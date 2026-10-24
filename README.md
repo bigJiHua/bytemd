@@ -1,5 +1,7 @@
 # ByteMD
 
+> Fork of [pd4d10/bytemd](https://github.com/pd4d10/bytemd), maintained by [bigJiHua](https://github.com/bigJiHua) with custom modifications. 基于 ByteMD v1 定制开发。
+
 > This is ByteMD v1 repository.
 >
 > v2 is under development actively, see [HashMD](https://github.com/pd4d10/hashmd).
