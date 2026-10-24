@@ -10,7 +10,7 @@
   import mermaid from '@bytemd/plugin-mermaid'
   import { Editor } from 'bytemd'
   import 'bytemd/dist/index.css'
-  import 'github-markdown-css'
+  import 'bytemd/dist/markdown.css'
   import 'highlight.js/styles/vs.css'
   // placed after highlight styles to override `code` padding
   import 'katex/dist/katex.css'
@@ -78,6 +78,10 @@
         locale: mermaidLocales[localeKey],
       }),
   ].filter((x) => x)
+
+  $: activePlugins = Object.entries(enabled)
+    .filter(([, v]) => v)
+    .map(([k]) => k)
 </script>
 
 <div class="container">
@@ -100,6 +104,13 @@
     {#each Object.keys(enabled) as p}
       {' '}
       <label> <input type="checkbox" bind:checked={enabled[p]} />{p}</label>
+    {/each}
+  </div>
+
+  <div class="badges">
+    已启用：
+    {#each activePlugins as p, i}
+      {#if i > 0}<span class="sep">·</span>{/if}<span class="badge">{p}</span>
     {/each}
   </div>
 
@@ -130,6 +141,32 @@
   .container {
     max-width: 1200px;
     margin: 0 auto;
+    position: relative;
+  }
+  .badges {
+    position: absolute;
+    top: 46px;
+    left: 12px;
+    z-index: 20;
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 20px;
+    color: #57606a;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(4px);
+    padding: 2px 10px;
+    border-radius: 12px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0 6px;
+    margin: 0 2px;
+    background: rgba(9, 105, 121, 0.12);
+    border-radius: 9px;
+  }
+  .sep {
+    margin: 0 4px;
+    opacity: 0.6;
   }
   .line {
     margin: 10px 0;

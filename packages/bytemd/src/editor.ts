@@ -167,39 +167,43 @@ export function getBuiltinActions(
   plugins: BytemdPlugin[],
   uploadImages: EditorProps['uploadImages']
 ): { leftActions: BytemdAction[]; rightActions: BytemdAction[] } {
+  const headingAction = (level: number): BytemdAction => ({
+    title: locale[`h${level}` as keyof BytemdLocale],
+    icon: [
+      icons.H1,
+      icons.H2,
+      icons.H3,
+      icons.LevelFourTitle,
+      icons.LevelFiveTitle,
+      icons.LevelSixTitle,
+    ][level - 1],
+    cheatsheet:
+      level <= 3 ? `${'#'.repeat(level)} ${locale.headingText}` : undefined,
+    handler: {
+      type: 'action',
+      click({ replaceLines, editor }) {
+        replaceLines((line) => {
+          line = line.trim().replace(/^#*/, '').trim()
+          line = '#'.repeat(level) + ' ' + line
+          return line
+        })
+        editor.focus()
+      },
+    },
+  })
+
   const leftActions: BytemdAction[] = [
     {
+      title: locale.headingText,
       icon: icons.H,
       handler: {
         type: 'dropdown',
-        actions: [1, 2, 3, 4, 5, 6].map((level) => ({
-          title: locale[`h${level}` as keyof BytemdLocale],
-          icon: [
-            icons.H1,
-            icons.H2,
-            icons.H3,
-            icons.LevelFourTitle,
-            icons.LevelFiveTitle,
-            icons.LevelSixTitle,
-          ][level - 1],
-          cheatsheet:
-            level <= 3
-              ? `${'#'.repeat(level)} ${locale.headingText}`
-              : undefined,
-          handler: {
-            type: 'action',
-            click({ replaceLines, editor }) {
-              replaceLines((line) => {
-                line = line.trim().replace(/^#*/, '').trim()
-                line = '#'.repeat(level) + ' ' + line
-                return line
-              })
-              editor.focus()
-            },
-          },
-        })),
+        actions: [4, 5, 6].map(headingAction),
       },
     },
+    headingAction(1),
+    headingAction(2),
+    headingAction(3),
     {
       title: locale.bold,
       icon: icons.TextBold,
@@ -275,7 +279,19 @@ export function getBuiltinActions(
               }
             },
           }
-        : undefined,
+        : {
+            type: 'action',
+            shortcut: getShortcutWithPrefix('I', true),
+            click({ editor, wrapText, codemirror }) {
+              wrapText('![', '](url)')
+              const cursor = editor.getCursor()
+              editor.setSelection(
+                codemirror.Pos(cursor.line, cursor.ch + 2),
+                codemirror.Pos(cursor.line, cursor.ch + 5)
+              )
+              editor.focus()
+            },
+          },
     },
     {
       title: locale.code,
@@ -337,6 +353,13 @@ export function getBuiltinActions(
       title: locale.hr,
       icon: icons.DividingLine,
       cheatsheet: '---',
+      handler: {
+        type: 'action',
+        click({ editor, appendBlock }) {
+          appendBlock('---')
+          editor.focus()
+        },
+      },
     },
   ]
   const rightActions: BytemdAction[] = []
@@ -349,6 +372,98 @@ export function getBuiltinActions(
       })
     }
   })
+  // 魔改新增：提示块（五种直出）/ 手风琴 / 拼音 / 时间线；
+  // 放在插件动作之后，保证自定义功能集中在工具栏末尾
+  const calloutActions = [
+    { key: 'default', label: '默认', color: '#409eff' },
+    { key: 'success', label: '成功', color: '#67c23a' },
+    { key: 'warning', label: '警告', color: '#e6a23c' },
+    { key: 'info', label: '信息', color: '#909399' },
+    { key: 'danger', label: '重要', color: '#f56c6c' },
+  ].map(
+    ({ key, label, color }): BytemdAction => ({
+      title: label,
+      icon: `<span class="bytemd-callout-dot" style="background-color:${color}"></span>`,
+      cheatsheet: `>[${key}] ${label}提示`,
+      handler: {
+        type: 'action',
+        click(ctx: BytemdEditorContext) {
+          const { editor } = ctx
+          const pos = editor.getCursor()
+          const lineText = editor.getLine(pos.line) ?? ''
+          const prefix = lineText.trim() === '' ? '' : '\n'
+          editor.replaceSelection(`${prefix}>[${key}] `)
+          editor.focus()
+        },
+      },
+    })
+  )
+
+  leftActions.push(
+    ...calloutActions,
+    {
+      title: '手风琴',
+      icon: icons.ClickToFold,
+      cheatsheet: '+++ 标题↵内容↵+++',
+      handler: {
+        type: 'action',
+        click({ editor, appendBlock, codemirror }) {
+          const { line } = appendBlock('+++ 标题\n内容\n+++')
+          editor.setSelection(codemirror.Pos(line, 4), codemirror.Pos(line, 6))
+          editor.focus()
+        },
+      },
+    },
+    {
+      title: '拼音',
+      icon: icons.Translate,
+      cheatsheet: '{汉字|Han Zi}',
+      handler: {
+        type: 'action',
+        click({ editor, codemirror }) {
+          const selected = editor.getSelection()
+          const from = editor.getCursor('from')
+          const pinyin = 'Han Zi'
+
+          if (selected && !selected.includes('\n')) {
+            editor.replaceSelection(`{${selected}|${pinyin}}`)
+            const start = codemirror.Pos(
+              from.line,
+              from.ch + selected.length + 2
+            )
+            editor.setSelection(
+              start,
+              codemirror.Pos(start.line, start.ch + pinyin.length)
+            )
+          } else {
+            editor.setCursor(from)
+            editor.replaceSelection('{汉字|Han Zi}')
+            const start = codemirror.Pos(from.line, from.ch + 1)
+            editor.setSelection(start, codemirror.Pos(start.line, start.ch + 2))
+          }
+          editor.focus()
+        },
+      },
+    },
+    {
+      title: '时间线',
+      icon: icons.VerticalTimeline,
+      cheatsheet: '::: timeline 标题↵:: [done] 2024-01-01 事项↵:::',
+      handler: {
+        type: 'action',
+        click({ editor, appendBlock, codemirror }) {
+          const { line } = appendBlock(
+            '::: timeline 时间线\n:: [done] 2024-01-01 事项\n:::'
+          )
+          editor.setSelection(
+            codemirror.Pos(line, 13),
+            codemirror.Pos(line, 16)
+          )
+          editor.focus()
+        },
+      },
+    }
+  )
   return {
     leftActions,
     rightActions,

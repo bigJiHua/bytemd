@@ -42,6 +42,8 @@ Before using the component, remember to import CSS file to make styles correct:
 
 ```js
 import 'bytemd/dist/index.css'
+// Optional standard Markdown theme (typography, tables, code, callouts, etc.)
+import 'bytemd/dist/markdown.css'
 ```
 
 ### Svelte
@@ -188,7 +190,14 @@ The other styles could also be overridden, see [the default style](https://githu
 
 #### Viewer
 
-There is no built-in styles for the Viewer. You could use third-party markdown themes, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css).
+A standard Markdown theme is shipped as an optional stylesheet: `bytemd/dist/markdown.css`. It covers the core Markdown syntax plus the built-in callout, accordion, pinyin and timeline syntaxes, and exposes `--md-*` CSS variables for host-level color and spacing overrides. Import it after `bytemd/dist/index.css`:
+
+```js
+import 'bytemd/dist/index.css'
+import 'bytemd/dist/markdown.css'
+```
+
+You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css).
 
 ## Plugin System
 

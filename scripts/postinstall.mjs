@@ -76,6 +76,8 @@ packages.forEach((p) => {
   if (pkg.name === 'bytemd') {
     pkg.exports['./dist/index.css'] = './dist/index.css'
     pkg.exports['./dist/index.min.css'] = './dist/index.min.css'
+    pkg.exports['./dist/markdown.css'] = './dist/markdown.css'
+    pkg.exports['./dist/markdown.min.css'] = './dist/markdown.min.css'
     pkg.files.push('svelte')
   }
   fs.writeJsonSync(pkgPath, pkg)

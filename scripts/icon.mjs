@@ -26,6 +26,10 @@ const meta = {
     'ListTwo',
     'OrderedList',
     'DividingLine',
+    'Callout',
+    'ClickToFold',
+    'Translate',
+    'VerticalTimeline',
 
     'AlignTextLeftOne',
     'Helpcenter',

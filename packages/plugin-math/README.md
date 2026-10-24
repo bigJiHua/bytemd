@@ -7,9 +7,9 @@ ByteMD plugin to support math formula
 ## Usage
 
 ```js
-import math from '@bytemd/plugin-math'
+import "katex/dist/katex.css"
 import { Editor } from 'bytemd'
-import 'katex/dist/katex.css'
+import math from '@bytemd/plugin-math'
 
 new Editor({
   target: document.body,

@@ -1,0 +1,736 @@
+// ByteMD standard Markdown theme (opt-in external stylesheet)
+//
+//   import 'bytemd/dist/index.css'    // editor chrome
+//   import 'bytemd/dist/markdown.css' // Markdown content
+//
+// Every token is a CSS custom property so host apps can override it without
+// patching this file. The fallbacks are a clean light reading theme; when a
+// host defines --text-primary / --bg-soft / --brand-500 (or the --md-* names),
+// the theme follows the host's light/dark design tokens automatically.
+
+.markdown-body {
+  // ===== Design tokens =====
+  --md-text: var(--text-primary, #1f2d3d);
+  --md-muted: var(--text-secondary, #6b7280);
+  --md-border: var(--border-color, #e5e7eb);
+  --md-border-soft: var(--border-light, #f1f5f9);
+  --md-border-strong: var(--border-strong, #d0d7de);
+  --md-bg-soft: var(--bg-soft, #f5f7fa);
+  --md-surface: var(--bg-card, #fff);
+  --md-link: var(--brand-500, #2f6fdd);
+  --md-link-hover: var(--brand-600, #1e56c9);
+  --md-accent: #2b7a4b;
+  --md-radius: 8px;
+  --md-radius-sm: 6px;
+  --md-font-size: 16px;
+  --md-line-height: 1.75;
+  --md-code-bg: var(--bg-soft, #f6f8fa);
+  --md-inline-code-bg: var(--bg-soft, rgba(175, 184, 193, 0.22));
+  --md-quote-border: var(--border-strong, #d0d7de);
+
+  --md-callout-default: #409eff;
+  --md-callout-default-bg: #ecf5ff;
+  --md-callout-default-text: #1554ad;
+  --md-callout-success: #67c23a;
+  --md-callout-success-bg: #f0f9eb;
+  --md-callout-success-text: #529b2e;
+  --md-callout-warning: #e6a23c;
+  --md-callout-warning-bg: #fdf6ec;
+  --md-callout-warning-text: #b88230;
+  --md-callout-info: #909399;
+  --md-callout-info-bg: #f4f4f5;
+  --md-callout-info-text: #73767a;
+  --md-callout-danger: #f56c6c;
+  --md-callout-danger-bg: #fef0f0;
+  --md-callout-danger-text: #c45656;
+
+  --md-copy-color: #57606a;
+  --md-copy-bg: rgba(255, 255, 255, 0.85);
+  --md-copy-border: #d0d7de;
+
+  --md-timeline-line: #e2e2e0;
+  --md-timeline-doing-line: #eaf0f5;
+  --md-timeline-dashed: #e9e9e7;
+  --md-timeline-done: #40c057;
+  --md-timeline-doing: #2b7a4b;
+  --md-timeline-error: #ff6b6b;
+  --md-timeline-error-text: #f03e3e;
+  --md-timeline-milestone: #fab005;
+  --md-timeline-milestone-text: #f08c00;
+  --md-timeline-done-bg: #e8f5ea;
+  --md-timeline-doing-bg: #f4f8f6;
+  --md-timeline-todo-bg: #f1f3f5;
+  --md-timeline-error-bg: #fbe9e9;
+  --md-timeline-milestone-bg: #fbf2de;
+  --md-timeline-todo-text: #6d6e6f;
+  --md-timeline-hover: rgba(43, 122, 75, 0.05);
+
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-size: var(--md-font-size);
+  line-height: var(--md-line-height);
+  color: var(--md-text);
+  letter-spacing: 0.01em;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  tab-size: 4;
+
+  > :first-child {
+    margin-top: 0;
+  }
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  // ===== Headings =====
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 1.5em 0 0.6em;
+    color: inherit;
+    font-weight: 600;
+    line-height: 1.35;
+    scroll-margin-top: 1.5em;
+  }
+
+  h1 {
+    font-size: 1.8em;
+    font-weight: 700;
+  }
+  h2 {
+    font-size: 1.4em;
+    font-weight: 700;
+  }
+  h3 {
+    font-size: 1.2em;
+  }
+  h4 {
+    font-size: 1.05em;
+  }
+  h5 {
+    font-size: 0.95em;
+  }
+  h6 {
+    font-size: 0.9em;
+    color: var(--md-muted);
+  }
+
+  // ===== Text =====
+  p {
+    margin: 0.8em 0;
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  b {
+    font-weight: 700;
+  }
+
+  em,
+  i {
+    font-style: italic;
+  }
+
+  del,
+  s {
+    color: var(--md-muted);
+  }
+
+  mark {
+    padding: 0 2px;
+    color: inherit;
+    background: #fff3bf;
+    border-radius: 2px;
+  }
+
+  small {
+    font-size: 0.875em;
+  }
+
+  sub,
+  sup {
+    line-height: 0;
+  }
+
+  abbr[title] {
+    text-decoration: underline dotted;
+    cursor: help;
+  }
+
+  a {
+    color: var(--md-link);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    color: var(--md-link-hover);
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--md-link);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  // ===== Lists =====
+  ul,
+  ol {
+    margin: 0.75em 0;
+    padding-left: 1.6em;
+  }
+
+  li {
+    margin: 0.25em 0;
+  }
+
+  li > ul,
+  li > ol {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
+
+  li > p {
+    margin: 0.25em 0;
+  }
+
+  .contains-task-list {
+    padding-left: 1.4em;
+  }
+
+  .task-list-item {
+    list-style: none;
+  }
+
+  .task-list-item > input[type='checkbox'] {
+    margin: 0 0.4em 0.2em -1.3em;
+    vertical-align: middle;
+    accent-color: var(--md-accent);
+  }
+
+  // ===== Blockquote =====
+  blockquote {
+    margin: 1em 0;
+    padding: 0.6em 1em;
+    color: var(--md-muted);
+    background: var(--md-bg-soft);
+    border-left: 4px solid var(--md-quote-border);
+    border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
+
+    > :first-child {
+      margin-top: 0;
+    }
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // ===== Rule =====
+  hr {
+    height: 0;
+    margin: 2em 0;
+    border: 0;
+    border-top: 1px solid var(--md-border);
+  }
+
+  // ===== Tables =====
+  table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 1em 0;
+    border-collapse: collapse;
+    overflow-x: auto;
+  }
+
+  th,
+  td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+    border: 1px solid var(--md-border);
+  }
+
+  th {
+    font-weight: 600;
+    background: var(--md-bg-soft);
+  }
+
+  // Hosts that wrap wide tables can use this container; the table keeps its
+  // native layout and only the container scrolls.
+  .table-scroll {
+    width: 100%;
+    margin: 1em 0;
+    overflow-x: auto;
+  }
+
+  .table-scroll table {
+    display: table;
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+  }
+
+  // ===== Media =====
+  img {
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+    border-radius: 4px;
+  }
+
+  // ===== Code =====
+  code,
+  kbd,
+  samp {
+    font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  :not(pre) > code {
+    padding: 0.15em 0.4em;
+    font-size: 0.875em;
+    color: var(--md-text);
+    background: var(--md-inline-code-bg);
+    border-radius: 4px;
+  }
+
+  pre {
+    position: relative;
+    margin: 1em 0;
+    padding: 0;
+    overflow: hidden;
+    line-height: 1.6;
+    background: var(--md-code-bg);
+    border: 1px solid var(--md-border);
+    border-radius: var(--md-radius);
+  }
+
+  pre > code {
+    display: block;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 0.875em;
+  }
+
+  // The copy button is injected by the Viewer
+  pre .bytemd-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--md-copy-color);
+    background: var(--md-copy-bg);
+    border: 1px solid var(--md-copy-border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  pre .bytemd-copy-btn:hover {
+    background: var(--md-bg-soft);
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 0.1em 0.45em;
+    font-size: 0.85em;
+    line-height: 1.4;
+    color: var(--md-text);
+    background: var(--md-bg-soft);
+    border: 1px solid var(--md-border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+  }
+
+  // ===== Details (not the accordion component) =====
+  details:not(.bytemd-accordion-item) {
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    background: var(--md-bg-soft);
+    border: 1px solid var(--md-border);
+    border-radius: var(--md-radius-sm);
+  }
+
+  summary {
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  details:not(.bytemd-accordion-item)[open] > summary {
+    margin-bottom: 0.5em;
+  }
+
+  // ===== Footnotes =====
+  .footnotes {
+    margin-top: 2em;
+    padding-top: 1em;
+    font-size: 0.9em;
+    color: var(--md-muted);
+    border-top: 1px solid var(--md-border);
+  }
+
+  .footnotes ol {
+    padding-left: 1.4em;
+  }
+
+  .footnotes li {
+    margin: 0.35em 0;
+  }
+
+  .footnote-ref a {
+    text-decoration: none;
+  }
+
+  // ===== Math / diagrams =====
+  .katex-display {
+    margin: 1em 0;
+    padding: 2px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .bytemd-mermaid {
+    margin: 1em 0;
+    overflow-x: auto;
+  }
+
+  // ===== Callout: >[type] =====
+  blockquote.bytemd-callout {
+    margin: 1em 0;
+    padding: 10px 14px;
+    border-left: 4px solid;
+    border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
+
+    &.bytemd-callout-default {
+      color: var(--md-callout-default-text);
+      background: var(--md-callout-default-bg);
+      border-color: var(--md-callout-default);
+    }
+    &.bytemd-callout-success {
+      color: var(--md-callout-success-text);
+      background: var(--md-callout-success-bg);
+      border-color: var(--md-callout-success);
+    }
+    &.bytemd-callout-warning {
+      color: var(--md-callout-warning-text);
+      background: var(--md-callout-warning-bg);
+      border-color: var(--md-callout-warning);
+    }
+    &.bytemd-callout-info {
+      color: var(--md-callout-info-text);
+      background: var(--md-callout-info-bg);
+      border-color: var(--md-callout-info);
+    }
+    &.bytemd-callout-danger {
+      color: var(--md-callout-danger-text);
+      background: var(--md-callout-danger-bg);
+      border-color: var(--md-callout-danger);
+    }
+  }
+
+  // ===== Accordion: +++ / ++- / ++ =====
+  .bytemd-accordion {
+    margin: 1em 0;
+    overflow: hidden;
+    border-radius: var(--md-radius);
+  }
+
+  .bytemd-accordion-item + .bytemd-accordion-item {
+    border-top: 1px solid var(--md-border-soft);
+  }
+
+  .bytemd-accordion-title {
+    display: flex;
+    align-items: center;
+    padding: 18px 20px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 26px;
+    list-style: none;
+    cursor: pointer;
+    background: var(--md-accent);
+    user-select: none;
+
+    &::marker {
+      content: '';
+    }
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: '';
+      flex: none;
+      width: 0;
+      height: 0;
+      margin-right: 20px;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 9px solid currentColor;
+    }
+  }
+
+  .bytemd-accordion-item[open] > .bytemd-accordion-title::before {
+    border-top: 0;
+    border-bottom: 9px solid currentColor;
+  }
+
+  .bytemd-accordion-body {
+    padding: 24px 22px;
+
+    > :first-child {
+      margin-top: 0;
+    }
+
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // ===== Pinyin: {拼 音|Ping Yin} =====
+  .bytemd-pinyin {
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
+
+  .bytemd-pinyin-item {
+    display: inline-block;
+    text-align: center;
+    vertical-align: baseline;
+    line-height: 1.2;
+  }
+
+  .bytemd-pinyin-item + .bytemd-pinyin-item {
+    margin-left: 0.25em;
+  }
+
+  .bytemd-pinyin-rt {
+    display: block;
+    max-width: 3em;
+    overflow: hidden;
+    font-size: 0.55em;
+    font-weight: 400;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ===== Timeline: ::: timeline =====
+  .bytemd-timeline {
+    margin: 1em 0;
+  }
+
+  .bytemd-timeline-title {
+    margin-bottom: 24px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .bytemd-timeline-list {
+    position: relative;
+  }
+
+  .bytemd-timeline-item {
+    position: relative;
+    padding-left: 34px;
+    padding-bottom: 20px;
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      z-index: 0;
+      left: 13px;
+      top: 18px;
+      bottom: -18px;
+      width: 2px;
+      background-color: var(--md-timeline-line);
+    }
+
+    &:last-child::after {
+      display: none;
+    }
+  }
+
+  .bytemd-timeline-content {
+    padding: 6px 12px;
+    border-radius: 6px;
+    transform-origin: left center;
+    transition: background-color 0.18s ease, transform 0.18s ease;
+  }
+
+  .bytemd-timeline-item:hover .bytemd-timeline-content {
+    background-color: var(--md-timeline-hover);
+    transform: scale(1.015);
+  }
+
+  .bytemd-timeline-item-doing::after {
+    background-color: var(--md-timeline-doing-line);
+  }
+
+  .bytemd-timeline-item-todo::after {
+    background-color: transparent;
+    background-image: linear-gradient(
+      to bottom,
+      var(--md-timeline-dashed) 50%,
+      transparent 50%
+    );
+    background-size: 2px 10px;
+    background-repeat: repeat-y;
+  }
+
+  .bytemd-timeline-marker {
+    position: absolute;
+    z-index: 1;
+    left: 14px;
+    top: 18px;
+    display: block;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    background-color: var(--md-surface);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .bytemd-timeline-item-done .bytemd-timeline-marker {
+    background-color: var(--md-timeline-done);
+  }
+
+  .bytemd-timeline-item-doing .bytemd-timeline-marker {
+    width: 24px;
+    height: 24px;
+    background-color: var(--md-timeline-doing);
+    border: 3px solid var(--md-surface);
+    box-shadow: 0 0 0 5px #cde5fb;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 34px;
+      height: 34px;
+      border: 2px solid #cde5fb;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      animation: bytemd-timeline-pulse 1.8s ease-out infinite;
+      pointer-events: none;
+    }
+  }
+
+  .bytemd-timeline-item-todo .bytemd-timeline-marker {
+    background-color: var(--md-surface);
+    border: 2px solid #adb5bd;
+  }
+
+  .bytemd-timeline-item-error .bytemd-timeline-marker {
+    background-color: var(--md-timeline-error);
+  }
+
+  .bytemd-timeline-item-milestone .bytemd-timeline-marker {
+    width: 18px;
+    height: 18px;
+    background-color: var(--md-timeline-milestone);
+    border-radius: 2px;
+    box-shadow: 0 0 0 6px #fbf3e4;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+
+  .bytemd-timeline-date {
+    display: inline-block;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 24px;
+    border-radius: 999px;
+  }
+
+  .bytemd-timeline-item-done .bytemd-timeline-date {
+    color: var(--md-timeline-done);
+    background-color: var(--md-timeline-done-bg);
+  }
+
+  .bytemd-timeline-item-doing .bytemd-timeline-date {
+    color: var(--md-timeline-doing);
+    background-color: var(--md-timeline-doing-bg);
+  }
+
+  .bytemd-timeline-item-todo .bytemd-timeline-date {
+    color: var(--md-timeline-todo-text);
+    background-color: var(--md-timeline-todo-bg);
+  }
+
+  .bytemd-timeline-item-error .bytemd-timeline-date {
+    color: var(--md-timeline-error-text);
+    background-color: var(--md-timeline-error-bg);
+  }
+
+  .bytemd-timeline-item-milestone .bytemd-timeline-date {
+    color: var(--md-timeline-milestone-text);
+    background-color: var(--md-timeline-milestone-bg);
+  }
+
+  .bytemd-timeline-heading {
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+  }
+
+  .bytemd-timeline-item-doing .bytemd-timeline-heading {
+    color: var(--md-timeline-doing);
+  }
+
+  .bytemd-timeline-item-error .bytemd-timeline-heading {
+    color: var(--md-timeline-error-text);
+  }
+
+  .bytemd-timeline-item-milestone .bytemd-timeline-heading {
+    color: var(--md-timeline-milestone-text);
+  }
+
+  .bytemd-timeline-desc {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--md-timeline-todo-text);
+  }
+}
+
+@keyframes bytemd-timeline-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-body .bytemd-timeline-item-doing .bytemd-timeline-marker::after {
+    animation: none;
+    opacity: 0;
+  }
+}

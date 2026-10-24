@@ -9,6 +9,7 @@ import fs from 'fs-extra'
 import { camelCase } from 'lodash-es'
 import path from 'path'
 import resolve from 'resolve'
+import sass from 'sass'
 import { emitDts } from 'svelte2tsx'
 import { preprocess } from 'svelte/compiler'
 import { build } from 'vite'
@@ -154,6 +155,26 @@ import { build } from 'vite'
       console.log('processing style files (backward compatibility)...')
       await fs.move('dist/style.css', 'dist/index.css')
       await fs.copy('dist/index.css', 'dist/index.min.css')
+
+      console.log('building standard markdown theme...')
+      const themeSource = path.resolve(root, 'src/markdown.scss')
+      const themeCss = sass.compile(themeSource, { style: 'expanded' }).css
+      const themeMin = sass.compile(themeSource, { style: 'compressed' }).css
+      await fs.writeFile(path.resolve(root, 'dist/markdown.css'), themeCss)
+      await fs.writeFile(path.resolve(root, 'dist/markdown.min.css'), themeMin)
+
+      for (const selector of [
+        '.markdown-body h1',
+        '.markdown-body table',
+        '.bytemd-callout',
+        '.bytemd-accordion',
+        '.bytemd-pinyin',
+        '.bytemd-timeline',
+      ]) {
+        if (!themeCss.includes(selector)) {
+          throw new Error(`markdown theme is missing ${selector}`)
+        }
+      }
     }
   }
 })()

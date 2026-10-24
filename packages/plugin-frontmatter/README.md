@@ -7,8 +7,9 @@ ByteMD plugin to parse frontmatter
 ## Usage
 
 ```js
-import frontmatter from '@bytemd/plugin-frontmatter'
+
 import { Editor } from 'bytemd'
+import frontmatter from '@bytemd/plugin-frontmatter'
 
 new Editor({
   target: document.body,

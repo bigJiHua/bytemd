@@ -7,9 +7,9 @@ ByteMD plugin to highlight code blocks
 ## Usage
 
 ```js
-import highlight from '@bytemd/plugin-highlight'
+import "highlight.js/styles/default.css"
 import { Editor } from 'bytemd'
-import 'highlight.js/styles/default.css'
+import highlight from '@bytemd/plugin-highlight'
 
 new Editor({
   target: document.body,

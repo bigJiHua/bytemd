@@ -52,6 +52,7 @@
   let root: HTMLElement
   let editorEl: HTMLElement
   let previewEl: HTMLElement
+  let bodyEl: HTMLElement
   let containerWidth = Infinity // TODO: first screen
 
   let codemirror: ReturnType<typeof createCodeMirror>
@@ -60,17 +61,45 @@
   let fullscreen = false
   let sidebar: false | 'help' | 'toc' = false
 
+  // 分屏拖拽比例（魔改新增）
+  let splitRatio = 50
+  let dragging = false
+  const refreshEditor = throttle(() => {
+    editor?.refresh()
+  }, 100)
+
+  function onHandleDown(e: MouseEvent) {
+    e.preventDefault()
+    dragging = true
+    const rect = bodyEl.getBoundingClientRect()
+    const move = (ev: MouseEvent) => {
+      ev.preventDefault()
+      splitRatio = Math.round(
+        Math.min(90, Math.max(10, ((ev.clientX - rect.left) / rect.width) * 100))
+      )
+      refreshEditor()
+    }
+    const up = () => {
+      dragging = false
+      editor?.refresh()
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
   $: styles = (() => {
     let edit: string
     let preview: string
 
     if (split && activeTab === false) {
       if (sidebar) {
-        edit = `width:calc(50% - ${sidebar ? 140 : 0}px)`
-        preview = `width:calc(50% - ${sidebar ? 140 : 0}px)`
+        edit = `width:calc(${splitRatio}% - ${sidebar ? 140 : 0}px)`
+        preview = `width:calc(${100 - splitRatio}% - ${sidebar ? 140 : 0}px)`
       } else {
-        edit = 'width:50%'
-        preview = 'width:50%'
+        edit = `width:${splitRatio}%`
+        preview = `width:${100 - splitRatio}%`
       }
     } else if (activeTab === 'preview') {
       edit = 'display:none'
@@ -341,6 +370,7 @@
   class="bytemd"
   class:bytemd-split={split && activeTab === false}
   class:bytemd-fullscreen={fullscreen}
+  class:bytemd-dragging={dragging}
   bind:this={root}
 >
   <Toolbar
@@ -392,8 +422,23 @@
       }
     }}
   />
-  <div class="bytemd-body">
+  <div class="bytemd-body" bind:this={bodyEl}>
     <div class="bytemd-editor" style={styles.edit} bind:this={editorEl} />
+    {#if split && activeTab === false}
+      <div
+        class="bytemd-split-handle"
+        on:mousedown={onHandleDown}
+        on:keydown={(e) => {
+          if (e.code === 'Enter') {
+            splitRatio = 50
+            refreshEditor()
+          }
+        }}
+        role="separator"
+        aria-orientation="vertical"
+        tabindex="-1"
+      />
+    {/if}
     <div bind:this={previewEl} class="bytemd-preview" style={styles.preview}>
       {#if !overridePreview && (split || activeTab === 'preview')}
         <Viewer

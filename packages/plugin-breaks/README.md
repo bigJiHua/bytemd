@@ -7,8 +7,9 @@ ByteMD plugin to support breaks
 ## Usage
 
 ```js
-import breaks from '@bytemd/plugin-breaks'
+
 import { Editor } from 'bytemd'
+import breaks from '@bytemd/plugin-breaks'
 
 new Editor({
   target: document.body,

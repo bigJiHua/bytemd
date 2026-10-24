@@ -7,9 +7,9 @@ ByteMD plugin to support math formula (SSR compatible)
 ## Usage
 
 ```js
-import math from '@bytemd/plugin-math-ssr'
+import "katex/dist/katex.css"
 import { Editor } from 'bytemd'
-import 'katex/dist/katex.css'
+import math from '@bytemd/plugin-math-ssr'
 
 new Editor({
   target: document.body,

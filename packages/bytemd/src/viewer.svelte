@@ -2,7 +2,7 @@
 
 <script lang="ts">
   import type { BytemdPlugin, ViewerProps as Props } from './types'
-  import { getProcessor } from './utils'
+  import { addCopyButtons, copyCodeFromButton, getProcessor } from './utils'
   import type { Root } from 'hast'
   import {
     tick,
@@ -36,8 +36,16 @@
   }
 
   onMount(() => {
+    addCopyButtons(markdownBody)
+
     markdownBody.addEventListener('click', (e) => {
       const $ = e.target as HTMLElement
+
+      if ($.classList?.contains('bytemd-copy-btn')) {
+        copyCodeFromButton($ as HTMLButtonElement)
+        return
+      }
+
       if ($.tagName !== 'A') return
 
       const href = $.getAttribute('href')
@@ -85,6 +93,7 @@
     // TODO: `off` should be called before DOM update
     // https://github.com/sveltejs/svelte/issues/6016
     off()
+    addCopyButtons(markdownBody)
     on()
   })
 
