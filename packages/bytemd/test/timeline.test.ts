@@ -72,6 +72,38 @@ test('unknown status falls back to todo', () => {
   $.component.$destroy()
 })
 
+test('timeline supports blank lines between entries', () => {
+  const $ = render(Viewer, {
+    value: `::: timeline 时间线
+
+:: [done] 2024-01-15 项目立项
+
+完成需求评审
+
+:: [doing] 2024-03-20 Alpha 版本
+
+正在联调
+
+:::`,
+  })
+  const items = [
+    ...$.container.querySelectorAll<HTMLElement>('.bytemd-timeline-item'),
+  ]
+
+  expect(items.length).toBe(2)
+  expect(items[0]).toHaveClass('bytemd-timeline-item-done')
+  expect(items[1]).toHaveClass('bytemd-timeline-item-doing')
+  expect(
+    items[0].querySelector('.bytemd-timeline-desc')?.textContent?.trim()
+  ).toBe('完成需求评审')
+  expect(
+    items[1].querySelector('.bytemd-timeline-desc')?.textContent?.trim()
+  ).toBe('正在联调')
+  expect($.container.textContent).not.toContain('::: timeline')
+
+  $.component.$destroy()
+})
+
 test('unclosed timeline stays plain text', () => {
   const $ = render(Viewer, {
     value: '::: timeline 时间线\n:: [done] 2024-01-15 项目立项',

@@ -18,19 +18,24 @@ import {
   Ref,
   nextTick,
 } from 'vue'
-import { getProcessor } from 'bytemd'
+import {
+  addCopyButtons,
+  copyCodeFromButton,
+  getProcessor,
+  BytemdPlugin,
+} from 'bytemd'
 
 export default defineComponent({
   props: ['value', 'plugins', 'sanitize', 'remarkRehype'],
   setup(props, ctx) {
     const markdownBody: Ref<HTMLElement | null> = ref(null)
-    const cbs = ref([])
+    let cbs: ReturnType<NonNullable<BytemdPlugin['viewerEffect']>>[] = []
     const file = computed(() => {
       return getProcessor(props).processSync(props.value)
     })
 
     const needUpdate = computed(() => {
-      return [file, props.plugins, props.sanitize, props.remarkRehype]
+      return [file.value, props.plugins, props.sanitize, props.remarkRehype]
     })
 
     watch(
@@ -54,6 +59,10 @@ export default defineComponent({
 
     const handleClick = (e: MouseEvent) => {
       const $ = e.target as HTMLElement
+      if ($.classList?.contains('bytemd-copy-btn')) {
+        copyCodeFromButton($ as HTMLButtonElement)
+        return
+      }
       if ($.tagName !== 'A') return
 
       const href = $.getAttribute('href')
@@ -66,19 +75,20 @@ export default defineComponent({
     }
 
     const off = () => {
-      if (cbs.value.length) {
-        cbs.value.forEach((cb: any) => cb && cb())
-      }
+      cbs.forEach((cb) => cb?.())
+      cbs = []
     }
 
     const on = () => {
-      if (props.plugins && file) {
-        cbs.value = props.plugins.map(
-          ({ viewerEffect }: any) =>
-            viewerEffect &&
-            viewerEffect({ markdownBody: markdownBody.value, file })
-        )
-      }
+      if (!markdownBody.value) return
+      addCopyButtons(markdownBody.value)
+      cbs =
+        (props.plugins as BytemdPlugin[] | undefined)?.map(({ viewerEffect }) =>
+          viewerEffect?.({
+            markdownBody: markdownBody.value!,
+            file: file.value,
+          })
+        ) ?? []
     }
 
     return { markdownBody, file, handleClick }

@@ -2,6 +2,7 @@
 
 <script lang="ts">
   import en from '../locales/en.json'
+  import { debounce, throttle } from './debounce'
   import {
     createCodeMirror,
     createEditorUtils,
@@ -22,9 +23,7 @@
   import Viewer from './viewer.svelte'
   import type { Editor, KeyMap } from 'codemirror'
   import type { Root, Element } from 'hast'
-  import { debounce, throttle } from 'lodash-es'
   import { onMount, createEventDispatcher, onDestroy, tick } from 'svelte'
-  import type { VFile } from 'vfile'
 
   export let value: Props['value'] = ''
   export let plugins: NonNullable<Props['plugins']> = []
@@ -64,18 +63,24 @@
   // 分屏拖拽比例（魔改新增）
   let splitRatio = 50
   let dragging = false
+  let stopDrag: (() => void) | undefined
+  let resizeObserver: ResizeObserver | undefined
   const refreshEditor = throttle(() => {
     editor?.refresh()
   }, 100)
 
   function onHandleDown(e: MouseEvent) {
     e.preventDefault()
+    stopDrag?.()
     dragging = true
     const rect = bodyEl.getBoundingClientRect()
     const move = (ev: MouseEvent) => {
       ev.preventDefault()
       splitRatio = Math.round(
-        Math.min(90, Math.max(10, ((ev.clientX - rect.left) / rect.width) * 100))
+        Math.min(
+          90,
+          Math.max(10, ((ev.clientX - rect.left) / rect.width) * 100)
+        )
       )
       refreshEditor()
     }
@@ -84,7 +89,9 @@
       editor?.refresh()
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
+      stopDrag = undefined
     }
+    stopDrag = up
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
@@ -182,10 +189,9 @@
   let editPs: number[]
   let previewPs: number[]
   let hast: Root = { type: 'root', children: [] }
-  let vfile: VFile
   let currentBlockIndex = 0
 
-  onMount(async () => {
+  onMount(() => {
     codemirror = createCodeMirror()
 
     editor = codemirror(editorEl, {
@@ -355,15 +361,18 @@
       handleImages(e, e.clipboardData?.items)
     })
 
-    // @ts-ignore
-    new ResizeObserver((entries) => {
+    resizeObserver = new ResizeObserver((entries) => {
       containerWidth = entries[0].contentRect.width
-      // console.log(containerWidth);
-    }).observe(root, { box: 'border-box' })
+    })
+    resizeObserver.observe(root, { box: 'border-box' })
 
     // No need to call `on` because cm instance would change once after init
   })
-  onDestroy(off)
+  onDestroy(() => {
+    off()
+    stopDrag?.()
+    resizeObserver?.disconnect()
+  })
 </script>
 
 <div
@@ -382,10 +391,6 @@
     rightAfferentActions={actions.rightActions}
     locale={mergedLocale}
     actions={actions.leftActions}
-    on:key={(e) => {
-      editor.setOption('keyMap', e.detail)
-      editor.focus()
-    }}
     on:tab={(e) => {
       const v = e.detail
       if (split) {
@@ -425,18 +430,35 @@
   <div class="bytemd-body" bind:this={bodyEl}>
     <div class="bytemd-editor" style={styles.edit} bind:this={editorEl} />
     {#if split && activeTab === false}
+      <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
       <div
         class="bytemd-split-handle"
         on:mousedown={onHandleDown}
         on:keydown={(e) => {
           if (e.code === 'Enter') {
+            e.preventDefault()
             splitRatio = 50
             refreshEditor()
+            return
           }
+          const delta =
+            e.code === 'ArrowLeft' || e.code === 'ArrowUp'
+              ? -5
+              : e.code === 'ArrowRight' || e.code === 'ArrowDown'
+              ? 5
+              : 0
+          if (!delta) return
+          e.preventDefault()
+          splitRatio = Math.min(90, Math.max(10, splitRatio + delta))
+          refreshEditor()
         }}
         role="separator"
         aria-orientation="vertical"
-        tabindex="-1"
+        aria-label={mergedLocale.resize}
+        aria-valuemin="10"
+        aria-valuemax="90"
+        aria-valuenow={splitRatio}
+        tabindex="0"
       />
     {/if}
     <div bind:this={previewEl} class="bytemd-preview" style={styles.preview}>
@@ -448,7 +470,6 @@
           {remarkRehype}
           on:hast={(e) => {
             hast = e.detail.hast
-            vfile = e.detail.file
           }}
         />
       {/if}
@@ -464,6 +485,11 @@
             sidebar = false
           }
         }}
+        role="button"
+        tabindex="0"
+        aria-label={sidebar === 'toc'
+          ? mergedLocale.closeToc
+          : mergedLocale.closeHelp}
       >
         {@html icons.Close}
       </div>

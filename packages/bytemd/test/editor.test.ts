@@ -70,6 +70,20 @@ describe('mode', () => {
     await act()
     expect($.container.querySelector('.bytemd-editor')).toBeVisible()
     expect($.container.querySelector('.bytemd-preview')).toBeVisible()
+
+    const handle = $.container.querySelector('.bytemd-split-handle')!
+    expect(handle).toHaveAttribute('role', 'separator')
+    expect(handle).toHaveAttribute('aria-valuenow', '50')
+    expect(handle).toHaveAttribute('tabindex', '0')
+
+    await fireEvent.keyDown(handle, { code: 'ArrowRight' })
+    expect(handle).toHaveAttribute('aria-valuenow', '55')
+
+    const icon = $.container.querySelector(
+      '.bytemd-toolbar-left .bytemd-toolbar-icon'
+    )
+    expect(icon).toHaveAttribute('role', 'button')
+    expect(icon).toHaveAttribute('tabindex', '0')
   })
 
   test('tab', async () => {
@@ -79,14 +93,20 @@ describe('mode', () => {
 
     expect($.container.querySelector('.bytemd-editor')).toBeVisible()
     expect(write).toHaveClass('bytemd-toolbar-tab-active')
-    // expect($.container.querySelector('.bytemd-preview')).toHaveStyle('width:0');
     expect(preview).not.toHaveClass('bytemd-toolbar-tab-active')
+    expect(write).toHaveAttribute('role', 'tab')
+    expect(write).toHaveAttribute('aria-selected', 'true')
+
+    const narrowActions = $.container.querySelectorAll(
+      '.bytemd-toolbar-actions .bytemd-toolbar-icon'
+    )
+    expect(narrowActions.length).toBeGreaterThan(0)
 
     await fireEvent.click(preview)
-    // expect($.container.querySelector('.bytemd-editor')).toHaveStyle('width:0');
     expect(write).not.toHaveClass('bytemd-toolbar-tab-active')
     expect($.container.querySelector('.bytemd-preview')).toBeVisible()
     expect(preview).toHaveClass('bytemd-toolbar-tab-active')
+    expect(preview).toHaveAttribute('aria-selected', 'true')
   })
 })
 

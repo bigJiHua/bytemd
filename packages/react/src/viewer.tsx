@@ -24,6 +24,8 @@ export const Viewer: FC<ViewerProps> = ({
     const markdownBody = elRef.current
     if (!markdownBody || !file) return
 
+    bytemd.addCopyButtons(markdownBody)
+
     const cbs = plugins?.map(({ viewerEffect }) =>
       viewerEffect?.({ markdownBody, file })
     )
@@ -36,6 +38,10 @@ export const Viewer: FC<ViewerProps> = ({
     <div
       onClick={(e) => {
         const $ = e.target as HTMLElement
+        if ($.classList?.contains('bytemd-copy-btn')) {
+          bytemd.copyCodeFromButton($ as HTMLButtonElement)
+          return
+        }
         if ($.tagName !== 'A') return
 
         const href = $.getAttribute('href')

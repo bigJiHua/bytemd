@@ -3,7 +3,7 @@
 <script lang="ts">
   import { icons } from './icons'
   import type { BytemdEditorContext, BytemdAction, BytemdLocale } from './types'
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { DelegateInstance } from 'tippy.js'
   import { delegate } from 'tippy.js'
 
@@ -92,7 +92,7 @@
       handler: {
         type: 'action',
         click() {
-          window.open('https://github.com/bytedance/bytemd')
+          window.open('https://github.com/bigJiHua/bytemd')
         },
       },
     },
@@ -158,6 +158,8 @@
           // dropdown
           const dropdown = document.createElement('div')
           dropdown.classList.add('bytemd-dropdown')
+          dropdown.setAttribute('role', 'menu')
+          if (item.title) dropdown.setAttribute('aria-label', item.title)
 
           if (item.title) {
             const dropdownTitle = document.createElement('div')
@@ -170,8 +172,11 @@
             const dropdownItem = document.createElement('div')
             dropdownItem.classList.add('bytemd-dropdown-item')
             dropdownItem.setAttribute(tippyPathKey, [...paths, i].join('-'))
+            dropdownItem.setAttribute('role', 'menuitem')
+            dropdownItem.tabIndex = 0
             if (subAction.handler?.type === 'dropdown') {
               dropdownItem.classList.add(tippyClass)
+              dropdownItem.setAttribute('aria-haspopup', 'menu')
             }
             if (reference.classList.contains(tippyClassRight)) {
               dropdownItem.classList.add(tippyClassRight)
@@ -216,6 +221,26 @@
                     })
                   }
                 }
+
+                el.addEventListener('click', (event) => {
+                  const itemHandler = getPayloadFromElement(el)?.item?.handler
+                  if (itemHandler?.type !== 'action') return
+                  event.stopPropagation()
+                  itemHandler.click(context)
+                  delegateInstance?.destroy()
+                  init()
+                })
+                el.addEventListener('keydown', (event) => {
+                  const e = event as KeyboardEvent
+                  if (!['Enter', 'Space'].includes(e.code)) return
+                  const itemHandler = getPayloadFromElement(el)?.item?.handler
+                  if (itemHandler?.type !== 'action') return
+                  e.preventDefault()
+                  e.stopPropagation()
+                  itemHandler.click(context)
+                  delegateInstance?.destroy()
+                  init()
+                })
               })
             },
           })
@@ -226,6 +251,9 @@
 
   onMount(() => {
     init()
+  })
+  onDestroy(() => {
+    delegateInstance?.destroy()
   })
 
   function handleClick(e: MouseEvent | KeyboardEvent) {
@@ -238,13 +266,24 @@
     delegateInstance?.destroy()
     init()
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (!['Enter', 'Space'].includes(e.code)) return
+    const target = (e.target as Element).closest(`[${tippyPathKey}]`)
+    if (!target) return
+    e.preventDefault()
+    handleClick(e)
+  }
 </script>
 
 <div
   class="bytemd-toolbar"
+  role="toolbar"
+  tabindex="-1"
+  aria-label={locale.cheatsheet}
   bind:this={toolbar}
   on:click={handleClick}
-  on:keydown|self={(e) => ['Enter', 'Space'].includes(e.code) && handleClick(e)}
+  on:keydown={handleKeydown}
 >
   <div class="bytemd-toolbar-left">
     {#if split}
@@ -252,6 +291,12 @@
         {#if item.handler}
           <div
             class={['bytemd-toolbar-icon', tippyClass].join(' ')}
+            role="button"
+            tabindex="0"
+            aria-label={item.title ?? ''}
+            aria-haspopup={item.handler.type === 'dropdown'
+              ? 'menu'
+              : undefined}
             bytemd-tippy-path={index}
           >
             {@html item.icon}
@@ -260,22 +305,34 @@
       {/each}
     {:else}
       <div
-        on:click={() => dispatch('tab', 'write')}
-        on:keydown|self={(e) =>
-          ['Enter', 'Space'].includes(e.code) && dispatch('tab', 'write')}
-        class="bytemd-toolbar-tab"
-        class:bytemd-toolbar-tab-active={activeTab !== 'preview'}
+        class="bytemd-toolbar-tabs"
+        role="tablist"
+        aria-label={`${locale.write} / ${locale.preview}`}
       >
-        {locale.write}
-      </div>
-      <div
-        on:click={() => dispatch('tab', 'preview')}
-        on:keydown|self={(e) =>
-          ['Enter', 'Space'].includes(e.code) && dispatch('tab', 'preview')}
-        class="bytemd-toolbar-tab"
-        class:bytemd-toolbar-tab-active={activeTab === 'preview'}
-      >
-        {locale.preview}
+        <div
+          on:click={() => dispatch('tab', 'write')}
+          on:keydown|self={(e) =>
+            ['Enter', 'Space'].includes(e.code) && dispatch('tab', 'write')}
+          class="bytemd-toolbar-tab"
+          class:bytemd-toolbar-tab-active={activeTab !== 'preview'}
+          role="tab"
+          tabindex="0"
+          aria-selected={activeTab !== 'preview'}
+        >
+          {locale.write}
+        </div>
+        <div
+          on:click={() => dispatch('tab', 'preview')}
+          on:keydown|self={(e) =>
+            ['Enter', 'Space'].includes(e.code) && dispatch('tab', 'preview')}
+          class="bytemd-toolbar-tab"
+          class:bytemd-toolbar-tab-active={activeTab === 'preview'}
+          role="tab"
+          tabindex="0"
+          aria-selected={activeTab === 'preview'}
+        >
+          {locale.preview}
+        </div>
       </div>
     {/if}
   </div>
@@ -286,6 +343,10 @@
         <div
           class={['bytemd-toolbar-icon', tippyClass, tippyClassRight].join(' ')}
           class:bytemd-toolbar-icon-active={item.active}
+          role="button"
+          tabindex="0"
+          aria-label={item.title ?? ''}
+          aria-haspopup={item.handler?.type === 'dropdown' ? 'menu' : undefined}
           bytemd-tippy-path={index}
         >
           {@html item.icon}
@@ -293,4 +354,29 @@
       {/if}
     {/each}
   </div>
+
+  {#if !split}
+    <div
+      class="bytemd-toolbar-actions"
+      role="group"
+      aria-label={locale.cheatsheet}
+    >
+      {#each actions as item, index}
+        {#if item.handler}
+          <div
+            class={['bytemd-toolbar-icon', tippyClass].join(' ')}
+            role="button"
+            tabindex="0"
+            aria-label={item.title ?? ''}
+            aria-haspopup={item.handler.type === 'dropdown'
+              ? 'menu'
+              : undefined}
+            bytemd-tippy-path={index}
+          >
+            {@html item.icon}
+          </div>
+        {/if}
+      {/each}
+    </div>
+  {/if}
 </div>

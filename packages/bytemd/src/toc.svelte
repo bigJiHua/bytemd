@@ -60,16 +60,17 @@
         class:bytemd-toc-active={currentHeadingIndex === index}
         class:bytemd-toc-first={item.level === minLevel}
         style={`padding-left:${(item.level - minLevel) * 16 + 8}px`}
-        on:click={() => {
-          dispatch('click', index)
-        }}
-        on:keydown|self={(e) => {
-          if (['Enter', 'Space'].includes(e.code)) {
-            dispatch('click', index)
-          }
-        }}
       >
-        {item.text}
+        <button
+          type="button"
+          class="bytemd-toc-button"
+          on:click={() => {
+            dispatch('click', index)
+          }}
+          aria-current={currentHeadingIndex === index ? 'location' : undefined}
+        >
+          {item.text}
+        </button>
       </li>
     {/each}
   </ul>

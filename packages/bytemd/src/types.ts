@@ -8,6 +8,21 @@ import type { Processor } from 'unified'
 import type { VFile } from 'vfile'
 
 export interface BytemdLocale {
+  accordion: string
+  calloutDefault: string
+  calloutSuccess: string
+  calloutWarning: string
+  calloutInfo: string
+  calloutDanger: string
+  pinyin: string
+  timeline: string
+  fontSize: string
+  fontColor: string
+  bgColor: string
+  textSample: string
+  hrText: string
+  hrTextSample: string
+  resize: string
   write: string
   preview: string
   writeOnly: string
@@ -211,7 +226,10 @@ export interface EditorProps extends ViewerProps {
    */
   overridePreview?(el: HTMLElement, props: ViewerProps): void
   /**
-   * Maximum length (number of characters) of value
+   * Warning threshold for value.length (UTF-16 code units).
+   * Shows an over-limit indicator without blocking input or truncating value.
+   *
+   * @defaultValue Infinity
    */
   maxLength?: number
 }

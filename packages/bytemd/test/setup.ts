@@ -30,4 +30,7 @@ if (typeof TextEncoder === 'undefined') {
   unobserve() {
     // do nothing
   }
+  disconnect() {
+    // do nothing
+  }
 }

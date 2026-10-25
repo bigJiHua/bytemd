@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { getProcessor } from 'bytemd'
+import { addCopyButtons, copyCodeFromButton, getProcessor } from 'bytemd'
 
 export default {
   props: ['value', 'plugins', 'sanitize', 'remarkRehype'],
@@ -38,6 +38,7 @@ export default {
   },
   methods: {
     on() {
+      addCopyButtons(this.$el)
       if (this.plugins && this.file) {
         this.cbs = this.plugins.map(
           ({ viewerEffect }) =>
@@ -53,6 +54,10 @@ export default {
     },
     handleClick(e) {
       const $ = e.target
+      if ($.classList?.contains('bytemd-copy-btn')) {
+        copyCodeFromButton($)
+        return
+      }
       if ($.tagName !== 'A') return
 
       const href = $.getAttribute('href')

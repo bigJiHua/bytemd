@@ -44,7 +44,9 @@
       on:click={() => dispatch('top')}
       on:keydown|self={(e) =>
         ['Enter', 'Space'].includes(e.code) && dispatch('top')}
-      >{locale.top}</span
+      role="button"
+      tabindex="0"
+      aria-label={locale.top}>{locale.top}</span
     >
   </div>
 </div>

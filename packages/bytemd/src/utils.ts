@@ -304,7 +304,7 @@ const remarkTimeline = () => {
     status: string,
     date: string,
     title: string,
-    desc: string
+    content: any[]
   ): any => ({
     type: 'bytemdTimelineItem',
     data: {
@@ -345,7 +345,7 @@ const remarkTimeline = () => {
             },
             children: [{ type: 'text', value: title }],
           },
-          ...(desc
+          ...(content.length
             ? [
                 {
                   type: 'bytemdTimelineDesc',
@@ -353,7 +353,7 @@ const remarkTimeline = () => {
                     hName: 'div',
                     hProperties: { className: ['bytemd-timeline-desc'] },
                   },
-                  children: [{ type: 'text', value: desc }],
+                  children: content,
                 },
               ]
             : []),
@@ -412,7 +412,14 @@ const remarkTimeline = () => {
     const pushItem = () => {
       if (!status) return
       const desc = descLines.join(' ').trim()
-      items.push(makeItem(status, date, title, desc))
+      items.push(
+        makeItem(
+          status,
+          date,
+          title,
+          desc ? [{ type: 'text', value: desc }] : []
+        )
+      )
     }
 
     for (let i = 1; i < lines.length; i++) {
@@ -450,19 +457,98 @@ const remarkTimeline = () => {
     return makeTimeline(start[1]?.trim() ?? '', items, node.position)
   }
 
+  const singleLineText = (node: any): string | null => {
+    if (node?.type !== 'paragraph' || node.children?.length !== 1) return null
+    const child = node.children[0]
+    if (child.type !== 'text' || /[\r\n]/.test(child.value)) return null
+    return child.value
+  }
+
+  // Block form: the fence and each entry live in separate paragraphs, so
+  // users can put blank lines (or richer Markdown) between them.
+  const parseBlock = (
+    children: any[],
+    index: number
+  ): { node: any; end: number } | null => {
+    const startText = singleLineText(children[index])
+    const start = startText && TIMELINE_START.exec(startText)
+    if (!start) return null
+
+    const items: any[] = []
+    let status = ''
+    let date = ''
+    let title = ''
+    let content: any[] = []
+    let end = -1
+
+    const pushItem = () => {
+      if (!status) return
+      items.push(makeItem(status, date, title, content))
+    }
+
+    for (let i = index + 1; i < children.length; i++) {
+      const text = singleLineText(children[i])
+      if (text && TIMELINE_END.test(text)) {
+        end = i
+        break
+      }
+
+      if (text) {
+        const matched = TIMELINE_ITEM.exec(text)
+        if (matched) {
+          pushItem()
+          const rawStatus = matched[1].toLowerCase()
+          status = TIMELINE_STATUSES.has(rawStatus) ? rawStatus : 'todo'
+          date = matched[2]
+          title = matched[3]
+          content = []
+          continue
+        }
+        if (text.trim().startsWith('::')) return null
+      }
+
+      if (!status) return null
+      content.push(children[i])
+    }
+
+    if (end === -1) return null
+    pushItem()
+    if (items.length === 0) return null
+
+    const startPos = children[index].position
+    const endPos = children[end].position
+    return {
+      node: makeTimeline(
+        start[1]?.trim() ?? '',
+        items,
+        startPos && endPos ? { start: startPos.start, end: endPos.end } : null
+      ),
+      end,
+    }
+  }
+
   const transform = (parent: any) => {
     if (!Array.isArray(parent?.children)) return
 
     const next: any[] = []
-    parent.children.forEach((child: any) => {
-      const timeline = parseInline(child)
-      if (timeline) {
-        next.push(timeline)
-        return
+    for (let i = 0; i < parent.children.length; i++) {
+      const child = parent.children[i]
+      const inline = parseInline(child)
+      if (inline) {
+        next.push(inline)
+        continue
       }
+
+      const block = parseBlock(parent.children, i)
+      if (block) {
+        next.push(block.node)
+        i = block.end
+        continue
+      }
+
       transform(child)
       next.push(child)
-    })
+    }
     parent.children = next
   }
 
@@ -588,11 +674,362 @@ const remarkPinyin = () => {
 }
 
 /**
- * Inject a copy button into every `pre` under `root`.
- * Idempotent: existing `.bytemd-copy-btn` are kept.
+ * Built-in transform: paired inline style ranges.
+ *   [size=20]text[/size]
+ *   [color=#e03131]text[/color]
+ *   [bg=#fff3bf]text[/bg]
+ * Markers may sit in different inline nodes, so emphasis, links, breaks and
+ * inline code inside the range are preserved. Invalid sizes/colors stay text.
+ */
+const INLINE_STYLE_MIN_SIZE = 8
+const INLINE_STYLE_MAX_SIZE = 96
+const INLINE_STYLE_HEX = /^(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
+const INLINE_STYLE_CLASS = /^bytemd-(size|color|bg)-([0-9a-z]+)$/
+const INLINE_STYLE_PARENTS = new Set([
+  'paragraph',
+  'heading',
+  'tableCell',
+  'strong',
+  'emphasis',
+  'delete',
+  'link',
+  'linkReference',
+])
+
+type InlineStyleKind = 'size' | 'color' | 'bg'
+
+const remarkInlineStyle = () => {
+  const parseTag = (
+    kind: string,
+    raw: string
+  ): { kind: InlineStyleKind; value: string } | null => {
+    if (kind === 'size') {
+      const size = Number(raw.trim().replace(/px$/i, ''))
+      if (
+        !Number.isInteger(size) ||
+        size < INLINE_STYLE_MIN_SIZE ||
+        size > INLINE_STYLE_MAX_SIZE
+      ) {
+        return null
+      }
+      return { kind, value: String(size) }
+    }
+
+    if (kind === 'color' || kind === 'bg') {
+      const hex = raw.trim().replace(/^#/, '')
+      if (!INLINE_STYLE_HEX.test(hex)) return null
+      return { kind, value: hex.toLowerCase() }
+    }
+
+    return null
+  }
+
+  const wrapStyles = (children: any[]) => {
+    interface Frame {
+      kind: InlineStyleKind
+      value: string
+      open: string
+      children: any[]
+    }
+    const root: any[] = []
+    const stack: Frame[] = []
+    const append = (node: any) => {
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push(node)
+      } else {
+        root.push(node)
+      }
+    }
+
+    children.forEach((child: any) => {
+      if (
+        child.type !== 'text' ||
+        !/\[(?:size|color|bg)=|\[\/(?:size|color|bg)\]/i.test(child.value)
+      ) {
+        append(child)
+        return
+      }
+
+      const re =
+        /\[(size|color|bg)=([^\]\n]{1,32})\]|\[\/(size|color|bg)\]/gi
+      let last = 0
+      for (
+        let match = re.exec(child.value);
+        match;
+        match = re.exec(child.value)
+      ) {
+        if (match.index > last) {
+          append({ type: 'text', value: child.value.slice(last, match.index) })
+        }
+
+        const token = match[0]
+        if (match[3]) {
+          const kind = match[3].toLowerCase()
+          const top = stack[stack.length - 1]
+          if (top && top.kind === kind) {
+            stack.pop()
+            append({
+              type: 'bytemdInlineStyle',
+              data: {
+                hName: 'span',
+                hProperties: {
+                  className: [`bytemd-${top.kind}-${top.value}`],
+                },
+              },
+              children: top.children,
+            })
+          } else {
+            append({ type: 'text', value: token })
+          }
+        } else {
+          const parsed = parseTag(match[1].toLowerCase(), match[2])
+          if (parsed) {
+            stack.push({ ...parsed, open: token, children: [] })
+          } else {
+            append({ type: 'text', value: token })
+          }
+        }
+        last = re.lastIndex
+      }
+      if (last < child.value.length) {
+        append({ type: 'text', value: child.value.slice(last) })
+      }
+    })
+
+    // Unclosed markers are kept as plain text instead of swallowing content.
+    while (stack.length > 0) {
+      const frame = stack.pop() as Frame
+      append({ type: 'text', value: frame.open })
+      frame.children.forEach((child) => append(child))
+    }
+
+    return root
+  }
+
+  const transform = (parent: any) => {
+    if (!Array.isArray(parent?.children)) return
+    parent.children.forEach((child: any) => {
+      if (child.type !== 'text') transform(child)
+    })
+    if (INLINE_STYLE_PARENTS.has(parent.type)) {
+      parent.children = wrapStyles(parent.children)
+    }
+  }
+
+  return (tree: any) => transform(tree)
+}
+
+// Runs after sanitize so generated colors/font sizes survive: the default
+// schema intentionally strips arbitrary inline styles.
+const rehypeInlineStyle = () => (tree: any) => {
+  const applyStyles = (target: any, styles: string[]) => {
+    target.properties = target.properties ?? {}
+    target.properties.style = [target.properties.style, ...styles]
+      .filter(Boolean)
+      .join(';')
+  }
+
+  const styleLabelImages = (node: any) => {
+    if (!Array.isArray(node.children)) return
+    node.children.forEach((child: any) => {
+      if (child.type === 'element' && child.tagName === 'img') {
+        applyStyles(child, [
+          'max-height:2em',
+          'max-width:8em',
+          'width:auto',
+          'height:auto',
+          'object-fit:contain',
+          'vertical-align:middle',
+        ])
+      }
+      styleLabelImages(child)
+    })
+  }
+
+  visit(tree, 'element', (node: any) => {
+    if (!node.properties) return
+    const classes = node.properties.className
+    const names = Array.isArray(classes) ? classes : [classes]
+    const declarations: string[] = []
+
+    for (const name of names) {
+      const match = INLINE_STYLE_CLASS.exec(String(name ?? '').toLowerCase())
+      if (!match) continue
+      const kind = match[1]
+      const value = match[2]
+
+      if (kind === 'size') {
+        const size = Number(value)
+        if (
+          Number.isInteger(size) &&
+          size >= INLINE_STYLE_MIN_SIZE &&
+          size <= INLINE_STYLE_MAX_SIZE
+        ) {
+          declarations.push(`font-size:${size}px`)
+        }
+      } else if (INLINE_STYLE_HEX.test(value)) {
+        declarations.push(
+          `${kind === 'color' ? 'color' : 'background-color'}:#${value}`
+        )
+      }
+    }
+
+    const classNames = new Set(names.map((name) => String(name ?? '')))
+    if (classNames.has('bytemd-hr-text')) {
+      declarations.push('display:flex', 'align-items:center', 'gap:12px')
+    }
+    if (classNames.has('bytemd-hr-text-line')) {
+      declarations.push(
+        'flex:1 1 0',
+        'min-width:24px',
+        'height:1px',
+        'background-color:currentColor',
+        'opacity:.25'
+      )
+    }
+    if (classNames.has('bytemd-hr-text-label')) {
+      declarations.push(
+        'flex:0 1 auto',
+        'min-width:0',
+        'text-align:center',
+        'overflow-wrap:anywhere'
+      )
+      styleLabelImages(node)
+    }
+
+    if (declarations.length > 0) {
+      applyStyles(node, declarations)
+    }
+  })
+}
+
+/**
+ * Built-in transform: `---text---` on a single line becomes a divider with
+ * the label centered between two rules. A plain `---` stays an <hr>, and
+ * empty or multi-line ranges are left as normal text.
+ */
+const remarkDividerText = () => {
+  const textOf = (node: any): string => {
+    if (node?.type === 'text' || node?.type === 'inlineCode') {
+      return node.value ?? ''
+    }
+    if (Array.isArray(node?.children)) {
+      return node.children.map(textOf).join('')
+    }
+    return ''
+  }
+
+  const containsImage = (node: any): boolean => {
+    if (node?.type === 'image' || node?.type === 'imageReference') return true
+    return (
+      Array.isArray(node?.children) && node.children.some(containsImage)
+    )
+  }
+
+  const makeDivider = (paragraph: any): any | null => {
+    const children = paragraph.children
+    if (!Array.isArray(children) || children.length === 0) return null
+    if (
+      children.some(
+        (child: any) =>
+          child.type === 'break' ||
+          (child.type === 'text' && /[\r\n]/.test(child.value))
+      )
+    ) {
+      return null
+    }
+
+    const first = children[0]
+    const last = children[children.length - 1]
+    if (first.type !== 'text' || last.type !== 'text') return null
+    if (!first.value.startsWith('---') || !last.value.endsWith('---')) {
+      return null
+    }
+
+    let content: any[]
+    if (first === last) {
+      const inner = first.value.slice(3, -3).trim()
+      if (!inner || inner.startsWith('-') || inner.endsWith('-')) return null
+      content = [{ type: 'text', value: inner }]
+    } else {
+      const rawHead = first.value.slice(3)
+      const rawTail = last.value.slice(0, -3)
+      if (rawHead.startsWith('-') || rawTail.endsWith('-')) return null
+      const head = rawHead.replace(/^\s+/, '')
+      const tail = rawTail.replace(/\s+$/, '')
+      content = [
+        ...(head ? [{ type: 'text', value: head }] : []),
+        ...children.slice(1, -1),
+        ...(tail ? [{ type: 'text', value: tail }] : []),
+      ]
+      if (
+        !content.some((child) => textOf(child).trim() || containsImage(child))
+      ) {
+        return null
+      }
+    }
+
+    const makeLine = () => ({
+      type: 'bytemdDividerLine',
+      data: {
+        hName: 'span',
+        hProperties: { className: ['bytemd-hr-text-line'] },
+      },
+      children: [],
+    })
+
+    return {
+      type: 'bytemdDividerText',
+      data: {
+        hName: 'div',
+        hProperties: { className: ['bytemd-hr-text'] },
+      },
+      children: [
+        makeLine(),
+        {
+          type: 'bytemdDividerLabel',
+          data: {
+            hName: 'span',
+            hProperties: { className: ['bytemd-hr-text-label'] },
+          },
+          children: content,
+        },
+        makeLine(),
+      ],
+      ...(paragraph.position ? { position: paragraph.position } : {}),
+    }
+  }
+
+  const transform = (parent: any) => {
+    if (!Array.isArray(parent?.children)) return
+    parent.children = parent.children.map((child: any) => {
+      if (child.type === 'paragraph') {
+        const divider = makeDivider(child)
+        if (divider) return divider
+      }
+      transform(child)
+      return child
+    })
+  }
+
+  return (tree: any) => transform(tree)
+}
+
+/**
+ * Inject a copy button into every `pre` under `root`, plus a code header
+ * carrying the fence language. Idempotent.
  */
 export function addCopyButtons(root: HTMLElement) {
   root.querySelectorAll('pre').forEach((pre) => {
+    const code = pre.querySelector('code')
+    const langClass = Array.from(code?.classList ?? []).find((name) =>
+      name.startsWith('language-'),
+    )
+    if (langClass) {
+      pre.dataset.codeLang = langClass.slice('language-'.length)
+    }
+    pre.classList.add('bytemd-code-block')
+
     if (pre.querySelector('.bytemd-copy-btn')) return
     const btn = document.createElement('button')
     btn.type = 'button'
@@ -644,6 +1081,8 @@ export function getProcessor({
     .use(remarkAccordion as any)
     .use(remarkTimeline as any)
     .use(remarkPinyin as any)
+    .use(remarkInlineStyle as any)
+    .use(remarkDividerText as any)
 
   plugins?.forEach(({ remark }) => {
     if (remark) processor = remark(processor)
@@ -659,7 +1098,9 @@ export function getProcessor({
     schema = sanitize(schema)
   }
 
-  processor = processor.use(rehypeSanitize, schema)
+  processor = processor
+    .use(rehypeSanitize, schema)
+    .use(rehypeInlineStyle as any)
 
   plugins?.forEach(({ rehype }) => {
     if (rehype) processor = rehype(processor)

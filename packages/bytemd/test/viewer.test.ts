@@ -1,8 +1,26 @@
 /// <reference types="vitest/globals" />
 import { Viewer } from '../src'
 import { addCopyButtons, copyCodeFromButton } from '../src/utils'
+import { testViewer } from './viewer-contract'
 import '@testing-library/jest-dom'
 import { render, act } from '@testing-library/svelte'
+
+describe('Svelte Viewer contract', () => {
+  testViewer(async (props) => {
+    const result = render(Viewer, props)
+    await act()
+    return {
+      root: result.container,
+      async update(nextProps) {
+        result.component.$set(nextProps)
+        await act()
+      },
+      async destroy() {
+        result.unmount()
+      },
+    }
+  })
+})
 
 function stripComment(str: string) {
   return str.replace(/<\!--.*?-->/g, '')
@@ -63,11 +81,16 @@ test('code block copy button helpers', async () => {
     configurable: true,
   })
 
-  document.body.innerHTML = `<div id="fixture"><pre><code>const a = 1</code></pre><pre><code>body { color: red; }</code></pre></div>`
+  document.body.innerHTML = `<div id="fixture"><pre><code class="language-ts">const a = 1</code></pre><pre><code>body { color: red; }</code></pre></div>`
   const fixture = document.querySelector('#fixture') as HTMLElement
 
   addCopyButtons(fixture)
   addCopyButtons(fixture) // idempotent
+
+  const pres = fixture.querySelectorAll('pre')
+  expect(pres[0].classList.contains('bytemd-code-block')).toBe(true)
+  expect(pres[0].getAttribute('data-code-lang')).toBe('ts')
+  expect(pres[1].getAttribute('data-code-lang')).toBe(null)
 
   const btns = fixture.querySelectorAll('pre .bytemd-copy-btn')
   expect(btns.length).toBe(2)

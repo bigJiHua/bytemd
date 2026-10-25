@@ -47,6 +47,7 @@
   --md-copy-color: #57606a;
   --md-copy-bg: rgba(255, 255, 255, 0.85);
   --md-copy-border: #d0d7de;
+  --md-code-header-bg: rgba(27, 31, 36, 0.04);
 
   --md-timeline-line: #e2e2e0;
   --md-timeline-doing-line: #eaf0f5;
@@ -240,6 +241,26 @@
     border-top: 1px solid var(--md-border);
   }
 
+  // ===== Divider with centered text =====
+  // Flex structure and side lines are injected by rehypeInlineStyle so the
+  // divider still works when a host does not import this optional theme.
+  .bytemd-hr-text {
+    margin: 1.6em 0;
+    font-size: 0.95em;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--md-muted);
+  }
+
+  .bytemd-hr-text-label img {
+    width: auto;
+    height: auto;
+    max-width: 8em;
+    max-height: 2em;
+    object-fit: contain;
+    vertical-align: middle;
+  }
+
   // ===== Tables =====
   table {
     display: block;
@@ -312,22 +333,60 @@
     border-radius: var(--md-radius);
   }
 
+  // The header is only reserved after the Viewer injects code tools, so a
+  // plain HTML <pre> rendered by a host without the Viewer keeps no empty bar.
+  pre.bytemd-code-block {
+    padding-top: 32px;
+  }
+
+  pre.bytemd-code-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: var(--md-code-header-bg);
+    border-bottom: 1px solid var(--md-border);
+    border-radius: calc(var(--md-radius) - 1px)
+      calc(var(--md-radius) - 1px) 0 0;
+    pointer-events: none;
+  }
+
+  pre.bytemd-code-block[data-code-lang]::after {
+    content: attr(data-code-lang);
+    position: absolute;
+    top: 0;
+    left: 14px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--md-muted);
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
   pre > code {
     display: block;
-    padding: 14px 16px;
+    padding: 12px 16px;
     overflow-x: auto;
     font-size: 0.875em;
   }
 
-  // The copy button is injected by the Viewer
+  // The copy button is injected by the Viewer, in the header on the right.
   pre .bytemd-copy-btn {
     position: absolute;
-    top: 8px;
+    top: 4px;
     right: 8px;
-    padding: 2px 10px;
+    height: 24px;
+    padding: 0 8px;
     font-family: inherit;
     font-size: 12px;
-    line-height: 18px;
+    line-height: 22px;
     color: var(--md-copy-color);
     background: var(--md-copy-bg);
     border: 1px solid var(--md-copy-border);
@@ -337,6 +396,11 @@
 
   pre .bytemd-copy-btn:hover {
     background: var(--md-bg-soft);
+  }
+
+  pre .bytemd-copy-btn:focus-visible {
+    outline: 2px solid var(--md-link);
+    outline-offset: 1px;
   }
 
   kbd {
@@ -711,7 +775,63 @@
     font-size: 14px;
     line-height: 22px;
     color: var(--md-timeline-todo-text);
+
+    > :first-child {
+      margin-top: 0;
+    }
+
+    > :last-child {
+      margin-bottom: 0;
+    }
   }
+}
+
+// Dark theme fallbacks. Hosts that expose --text-primary / --bg-soft /
+// --bg-card / --brand-500 automatically keep their own palette; the values
+// below only apply when the theme is used standalone in a .dark container.
+.dark .markdown-body {
+  --md-text: var(--text-primary, #e6edf3);
+  --md-muted: var(--text-secondary, #9ba7b4);
+  --md-border: var(--border-color, #3d444d);
+  --md-border-soft: var(--border-light, #30363d);
+  --md-border-strong: var(--border-strong, #3d444d);
+  --md-bg-soft: var(--bg-soft, #161b22);
+  --md-surface: var(--bg-card, #0d1117);
+  --md-link: var(--brand-500, #79c0ff);
+  --md-link-hover: var(--brand-600, #a5d6ff);
+  --md-quote-border: var(--border-strong, #3d444d);
+  --md-code-bg: var(--bg-soft, #161b22);
+  --md-inline-code-bg: rgba(110, 118, 129, 0.4);
+  --md-copy-color: #c9d1d9;
+  --md-copy-bg: rgba(30, 35, 42, 0.85);
+  --md-copy-border: #444c56;
+  --md-code-header-bg: rgba(255, 255, 255, 0.05);
+  --md-callout-default-bg: rgba(64, 158, 255, 0.14);
+  --md-callout-default-text: #a0cfff;
+  --md-callout-success-bg: rgba(103, 194, 58, 0.14);
+  --md-callout-success-text: #b3e19d;
+  --md-callout-warning-bg: rgba(230, 162, 60, 0.16);
+  --md-callout-warning-text: #f3d19e;
+  --md-callout-info-bg: rgba(144, 147, 153, 0.16);
+  --md-callout-info-text: #c8c9cc;
+  --md-callout-danger-bg: rgba(245, 108, 108, 0.16);
+  --md-callout-danger-text: #fab6b6;
+  --md-timeline-line: #3b4148;
+  --md-timeline-doing-line: rgba(120, 170, 255, 0.18);
+  --md-timeline-dashed: #3b4148;
+  --md-timeline-done: #69db7c;
+  --md-timeline-doing: #8ce99a;
+  --md-timeline-error: #ff8787;
+  --md-timeline-error-text: #ff8787;
+  --md-timeline-milestone: #ffc078;
+  --md-timeline-milestone-text: #ffc078;
+  --md-timeline-done-bg: rgba(64, 192, 87, 0.16);
+  --md-timeline-doing-bg: rgba(43, 122, 75, 0.22);
+  --md-timeline-todo-bg: rgba(144, 147, 153, 0.16);
+  --md-timeline-error-bg: rgba(245, 108, 108, 0.16);
+  --md-timeline-milestone-bg: rgba(230, 162, 60, 0.16);
+  --md-timeline-todo-text: #aab4be;
+  --md-timeline-hover: rgba(104, 211, 145, 0.12);
 }
 
 @keyframes bytemd-timeline-pulse {

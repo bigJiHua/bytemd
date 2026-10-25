@@ -28,6 +28,26 @@ tags:
 
 [bytemd]: https://github.com/bytedance/bytemd
 
+## 字号
+
+整行放大：
+
+[size=22]这一行使用 22px 字号[/size]
+
+局部放大：这段文字中的 [size=32]重点内容[/size] 会变大，其余保持默认。
+
+整段包裹时，内部仍支持 **加粗**、[链接](#字号) 与行内代码 `const answer = 42`：
+
+[size=20]这一段整体使用 20px，包含 **加粗**、[链接](#字号) 与行内代码 `const answer = 42`，验证行内节点混排。[/size]
+
+## 颜色
+
+字体颜色：[color=#e03131]红色重点[/color]、[color=#1971c2]蓝色说明[/color]、[color=#2f9e44]绿色结论[/color]。
+
+背景颜色：[bg=#fff3bf]黄色高亮[/bg]、[bg=#d3f9d8]绿色高亮[/bg]、[bg=#d0ebff]蓝色高亮[/bg]。
+
+组合使用：[size=24][color=#e03131][bg=#fff3bf]大字 + 红字 + 黄底[/bg][/color][/size]
+
 ## 引用与分割线
 
 > 普通引用块：Markdown 的基础引用样式。
@@ -35,6 +55,20 @@ tags:
 > > 嵌套引用：引用里还可以继续引用。
 
 ---
+
+带文字的分割线：
+
+---居中文字---
+
+标签内也支持 **加粗**、[链接](#引用与分割线) 与 `行内代码`：
+
+---**重点** 与 [链接](#引用与分割线)---
+
+图标分割线（图片自动限制到图标大小）：
+
+---![ByteMD 插件管线](./plugin.svg 'ByteMD 插件系统')---
+
+普通 `---` 仍是普通分割线。
 
 ## 列表
 
@@ -73,24 +107,69 @@ tags:
 
 行内代码：`const answer = 42`。
 
+### TypeScript
+
 ```ts
 import gfm from '@bytemd/plugin-gfm'
 import { Editor } from 'bytemd'
 
-const editor = new Editor({
-  target: document.body,
-  props: {
-    value: '',
-    plugins: [gfm()],
-  },
-})
+interface EditorOptions {
+  target: HTMLElement
+  value: string
+}
+
+export function mountEditor({ target, value }: EditorOptions) {
+  return new Editor({
+    target,
+    props: {
+      value,
+      plugins: [gfm()],
+    },
+  })
+}
+```
+
+### Bash
+
+```bash
+pnpm install
+pnpm --filter playground dev
+pnpm test
+pnpm build
+```
+
+### JSON
+
+```json
+{
+  "name": "bytemd",
+  "version": "1.22.0",
+  "features": ["markdown", "gfm", "math", "mermaid", "timeline"]
+}
+```
+
+### 超长行（验证横向滚动）
+
+```js
+const message = '这一行故意写得很长，用来验证代码块横向滚动时，右上角的复制按钮仍然固定在头部，不会压住任何一行代码。'
+const tools = ['accordion', 'pinyin', 'timeline', 'callout']
+console.log(message, tools.join(' / '))
+```
+
+### 无语言标记
+
+```
+plain text block
+  without a language label
 ```
 
 ## 图片
 
 ![ByteMD 插件管线](./plugin.svg 'ByteMD 插件系统')
 
-图片支持 Medium Zoom：点击图片可以放大查看。
+![ByteMD 插件管线（第二张）](./plugin.svg 'ByteMD 插件系统（第二张）')
+
+图片支持 Medium Zoom：点击图片可以放大查看，多张图片可在灯箱内左右切换。
 
 ## GFM 扩展
 

@@ -8,7 +8,7 @@
 
 ByteMD is a Markdown editor component built with Svelte. It could also be used in other libraries/frameworks such as React, Vue and Angular.
 
-Playground here: https://bytemd.js.org/playground/
+Playground: run `pnpm dev` at the repository root.
 
 ## Features
 
@@ -160,6 +160,8 @@ editor.$on('change', (e) => {
 | `sanitize` | `(schema: Schema) => Schema` | Sanitize strategy |
 | `remarkRehype` | [documentation](https://github.com/remarkjs/remark-rehype#options) | remark-rehype config options |
 
+Svelte, React, Vue 2 and Vue 3 Viewers all add a copy button and language label to code blocks after mounting and after content updates. This uses the shared `addCopyButtons` and `copyCodeFromButton` helpers exported by `bytemd`; plugins are optional. Import `bytemd/dist/markdown.css` for the button and code header styles.
+
 ### Editor
 
 `Editor` component also accepts the options of `Viewer` for preview. Besides that, there are some other options:
@@ -172,7 +174,9 @@ editor.$on('change', (e) => {
 | `editorConfig` | [documentation](https://codemirror.net/doc/manual.html#config) | CodeMirror editor config |
 | `locale` |  | i18n locale. Available locales could be found at `bytemd/locales`, default: use `en.json` |
 | `uploadImages` | `function` | Specify how to upload images. If set, the image icon will appear on the toolbar |
-| `maxLength` | `number` | Maximum length (number of characters) of value |
+| `maxLength` | `number` | Warning threshold for `value.length` (UTF-16 code units), default: `Infinity`. Shows an over-limit indicator; input and pasted text are accepted without truncation. |
+
+The editor emits the complete Markdown through `change`. The host must update `value` to keep the editor and preview in sync, and validate the length before saving if a hard limit is required. Preview rendering is debounced by `previewDebounce` (300 ms by default).
 
 ### Style customization
 
@@ -198,6 +202,76 @@ import 'bytemd/dist/markdown.css'
 ```
 
 You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css).
+
+## Extended Markdown syntax
+
+In addition to standard Markdown and the optional plugins, this fork includes eight built-in syntaxes. All of them are also exposed as toolbar actions and Help cheatsheets.
+
+### Callout
+
+```md
+> [warning] 警告内容
+```
+
+Supported types: `default`, `success`, `warning`, `info`, `danger` (English and Chinese aliases).
+
+### Accordion
+
+```md
++++ 默认收起
+内容
+++- 默认展开
+内容
+++ 默认收起
+内容
++++
+```
+
+The opening `+++ title` also creates the first item; end the group with a standalone `+++`.
+
+### Pinyin
+
+```md
+{拼 音|Ping Yin}
+```
+
+Each syllable is capped at 5 characters (for example `zhang`) so the annotation cannot overflow the base text.
+
+### Timeline
+
+```md
+::: timeline 时间线 :: [done] 2024-01-15 项目立项 完成需求评审 :: [doing] 2024-03-20 Alpha 版本 正在联调 :: [todo] 2024-06-01 正式上线 :: [error] 2024-07-01 严重回滚事件 :: [milestone] 2024-08-01 用户破万 :::
+```
+
+Supported statuses: `done`, `doing`, `todo`, `error`, `milestone`. Entries can also be separated by blank lines.
+
+### Font size
+
+```md
+[size=24]这一行按 24px 渲染[/size]
+
+局部放大：[size=32]重点内容[/size] 其余保持默认。
+```
+
+Sizes are integers from 8 to 96. The range keeps emphasis, links, inline code and other inline nodes intact, and is rendered as a span with an inline `font-size`, so it survives sanitization and HTML export. Use the **Font size** dropdown in the toolbar to wrap the selection, or the current line when nothing is selected. A range cannot span blank lines or separate block nodes yet.
+
+### Colors
+
+```md
+[color=#e03131]红色文字[/color]
+
+[bg=#fff3bf]黄色背景[/bg]
+```
+
+Both accept 3, 6 or 8 digit hex values. Use the **Font color** and **Background color** dropdowns in the toolbar to wrap the selection or the current line. Color ranges can be nested with font size and with each other.
+
+### Text divider
+
+```md
+---居中文字---
+```
+
+A single line of the form `---text---` renders a horizontal rule with the label centered between two lines. The label keeps inline Markdown (emphasis, links, code), inline style ranges and images. Images are capped to an icon-sized box (`max-height: 2em`, `max-width: 8em`) so a divider like `---![icon](./icon.svg)---` stays compact. Divider images are excluded from click-to-zoom; normal Markdown images keep their zoom behavior. A plain `---` stays a normal horizontal rule; empty or multi-line ranges are left untouched.
 
 ## Plugin System
 
@@ -341,6 +415,34 @@ export default function mathPlugin(): BytemdPlugin {
 ```
 
 Now we have completed a minimalist version of the plugin! For more details and references please check out the source code.
+
+## Local development
+
+This is a pnpm workspace with Svelte 3, TypeScript, CodeMirror 5 and the unified/remark/rehype rendering pipeline. Run these commands from the repository root:
+
+```sh
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm exec vitest run --threads false
+pnpm build
+pnpm dev
+```
+
+`postinstall` currently rewrites workspace `package.json` exports and repository metadata, root/package `tsconfig.json` files, plugin READMEs and the root README plugin table. It also copies licenses and formats files across the repository. Use `--ignore-scripts` to preserve local customizations during dependency installation, and inspect `git diff` if you run `pnpm postinstall` explicitly. Plugin README changes also need to be reflected in `scripts/plugin-template.md` if they should survive regeneration.
+
+The playground imports workspace package entries: the core JavaScript uses the generated `svelte/` entry under Svelte resolution, plugins use `dist/`, and theme styles use `dist/*.css`. Rebuild with `pnpm build` after source changes, then restart the dev server if it still shows cached output. Vitest aliases `bytemd` directly to source so the core and framework Viewer tests exercise current changes.
+
+`pnpm clean` uses `scripts/clean.mjs` to remove package build outputs on Windows, macOS and Linux without requiring Unix shell commands.
+
+When adding or changing a built-in syntax, keep these parts in sync:
+
+1. Parsing and sanitization in `packages/bytemd/src/utils.ts`, with rendering tests for valid, invalid and unsafe input.
+2. Toolbar actions in `editor.ts`, icons and the Help cheatsheet generated from those actions.
+3. Styles in `markdown.scss`, including dark theme tokens where appropriate.
+4. Locale keys and types in `locales/en.json`, `locales/zh_Hans.json` and `types.ts`; other locales fall back to English.
+5. Examples in `playground/src/text.md`, this README, `docs/index.md` and `packages/bytemd/README.md`.
+6. DOM behavior in the Svelte, React, Vue 2 and Vue 3 Viewers when the feature runs after rendering. Use the shared Viewer contract tests to verify mounting, updates and cleanup.
+
+Run the test suite, build all packages and smoke-test the playground after each batch. UMD/CJS format changes and major dependency migrations remain separate stages in the repository's `PLAN.md`.
 
 ## Contributors
 

@@ -192,6 +192,94 @@ export function getBuiltinActions(
     },
   })
 
+  const rangeStyleAction = (
+    kind: 'size' | 'color' | 'bg',
+    value: string,
+    title: string,
+    icon?: string
+  ): BytemdAction => {
+    const open = `[${kind}=${value}]`
+    const close = `[/${kind}]`
+    const existingRange = new RegExp(
+      `^\\[${kind}=[^\\]]+\\]([\\s\\S]*)\\[\\/${kind}\\]$`,
+      'i'
+    )
+
+    return {
+      title,
+      icon,
+      handler: {
+        type: 'action',
+        click({ editor, codemirror }) {
+          const selected = editor.getSelection()
+
+          if (selected) {
+            const existing = selected.match(existingRange)
+            editor.replaceSelection(
+              open + (existing ? existing[1] : selected) + close
+            )
+            editor.focus()
+            return
+          }
+
+          const from = editor.getCursor('from')
+          const lineText = editor.getLine(from.line) ?? ''
+          const prefix =
+            lineText.match(
+              /^(\s*(?:(?:#{1,6}|>|[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?)*)/
+            )?.[1] ?? ''
+          const content = lineText.slice(prefix.length)
+          const trailing = content.match(/\s*$/)?.[0] ?? ''
+          const body = content.slice(0, content.length - trailing.length)
+          const existing = body.match(existingRange)
+
+          if (body) {
+            const inner = existing ? existing[1] : body
+            const next = open + inner + close
+            editor.replaceRange(
+              next,
+              codemirror.Pos(from.line, prefix.length),
+              codemirror.Pos(from.line, prefix.length + body.length)
+            )
+            editor.setCursor(
+              codemirror.Pos(from.line, prefix.length + next.length)
+            )
+          } else {
+            editor.replaceRange(
+              open + close,
+              codemirror.Pos(from.line, prefix.length),
+              codemirror.Pos(from.line, prefix.length)
+            )
+            editor.setCursor(
+              codemirror.Pos(from.line, prefix.length + open.length)
+            )
+          }
+          editor.focus()
+        },
+      },
+    }
+  }
+
+  const colorSwatch = (color: string) =>
+    `<span class="bytemd-color-swatch" style="background-color:${color}"></span>`
+  const fontColors = [
+    '#e03131',
+    '#f08c00',
+    '#2f9e44',
+    '#1971c2',
+    '#7048e8',
+    '#495057',
+    '#000000',
+  ]
+  const bgColors = [
+    '#fff3bf',
+    '#d3f9d8',
+    '#d0ebff',
+    '#ffe3e3',
+    '#f3d9fa',
+    '#e9ecef',
+  ]
+
   const leftActions: BytemdAction[] = [
     {
       title: locale.headingText,
@@ -204,6 +292,39 @@ export function getBuiltinActions(
     headingAction(1),
     headingAction(2),
     headingAction(3),
+    {
+      title: locale.fontSize,
+      icon: icons.FontSize,
+      cheatsheet: `[size=20]${locale.textSample}[/size]`,
+      handler: {
+        type: 'dropdown',
+        actions: [12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map((size) =>
+          rangeStyleAction('size', String(size), `${size}px`)
+        ),
+      },
+    },
+    {
+      title: locale.fontColor,
+      icon: icons.ColorCard,
+      cheatsheet: `[color=#e03131]${locale.textSample}[/color]`,
+      handler: {
+        type: 'dropdown',
+        actions: fontColors.map((color) =>
+          rangeStyleAction('color', color, color, colorSwatch(color))
+        ),
+      },
+    },
+    {
+      title: locale.bgColor,
+      icon: icons.HighLight,
+      cheatsheet: `[bg=#fff3bf]${locale.textSample}[/bg]`,
+      handler: {
+        type: 'dropdown',
+        actions: bgColors.map((color) =>
+          rangeStyleAction('bg', color, color, colorSwatch(color))
+        ),
+      },
+    },
     {
       title: locale.bold,
       icon: icons.TextBold,
@@ -361,6 +482,23 @@ export function getBuiltinActions(
         },
       },
     },
+    {
+      title: locale.hrText,
+      icon: icons.DividingLineOne,
+      cheatsheet: `---${locale.hrTextSample}---`,
+      handler: {
+        type: 'action',
+        click({ editor, appendBlock, codemirror }) {
+          const text = locale.hrTextSample
+          const { line } = appendBlock(`---${text}---`)
+          editor.setSelection(
+            codemirror.Pos(line, 3),
+            codemirror.Pos(line, 3 + text.length)
+          )
+          editor.focus()
+        },
+      },
+    },
   ]
   const rightActions: BytemdAction[] = []
   plugins.forEach(({ actions }) => {
@@ -375,16 +513,16 @@ export function getBuiltinActions(
   // 魔改新增：提示块（五种直出）/ 手风琴 / 拼音 / 时间线；
   // 放在插件动作之后，保证自定义功能集中在工具栏末尾
   const calloutActions = [
-    { key: 'default', label: '默认', color: '#409eff' },
-    { key: 'success', label: '成功', color: '#67c23a' },
-    { key: 'warning', label: '警告', color: '#e6a23c' },
-    { key: 'info', label: '信息', color: '#909399' },
-    { key: 'danger', label: '重要', color: '#f56c6c' },
+    { key: 'default', label: locale.calloutDefault, color: '#409eff' },
+    { key: 'success', label: locale.calloutSuccess, color: '#67c23a' },
+    { key: 'warning', label: locale.calloutWarning, color: '#e6a23c' },
+    { key: 'info', label: locale.calloutInfo, color: '#909399' },
+    { key: 'danger', label: locale.calloutDanger, color: '#f56c6c' },
   ].map(
     ({ key, label, color }): BytemdAction => ({
       title: label,
       icon: `<span class="bytemd-callout-dot" style="background-color:${color}"></span>`,
-      cheatsheet: `>[${key}] ${label}提示`,
+      cheatsheet: `>[${key}] ${label}`,
       handler: {
         type: 'action',
         click(ctx: BytemdEditorContext) {
@@ -402,7 +540,7 @@ export function getBuiltinActions(
   leftActions.push(
     ...calloutActions,
     {
-      title: '手风琴',
+      title: locale.accordion,
       icon: icons.ClickToFold,
       cheatsheet: '+++ 标题↵内容↵+++',
       handler: {
@@ -415,7 +553,7 @@ export function getBuiltinActions(
       },
     },
     {
-      title: '拼音',
+      title: locale.pinyin,
       icon: icons.Translate,
       cheatsheet: '{汉字|Han Zi}',
       handler: {
@@ -446,7 +584,7 @@ export function getBuiltinActions(
       },
     },
     {
-      title: '时间线',
+      title: locale.timeline,
       icon: icons.VerticalTimeline,
       cheatsheet: '::: timeline 标题↵:: [done] 2024-01-01 事项↵:::',
       handler: {

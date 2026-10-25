@@ -68,6 +68,12 @@ $max-width: 800px;
       margin-left: auto;
     }
 
+    &-tabs {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
     &-tab {
       display: inline-block;
       cursor: pointer;
@@ -75,8 +81,13 @@ $max-width: 800px;
       padding-right: 8px;
       line-height: 24px;
       font-size: 14px;
+      border-radius: 4px;
       &-active {
         color: $primary;
+      }
+      &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: 1px;
       }
     }
 
@@ -103,8 +114,40 @@ $max-width: 800px;
       &:hover {
         background-color: $border-color;
       }
+      &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: 1px;
+      }
       &-active {
         color: $blue-500;
+      }
+    }
+
+    // On narrow layouts the top row only has tabs; all formatting actions
+    // remain reachable in this horizontal strip.
+    &-actions {
+      display: flex;
+      flex: 1 0 100%;
+      max-width: 100%;
+      margin-top: 4px;
+      padding-top: 4px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-top: 1px solid $border-color;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+
+      .bytemd-toolbar-icon {
+        flex: none;
+      }
+
+      &::-webkit-scrollbar {
+        height: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: $border-color;
+        border-radius: 2px;
       }
     }
 
@@ -131,6 +174,10 @@ $max-width: 800px;
       cursor: pointer;
       &:hover {
         background-color: $gray-100;
+      }
+      &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: -2px;
       }
 
       &-icon {
@@ -212,8 +259,13 @@ $max-width: 800px;
       top: 0;
       right: 0;
       cursor: pointer;
+      border-radius: 4px;
       &:hover {
         color: $primary;
+      }
+      &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: -2px;
       }
     }
     h2 {
@@ -263,10 +315,22 @@ $max-width: 800px;
       margin-bottom: 4px;
       font-size: 14px;
       line-height: 2;
+    }
+
+    &-button {
+      all: unset;
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
       cursor: pointer;
       text-overflow: ellipsis;
       overflow: hidden;
       white-space: nowrap;
+      border-radius: 4px;
+      &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: -2px;
+      }
     }
     &-active {
       color: $primary;
@@ -298,9 +362,14 @@ $max-width: 800px;
       span {
         margin-right: 16px;
         cursor: pointer;
+        border-radius: 3px;
       }
       span:hover {
         color: $primary;
+      }
+      span:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: 1px;
       }
       input {
         vertical-align: middle;
@@ -355,6 +424,13 @@ $max-width: 800px;
     &:hover::after {
       background-color: $primary;
     }
+
+    &:focus-visible {
+      outline: none;
+      &::after {
+        background-color: $primary;
+      }
+    }
   }
 
   &-dragging {
@@ -378,4 +454,16 @@ $max-width: 800px;
   height: 10px;
   border-radius: 50%;
   vertical-align: middle;
+}
+
+// Color picker swatch inside dropdown items.
+.bytemd-color-swatch {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 5px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 3px;
+  vertical-align: top;
 }

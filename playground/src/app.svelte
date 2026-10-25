@@ -181,10 +181,4 @@
   :global(.bytemd) {
     height: calc(100vh - 100px);
   }
-  :global(.medium-zoom-overlay) {
-    z-index: 100;
-  }
-  :global(.medium-zoom-image--opened) {
-    z-index: 101;
-  }
 </style>
