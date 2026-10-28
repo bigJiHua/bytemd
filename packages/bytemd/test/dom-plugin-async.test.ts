@@ -1,14 +1,14 @@
-import H from '../../plugin-highlight/node_modules/highlight.js'
 import highlight from '../../plugin-highlight/src'
-import K from '../../plugin-math/node_modules/katex'
 import math from '../../plugin-math/src'
-import { Viewer } from '../src'
+import Viewer from '../src/viewer.svelte'
 import { render, act, cleanup, waitFor } from '@testing-library/svelte'
+import H from 'highlight.js'
+import K from 'katex'
 
-vi.mock('../../plugin-math/node_modules/katex', () => ({
+vi.mock('katex', () => ({
   default: { render: vi.fn() },
 }))
-vi.mock('../../plugin-highlight/node_modules/highlight.js', () => ({
+vi.mock('highlight.js', () => ({
   default: { highlightElement: vi.fn() },
 }))
 
@@ -31,11 +31,11 @@ test('math failures preserve source and continue with other expressions', async 
   })
   await waitFor(() => expect(K.render).toHaveBeenCalledTimes(2))
   expect(
-    result.container.querySelector('code.language-math')?.textContent
+    result.container.querySelector('code.language-math')?.textContent,
   ).toBe('bad')
   expect(result.container.querySelector('.katex')?.textContent).toBe('good')
   expect(
-    result.container.querySelectorAll('.bytemd-plugin-error')
+    result.container.querySelectorAll('.bytemd-plugin-error'),
   ).toHaveLength(1)
   expect(result.container.querySelector('p p')).toBeNull()
 })
@@ -47,10 +47,10 @@ test('KaTeX parse-error output receives the same fallback feedback', async () =>
   })
   const result = render(Viewer, { value: '$invalid$', plugins: [math()] })
   await waitFor(() =>
-    expect(result.container.querySelector('[role="alert"]')).not.toBeNull()
+    expect(result.container.querySelector('[role="alert"]')).not.toBeNull(),
   )
   expect(
-    result.container.querySelector('code.language-math')?.textContent
+    result.container.querySelector('code.language-math')?.textContent,
   ).toBe('invalid')
   expect(result.container.querySelector('.katex-error')).toBeNull()
 })
@@ -62,16 +62,23 @@ test('math cleanup restores source for locale changes and discards late loading'
   const plugins = [math()]
   const result = render(Viewer, { value: '$original$', plugins })
   await waitFor(() => expect(K.render).toHaveBeenCalledOnce())
-  result.component.$set({ locale: { pluginError: '中文' } })
+  await result.rerender({ locale: { pluginError: '中文' } })
   await waitFor(() => expect(K.render).toHaveBeenCalledTimes(2))
   expect(vi.mocked(K.render).mock.calls.map(([source]) => source)).toEqual([
     'original',
     'original',
   ])
-  result.component.$set({ value: '$late$' })
+  await result.rerender({ value: '$late$' })
   result.unmount()
   await act()
-  expect(K.render).toHaveBeenCalledTimes(2)
+  // Svelte 5 flushes rerenders synchronously, so the late value lands before
+  // unmount; the preserved guarantee is that nothing renders after it.
+  expect(K.render).toHaveBeenCalledTimes(3)
+  expect(vi.mocked(K.render).mock.calls.map(([source]) => source)).toEqual([
+    'original',
+    'original',
+    'late',
+  ])
 })
 
 test('highlight waits for shared initialization before either Viewer renders', async () => {
@@ -80,14 +87,14 @@ test('highlight waits for shared initialization before either Viewer renders', a
     () =>
       new Promise<void>((resolve) => {
         finish = resolve
-      })
+      }),
   )
   const plugins = [highlight({ init })]
   const a = render(Viewer, { value: '```js\nfirst\n```', plugins })
   const b = render(
     Viewer,
     { value: '```js\nsecond\n```', plugins },
-    { container: document.body.appendChild(document.createElement('div')) }
+    { container: document.body.appendChild(document.createElement('div')) },
   )
   await waitFor(() => expect(init).toHaveBeenCalledOnce())
   expect(H.highlightElement).not.toHaveBeenCalled()
@@ -115,7 +122,7 @@ test('highlight restores partial mutations after failure and processes later blo
   expect(code.className).toBe('language-js')
   expect(code.dataset.highlighted).toBeUndefined()
   expect(
-    result.container.querySelector('[role="alert"]')?.textContent
+    result.container.querySelector('[role="alert"]')?.textContent,
   ).toContain('highlight.js')
 })
 
@@ -127,10 +134,10 @@ test('failed highlight initialization is reported and retried on the next render
   const plugins = [highlight({ init })]
   const result = render(Viewer, { value: '```js\nfirst\n```', plugins })
   await waitFor(() =>
-    expect(result.container.querySelector('[role="alert"]')).not.toBeNull()
+    expect(result.container.querySelector('[role="alert"]')).not.toBeNull(),
   )
   expect(H.highlightElement).not.toHaveBeenCalled()
-  result.component.$set({ value: '```js\nsecond\n```' })
+  await result.rerender({ value: '```js\nsecond\n```' })
   await waitFor(() => expect(H.highlightElement).toHaveBeenCalledOnce())
   expect(init).toHaveBeenCalledTimes(2)
   expect(result.container.querySelector('[role="alert"]')).toBeNull()
@@ -168,7 +175,7 @@ test.each(['math', 'highlight'])(
     }
     vi.mocked(K.render).mockImplementation((source, el) => work(source, el))
     vi.mocked(H.highlightElement).mockImplementation((el) =>
-      work(el.textContent ?? '', el)
+      work(el.textContent ?? '', el),
     )
     render(Viewer, {
       value:
@@ -179,7 +186,7 @@ test.each(['math', 'highlight'])(
     })
     await waitFor(() => expect(count).toBe(3))
     expect(atBrowserTask).toBe(1)
-  }
+  },
 )
 
 test.each(['math', 'highlight'])(
@@ -192,19 +199,17 @@ test.each(['math', 'highlight'])(
     const work = (source: string, el: HTMLElement) => {
       sources.push(source.trim())
       if (sources.length === 1)
-        setTimeout(
-          () =>
-            result.component.$set({
-              value: kind === 'math' ? '$fresh$' : '```js\nfresh\n```',
-            }),
-          0
-        )
+        setTimeout(() => {
+          void result.rerender({
+            value: kind === 'math' ? '$fresh$' : '```js\nfresh\n```',
+          })
+        }, 0)
       el.innerHTML = `<span>${source}</span>`
       time += 12
     }
     vi.mocked(K.render).mockImplementation((source, el) => work(source, el))
     vi.mocked(H.highlightElement).mockImplementation((el) =>
-      work(el.textContent ?? '', el)
+      work(el.textContent ?? '', el),
     )
     result = render(Viewer, {
       value:
@@ -215,10 +220,10 @@ test.each(['math', 'highlight'])(
     })
     await waitFor(() => expect(sources).toEqual(['one', 'fresh']))
     expect(
-      result.container.querySelector('.markdown-body')?.textContent
+      result.container.querySelector('.markdown-body')?.textContent,
     ).toContain('fresh')
     expect(result.container.querySelector('[role="alert"]')).toBeNull()
-  }
+  },
 )
 
 test('unmount cancels both suspended inline and display math jobs', async () => {
@@ -252,7 +257,7 @@ test.each(['math', 'highlight'])(
     vi.spyOn(performance, 'now').mockImplementation(() => time)
     let resume!: () => void
     const yieldTask = vi.fn(
-      () => new Promise<void>((resolve) => (resume = resolve))
+      () => new Promise<void>((resolve) => (resume = resolve)),
     )
     vi.stubGlobal('scheduler', { yield: yieldTask })
     let count = 0
@@ -263,7 +268,7 @@ test.each(['math', 'highlight'])(
     }
     vi.mocked(K.render).mockImplementation((source, el) => work(source, el))
     vi.mocked(H.highlightElement).mockImplementation((el) =>
-      work(el.textContent ?? '', el)
+      work(el.textContent ?? '', el),
     )
     const result = render(Viewer, {
       value:
@@ -278,5 +283,5 @@ test.each(['math', 'highlight'])(
     await act()
     expect(count).toBe(1)
     expect(result.container.querySelector('[role="alert"]')).toBeNull()
-  }
+  },
 )

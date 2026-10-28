@@ -238,7 +238,7 @@ const remarkAccordion = () => {
 
   const parseBlock = (
     children: any[],
-    index: number
+    index: number,
   ): { node: any; end: number } | null => {
     const startText = singleLineText(children[index])
     const start = startText && ACCORDION_START.exec(startText)
@@ -289,7 +289,7 @@ const remarkAccordion = () => {
     return {
       node: makeGroup(
         items,
-        startPos && endPos ? { start: startPos.start, end: endPos.end } : null
+        startPos && endPos ? { start: startPos.start, end: endPos.end } : null,
       ),
       end,
     }
@@ -348,7 +348,7 @@ const remarkTimeline = () => {
     status: string,
     date: string,
     title: string,
-    content: any[]
+    content: any[],
   ): any => ({
     type: 'bytemdTimelineItem',
     data: {
@@ -461,8 +461,8 @@ const remarkTimeline = () => {
           status,
           date,
           title,
-          desc ? [{ type: 'text', value: desc }] : []
-        )
+          desc ? [{ type: 'text', value: desc }] : [],
+        ),
       )
     }
 
@@ -512,7 +512,7 @@ const remarkTimeline = () => {
   // users can put blank lines (or richer Markdown) between them.
   const parseBlock = (
     children: any[],
-    index: number
+    index: number,
   ): { node: any; end: number } | null => {
     const startText = singleLineText(children[index])
     const start = startText && TIMELINE_START.exec(startText)
@@ -565,7 +565,7 @@ const remarkTimeline = () => {
       node: makeTimeline(
         start[1]?.trim() ?? '',
         items,
-        startPos && endPos ? { start: startPos.start, end: endPos.end } : null
+        startPos && endPos ? { start: startPos.start, end: endPos.end } : null,
       ),
       end,
     }
@@ -683,7 +683,7 @@ const remarkPinyin = () => {
       parts.push(
         base && pinyin
           ? makeAnnotation(base, pinyin)
-          : { type: 'text', value: match[0] }
+          : { type: 'text', value: match[0] },
       )
       last = re.lastIndex
     }
@@ -747,7 +747,7 @@ type InlineStyleKind = 'size' | 'color' | 'bg'
 const remarkInlineStyle = () => {
   const parseTag = (
     kind: string,
-    raw: string
+    raw: string,
   ): { kind: InlineStyleKind; value: string } | null => {
     if (kind === 'size') {
       const size = Number(raw.trim().replace(/px$/i, ''))
@@ -922,7 +922,7 @@ const rehypeInlineStyle = () => (tree: any) => {
         }
       } else if (INLINE_STYLE_HEX.test(value)) {
         declarations.push(
-          `${kind === 'color' ? 'color' : 'background-color'}:#${value}`
+          `${kind === 'color' ? 'color' : 'background-color'}:#${value}`,
         )
       }
     }
@@ -937,7 +937,7 @@ const rehypeInlineStyle = () => (tree: any) => {
         'min-width:24px',
         'height:1px',
         'background-color:currentColor',
-        'opacity:.25'
+        'opacity:.25',
       )
     }
     if (classNames.has('bytemd-hr-text-label')) {
@@ -945,7 +945,7 @@ const rehypeInlineStyle = () => (tree: any) => {
         'flex:0 1 auto',
         'min-width:0',
         'text-align:center',
-        'overflow-wrap:anywhere'
+        'overflow-wrap:anywhere',
       )
       styleLabelImages(node)
     }
@@ -984,7 +984,7 @@ const remarkDividerText = () => {
       children.some(
         (child: any) =>
           child.type === 'break' ||
-          (child.type === 'text' && /[\r\n]/.test(child.value))
+          (child.type === 'text' && /[\r\n]/.test(child.value)),
       )
     ) {
       return null
@@ -1109,7 +1109,7 @@ export function getProcessor({
   if (headingIds !== false) {
     processor = processor.use(
       rehypeHeadingIds as any,
-      typeof headingIds === 'object' ? headingIds : {}
+      typeof headingIds === 'object' ? headingIds : {},
     )
   }
 

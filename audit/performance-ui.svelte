@@ -32,7 +32,7 @@
   const results: any[] = []
   let resolveHighlight: (library: any) => void
   const highlightReady = new Promise<any>(
-    (resolve) => (resolveHighlight = resolve)
+    (resolve) => (resolveHighlight = resolve),
   )
   const plugins = {
     core: [],
@@ -62,7 +62,7 @@
         longTasks.push(
           ...list
             .getEntries()
-            .map(({ startTime, duration }) => ({ startTime, duration }))
+            .map(({ startTime, duration }) => ({ startTime, duration })),
         )
       })
     : undefined
@@ -157,7 +157,7 @@
           (error: any, result: any, resultFile: any) => {
             file.data.performanceProbe.transformMs = performance.now() - started
             done(error, result, resultFile)
-          }
+          },
         )
       }
       processor.stringify = function (tree: any, file: any) {
@@ -213,7 +213,7 @@
         }
         if (
           ['math', 'highlight', 'mermaid'].every(
-            (kind) => render[`${kind}ReadyMs`] !== undefined
+            (kind) => render[`${kind}ReadyMs`] !== undefined,
           )
         ) {
           render.pluginsSettleMs = elapsed
@@ -222,7 +222,7 @@
           current.endToEndMs = round(current.readyAt - current.started)
           if (current.lastKeyAt)
             current.lastKeyToPreviewMs = round(
-              current.readyAt - current.lastKeyAt
+              current.readyAt - current.lastKeyAt,
             )
           current.resolve()
           changes.disconnect()
@@ -247,7 +247,7 @@
         new Promise((_, reject) => {
           timer = setTimeout(
             () => reject(new Error('Preview readiness timeout (120s)')),
-            120000
+            120000,
           )
         }),
       ])
@@ -262,7 +262,7 @@
     const entries = longTasks.filter(
       (task) =>
         task.startTime + task.duration > current.started &&
-        task.startTime < ended
+        task.startTime < ended,
     )
     current.longTasks = entries.map((task) => ({
       startMs: round(task.startTime - current.started),
@@ -270,10 +270,10 @@
     }))
     current.longTaskCount = entries.length
     current.maxLongTaskMs = round(
-      Math.max(0, ...entries.map((task) => task.duration))
+      Math.max(0, ...entries.map((task) => task.duration)),
     )
     current.totalBlockingMs = round(
-      entries.reduce((sum, task) => sum + Math.max(0, task.duration - 50), 0)
+      entries.reduce((sum, task) => sum + Math.max(0, task.duration - 50), 0),
     )
     current.domNodes = sandbox.querySelectorAll('*').length
     current.previewNodes =
@@ -285,8 +285,8 @@
           Object.entries(render).map(([key, value]) => [
             key,
             typeof value === 'number' ? round(value) : value,
-          ])
-        )
+          ]),
+        ),
     )
     if (destroy) {
       const started = performance.now()
@@ -320,7 +320,7 @@
       },
     })
     component.$on('change', (event: any) =>
-      component.$set({ value: event.detail.value })
+      component.$set({ value: event.detail.value }),
     )
     if (sample) sample.mountCallMs = round(performance.now() - started)
   }
@@ -400,7 +400,7 @@
     status = '插件专项：准备 HTML（解析不计入插件样本）'
     try {
       const file = getProcessor({ plugins: plugins.enhanced }).processSync(
-        fixture.markdown
+        fixture.markdown,
       )
       // Warm the shared highlighter outside all measured samples.
       const warmBody = document.createElement('div')

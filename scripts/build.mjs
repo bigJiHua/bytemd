@@ -47,7 +47,7 @@ import { build } from 'vite'
           ...Object.keys({
             ...pkg.peerDependencies,
             ...pkg.dependencies,
-          })
+          }),
         )
       } else {
         const deps = Object.keys({ ...pkg.dependencies })
@@ -57,7 +57,7 @@ import { build } from 'vite'
               root,
               'node_modules',
               dep,
-              'package.json'
+              'package.json',
             )
 
             if (!fs.existsSync(pkgPath)) {
@@ -193,7 +193,7 @@ import { build } from 'vite'
           })
           await fs.writeFile(
             dest,
-            item.code.replace('<script lang="ts">', '<script>')
+            item.code.replace('<script lang="ts">', '<script>'),
           )
         }
       }
@@ -207,6 +207,20 @@ import { build } from 'vite'
         .split('\n')
         .filter((line) => !line.includes('index.scss'))
         .join('\n')
+      // The `svelte` export condition is only resolved by hosts that render
+      // Svelte templates, so it must expose the components under the documented
+      // names; imperative hosts use the dist/`import` entry, which keeps the
+      // `createClassComponent` bridges.
+      const classExport = "export { Editor, Viewer } from './legacy-compat';"
+      if (!js.includes(classExport))
+        throw new Error('svelte entry: class export line not found')
+      js = js.replace(
+        classExport,
+        [
+          "export { default as Editor } from './editor.svelte';",
+          "export { default as Viewer } from './viewer.svelte';",
+        ].join('\n'),
+      )
       await fs.writeFile('svelte/index.js', js)
 
       for (const [file, content] of [

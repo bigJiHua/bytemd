@@ -16,7 +16,7 @@ const summaries = args
     for (const result of data.results) {
       if (
         !['mount', 'api-edit', 'keyboard-burst', 'plugins-only'].includes(
-          result.operation
+          result.operation,
         )
       )
         continue
@@ -31,22 +31,22 @@ const summaries = args
       endToEndMs: median(samples.map((x) => x.endToEndMs)),
       firstFrameMs: median(samples.map((x) => x.firstFrameMs)),
       parseMs: median(
-        samples.map((x) => x.renders.reduce((n, r) => n + r.parseMs, 0))
+        samples.map((x) => x.renders.reduce((n, r) => n + r.parseMs, 0)),
       ),
       transformMs: median(
-        samples.map((x) => x.renders.reduce((n, r) => n + r.transformMs, 0))
+        samples.map((x) => x.renders.reduce((n, r) => n + r.transformMs, 0)),
       ),
       stringifyMs: median(
-        samples.map((x) => x.renders.reduce((n, r) => n + r.stringifyMs, 0))
+        samples.map((x) => x.renders.reduce((n, r) => n + r.stringifyMs, 0)),
       ),
       domAndCopyMs: median(
-        samples.map((x) => x.renders.reduce((n, r) => n + r.domAndCopyMs, 0))
+        samples.map((x) => x.renders.reduce((n, r) => n + r.domAndCopyMs, 0)),
       ),
       forcedLayoutMs: median(
-        samples.map((x) => x.renders.reduce((n, r) => n + r.forcedLayoutMs, 0))
+        samples.map((x) => x.renders.reduce((n, r) => n + r.forcedLayoutMs, 0)),
       ),
       pluginsSettleMs: median(
-        samples.map((x) => x.renders.at(-1)?.pluginsSettleMs)
+        samples.map((x) => x.renders.at(-1)?.pluginsSettleMs),
       ),
       maxLongTaskMs: median(samples.map((x) => x.maxLongTaskMs)),
       worstLongTaskMs: Math.max(...samples.map((x) => x.maxLongTaskMs)),
@@ -54,8 +54,8 @@ const summaries = args
       previewNodes: median(samples.map((x) => x.previewNodes)),
       heapReadyMiB: median(
         samples.map((x) =>
-          x.heapReady === null ? null : x.heapReady / 1024 ** 2
-        )
+          x.heapReady === null ? null : x.heapReady / 1024 ** 2,
+        ),
       ),
       errors: samples.flatMap((x) => x.errors),
       remainingDomAfterDestroy: samples

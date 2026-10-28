@@ -15,7 +15,7 @@ export function measureScrollMap(
   preview: HTMLElement,
   blocks: SourceBlock[],
   editHeight: number,
-  heightAtLine: (line: number) => number
+  heightAtLine: (line: number) => number,
 ): ScrollMap | undefined {
   const previewHeight = preview.scrollHeight - preview.clientHeight
   if (
@@ -61,7 +61,7 @@ export function measureScrollMap(
     const margin = parseFloat(view.getComputedStyle(node).scrollMarginTop) || 0
     const tocPosition = Math.min(
       1,
-      Math.max(0, right - (margin + padding + 1) / previewHeight)
+      Math.max(0, right - (margin + padding + 1) / previewHeight),
     )
     if (tocPosition > map.toc[map.toc.length - 1]) {
       map.toc.push(tocPosition)
@@ -92,7 +92,7 @@ export function measureScrollMap(
 export function mapScrollRatio(
   ratio: number,
   from: number[],
-  to: number[]
+  to: number[],
 ): number | undefined {
   if (!Number.isFinite(ratio) || from.length < 2) return
   const value = Math.min(1, Math.max(0, ratio))

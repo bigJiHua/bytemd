@@ -117,9 +117,9 @@ export function createAsyncEditor({
                   class: 'bytemd-async-retry',
                   onClick: retry,
                 },
-                props.retryText
+                props.retryText,
               ),
-            ]
+            ],
           )
         }
         return h(
@@ -135,7 +135,7 @@ export function createAsyncEditor({
                   : props.placeholderHeight,
             },
           },
-          slots.loading ? slots.loading() : [h('p', props.loadingText)]
+          slots.loading ? slots.loading() : [h('p', props.loadingText)],
         )
       }
     },

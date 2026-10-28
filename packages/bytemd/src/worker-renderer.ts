@@ -41,7 +41,7 @@ export function createWorkerRenderer(
     resolveOptions = defaultOptions,
     strategy = 'queue',
     timeoutMs = 60000,
-  }: WorkerRendererOptions = {}
+  }: WorkerRendererOptions = {},
 ): WorkerRenderer {
   if (!Number.isFinite(timeoutMs) || timeoutMs < 0)
     throw new Error('Invalid Worker timeout.')
@@ -98,14 +98,14 @@ export function createWorkerRenderer(
     if (timeoutMs)
       timer = setTimeout(
         () => fail(new Error('Worker rendering timed out.')),
-        timeoutMs
+        timeoutMs,
       )
   }
   const onError: EventListener = (event) => {
     event.preventDefault()
     fail(
       (event as ErrorEvent).error ??
-        new Error((event as ErrorEvent).message || 'Worker rendering failed.')
+        new Error((event as ErrorEvent).message || 'Worker rendering failed.'),
     )
   }
   const onMessage: EventListener = (event) => {

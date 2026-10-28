@@ -116,7 +116,7 @@ test('unmounting an open lightbox clears overlays without affecting another view
   await new Promise((resolve) => setTimeout(resolve, 100))
   a.querySelector('img')!.click()
   expect(
-    document.querySelector('[role="dialog"]')?.getAttribute('aria-label')
+    document.querySelector('[role="dialog"]')?.getAttribute('aria-label'),
   ).toBe('A')
   stopA?.()
   expect(document.querySelector('.medium-zoom-overlay')).toBeNull()
@@ -124,15 +124,15 @@ test('unmounting an open lightbox clears overlays without affecting another view
   expect(document.querySelector('[role="dialog"]')).toBeNull()
   expect(document.body.style.overflow).toBe('')
   expect(b.querySelector('img')?.classList.contains('medium-zoom-image')).toBe(
-    true
+    true,
   )
   b.querySelector('img')!.click()
   expect(
-    document.querySelector('[role="dialog"]')?.getAttribute('aria-label')
+    document.querySelector('[role="dialog"]')?.getAttribute('aria-label'),
   ).toBe('B')
   expect(
     (document.querySelector('.medium-zoom-overlay') as HTMLElement).style
-      .background
+      .background,
   ).toBe('rgb(1, 2, 3)')
   stopB?.()
   expect(document.querySelector('.medium-zoom-overlay')).toBeNull()
@@ -197,18 +197,18 @@ test('sharing one mediumZoom plugin keeps viewer cleanup isolated', async () => 
   const stopB = plugin.viewerEffect!({ markdownBody: b, file })
   await new Promise((resolve) => setTimeout(resolve, 100))
   expect(a.querySelector('img')?.classList.contains('medium-zoom-image')).toBe(
-    true
+    true,
   )
   expect(b.querySelector('img')?.classList.contains('medium-zoom-image')).toBe(
-    true
+    true,
   )
   try {
     stopA?.()
     expect(
-      b.querySelector('img')?.classList.contains('medium-zoom-image')
+      b.querySelector('img')?.classList.contains('medium-zoom-image'),
     ).toBe(true)
     expect(
-      a.querySelector('img')?.classList.contains('medium-zoom-image')
+      a.querySelector('img')?.classList.contains('medium-zoom-image'),
     ).toBe(false)
   } finally {
     stopB?.()

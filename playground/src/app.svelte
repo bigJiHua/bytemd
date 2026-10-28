@@ -1,4 +1,8 @@
 <script lang="ts">
+  // ByteMD is imported from source so it compiles with this playground's Svelte
+  // runtime. `bytemd/dist` bundles its own runtime copy, and components
+  // rendered by a host runtime never run that copy's `init_operations`.
+  import { EditorComponent as Editor } from '../../packages/bytemd/src'
   import markdownText from './text.md?raw'
   import breaks from '@bytemd/plugin-breaks'
   import frontmatter from '@bytemd/plugin-frontmatter'
@@ -8,7 +12,6 @@
   import math from '@bytemd/plugin-math'
   import mediumZoom from '@bytemd/plugin-medium-zoom'
   import mermaid from '@bytemd/plugin-mermaid'
-  import { Editor } from 'bytemd'
   import 'bytemd/dist/index.css'
   import 'bytemd/dist/markdown.css'
   import hljsDarkUrl from 'highlight.js/styles/github-dark.css?url'
@@ -19,30 +22,33 @@
   import 'katex/dist/katex.css'
 
   function stripPrefixes(obj: Record<string, any>) {
-    return Object.entries(obj).reduce((p, [key, value]) => {
-      p[key.split('/').slice(-1)[0].replace('.json', '')] = value
-      // console.log(p)
-      return p
-    }, {} as Record<string, any>)
+    return Object.entries(obj).reduce(
+      (p, [key, value]) => {
+        p[key.split('/').slice(-1)[0].replace('.json', '')] = value
+        // console.log(p)
+        return p
+      },
+      {} as Record<string, any>,
+    )
   }
 
   const locales = stripPrefixes(
-    import.meta.glob('/node_modules/bytemd/locales/*.json', { eager: true })
+    import.meta.glob('/node_modules/bytemd/locales/*.json', { eager: true }),
   )
   const gfmLocales = stripPrefixes(
     import.meta.glob('/node_modules/@bytemd/plugin-gfm/locales/*.json', {
       eager: true,
-    })
+    }),
   )
   const mathLocales = stripPrefixes(
     import.meta.glob('/node_modules/@bytemd/plugin-math/locales/*.json', {
       eager: true,
-    })
+    }),
   )
   const mermaidLocales = stripPrefixes(
     import.meta.glob('/node_modules/@bytemd/plugin-mermaid/locales/*.json', {
       eager: true,
-    })
+    }),
   )
 
   let value = markdownText
@@ -146,7 +152,7 @@
           return {
             url: 'https://picsum.photos/300',
           }
-        })
+        }),
       )
     }}
     on:change={(e) => {
@@ -193,7 +199,8 @@
   :global(body) {
     margin: 0 10px;
     font-size: 14px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
       sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
   }
   :global(html.dark body) {

@@ -1,5 +1,5 @@
-import { Editor } from '../src'
 import { createCodeMirror } from '../src/editor'
+import Editor from '../src/editor.svelte'
 import { render, cleanup, act } from '@testing-library/svelte'
 
 afterEach(cleanup)
@@ -13,12 +13,12 @@ test('layout containment is opt-in and toggles without replacing the document or
   editor.setSelection({ line: 0, ch: 2 }, { line: 0, ch: 5 })
   const selection = editor.listSelections()
   expect(mounted.container.querySelector('.bytemd-body-contained')).toBeNull()
-  mounted.component.$set({ layoutContainment: true })
+  await mounted.rerender({ layoutContainment: true })
   await act()
   expect(
-    mounted.container.querySelector('.bytemd-body-contained')
+    mounted.container.querySelector('.bytemd-body-contained'),
   ).not.toBeNull()
-  mounted.component.$set({ layoutContainment: false })
+  await mounted.rerender({ layoutContainment: false })
   await act()
   expect(mounted.container.querySelector('.bytemd-body-contained')).toBeNull()
   expect(editor.getDoc()).toBe(doc)
@@ -55,8 +55,8 @@ test('one initialized CodeMirror runtime serves independent editor documents', a
     createCodeMirror()(target, { value: 'Third independent document' })
     expect(
       addListener.mock.calls.filter(
-        ([event]) => event === 'resize' || event === 'blur'
-      )
+        ([event]) => event === 'resize' || event === 'blur',
+      ),
     ).toHaveLength(0)
   } finally {
     target.remove()
@@ -90,7 +90,7 @@ test('destroying a focused editor cancels its repeating cursor timer immediately
       .CodeMirror
     editor.getInputField().focus()
     expect(timers.size).toBeGreaterThan(0)
-    mounted.component.$destroy()
+    mounted.unmount()
     expect(timers.size).toBe(0)
   } finally {
     intervalSpy.mockRestore()
@@ -130,7 +130,7 @@ test.each(['selection', 'drag'])(
             bottom: 16,
             width: 8,
             height: 16,
-          } as DOMRect)
+          }) as DOMRect
         range.getClientRects = () => [] as any
         return range
       })
@@ -177,14 +177,14 @@ test.each(['selection', 'drag'])(
       const value = editor.getValue()
       const change = vi.fn()
       editor.on('change', change)
-      mounted.component.$destroy()
+      mounted.unmount()
       expect(editor.state[state]).toBe(false)
       expect(editor.getWrapperElement().isConnected).toBe(false)
       for (const [type, listener] of ownListeners)
         expect(
           remove.mock.calls.some(
-            ([event, callback]) => event === type && callback === listener
-          )
+            ([event, callback]) => event === type && callback === listener,
+          ),
         ).toBe(true)
       expect(peerEditor.state.selectingText).toBe(peerCancel)
       expect(peerEditor.getDoc()).toBe(peerDoc)
@@ -199,8 +199,8 @@ test.each(['selection', 'drag'])(
       editor.off('change', change)
       focus.mockRestore()
     } finally {
-      mounted.component.$destroy()
-      peer.component.$destroy()
+      mounted.unmount()
+      peer.unmount()
       rangeSpy.mockRestore()
       windowFocus.mockRestore()
       add.mockRestore()
@@ -208,5 +208,5 @@ test.each(['selection', 'drag'])(
       height.mockRestore()
       bounds.mockRestore()
     }
-  }
+  },
 )

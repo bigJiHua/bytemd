@@ -32,7 +32,7 @@ async function getWsUrl(debugPort, pageUrl) {
             const targets = JSON.parse(data)
             const page = targets.find(
               (t) =>
-                t.type === 'page' && (!pageUrl || t.url.startsWith(pageUrl))
+                t.type === 'page' && (!pageUrl || t.url.startsWith(pageUrl)),
             )
             if (page?.webSocketDebuggerUrl) resolve(page.webSocketDebuggerUrl)
             else reject(new CDPConnectionError('No page target found'))
@@ -40,10 +40,10 @@ async function getWsUrl(debugPort, pageUrl) {
             reject(new CDPConnectionError('Failed to parse /json/list'))
           }
         })
-      }
+      },
     ).on('error', reject)
     req.on('timeout', () =>
-      req.destroy(new CDPConnectionError('Debug endpoint request timed out'))
+      req.destroy(new CDPConnectionError('Debug endpoint request timed out')),
     )
   })
 }

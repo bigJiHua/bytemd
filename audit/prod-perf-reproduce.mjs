@@ -21,7 +21,7 @@ async function command(executable, args) {
     processHandle.on('exit', (code) =>
       code === 0
         ? resolve()
-        : reject(new Error(`Command exited ${code}: ${executable}`))
+        : reject(new Error(`Command exited ${code}: ${executable}`)),
     )
   })
 }
@@ -36,7 +36,7 @@ export async function reproduce(options = {}) {
     auditDir = join(
       root,
       'audit',
-      `prod-perf-run-${new Date().toISOString().replace(/[:.]/g, '-')}`
+      `prod-perf-run-${new Date().toISOString().replace(/[:.]/g, '-')}`,
     ),
   } = options
   const report = {
@@ -78,7 +78,7 @@ export async function reproduce(options = {}) {
         String(previewPort),
         '--strictPort',
       ],
-      { cwd: root, stdio: 'ignore' }
+      { cwd: root, stdio: 'ignore' },
     )
     let startupError
     preview.on('error', (error) => {

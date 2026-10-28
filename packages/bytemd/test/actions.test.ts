@@ -131,7 +131,7 @@ test('color actions wrap the selection or the current line', () => {
   const bgColor = action(en.bgColor)
   if (bgColor?.handler?.type !== 'dropdown') throw new Error('not a dropdown')
   const yellow = bgColor.handler.actions.find(
-    (item) => item.title === '#fff3bf'
+    (item) => item.title === '#fff3bf',
   )
   if (yellow?.handler?.type !== 'action') throw new Error('not an action')
   yellow.handler.click(line.context as any)
@@ -235,7 +235,7 @@ test('timeline action inserts a template and selects its title', () => {
   const { appendBlock, selections } = click(en.timeline)
 
   expect(appendBlock).toHaveBeenCalledWith(
-    '::: timeline 时间线\n:: [done] 2024-01-01 事项\n:::'
+    '::: timeline 时间线\n:: [done] 2024-01-01 事项\n:::',
   )
   expect(selections[0]).toEqual([
     { line: 0, ch: 13 },

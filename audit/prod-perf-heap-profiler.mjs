@@ -16,7 +16,7 @@ export class HeapProfilerController {
         'HeapProfiler.addHeapSnapshotChunk',
         (params) => {
           chunks.push(params.chunk)
-        }
+        },
       )
       session
         .send('HeapProfiler.takeHeapSnapshot', { reportProgress: false })

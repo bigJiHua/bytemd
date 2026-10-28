@@ -1,6 +1,6 @@
 export function debounce<Args extends unknown[]>(
   fn: (...args: Args) => void,
-  wait: number
+  wait: number,
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -10,17 +10,20 @@ export function debounce<Args extends unknown[]>(
   }
   const scheduled = (...args: Args) => {
     cancel()
-    timer = setTimeout(() => {
-      timer = undefined
-      fn(...args)
-    }, Math.max(0, wait))
+    timer = setTimeout(
+      () => {
+        timer = undefined
+        fn(...args)
+      },
+      Math.max(0, wait),
+    )
   }
   return Object.assign(scheduled, { cancel })
 }
 
 export function throttle<Args extends unknown[]>(
   fn: (...args: Args) => void,
-  wait: number
+  wait: number,
 ) {
   let last = 0
   let timer: ReturnType<typeof setTimeout> | undefined

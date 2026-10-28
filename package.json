@@ -19,8 +19,9 @@
     "test:scripts:coverage": "c8 --all --include=\"scripts/generate.mjs\" --include=\"audit/prod-perf-cdp-client.mjs\" --include=\"audit/prod-perf-archiver.mjs\" --include=\"audit/prod-perf-summarize.mjs\" --reports-dir=audit/prod-perf-script-coverage --reporter=text --reporter=json-summary --check-coverage --lines=80 --statements=80 --branches=80 --functions=75 node --test scripts/test/generate.test.mjs scripts/test/prod-perf.test.mjs scripts/test/hygiene.test.mjs"
   },
   "prettier": {
-    "pluginSearchDirs": [
-      "."
+    "plugins": [
+      "prettier-plugin-svelte",
+      "@trivago/prettier-plugin-sort-imports"
     ],
     "proseWrap": "never",
     "semi": false,
@@ -28,10 +29,10 @@
   },
   "devDependencies": {
     "@icon-park/svg": "^1.4.2",
-    "@sveltejs/vite-plugin-svelte": "2.5.3",
+    "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/svelte": "^3.2.2",
-    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
+    "@testing-library/svelte": "^5.4.2",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/fs-extra": "^11.0.1",
     "@types/lodash-es": "^4.17.7",
     "@types/resolve": "^1.20.2",
@@ -44,14 +45,14 @@
     "jsdom": "^24.1.3",
     "lodash-es": "^4.17.21",
     "mustache": "^4.2.0",
-    "prettier": "^2.8.7",
-    "prettier-plugin-svelte": "^2.10.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-svelte": "^3.3.3",
     "resolve": "^1.22.1",
     "sass": "^1.60.0",
     "sort-package-json": "^2.4.1",
-    "svelte": "^3.59.2",
-    "svelte-preprocess": "^5.0.3",
-    "svelte2tsx": "^0.6.10",
+    "svelte": "^5.0.0",
+    "svelte-preprocess": "^6.0.5",
+    "svelte2tsx": "^0.7.62",
     "svgo": "^3.0.2",
     "typescript": "^5.0.2",
     "vite": "^5.4.20",

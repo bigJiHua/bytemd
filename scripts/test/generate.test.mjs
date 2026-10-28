@@ -18,7 +18,7 @@ async function fixture(t) {
     await fs.mkdir(path.dirname(destination), { recursive: true })
     await fs.writeFile(
       destination,
-      typeof value === 'string' ? value : JSON.stringify(value)
+      typeof value === 'string' ? value : JSON.stringify(value),
     )
   }
   await write('LICENSE', 'MIT license fixture\n')
@@ -29,7 +29,7 @@ async function fixture(t) {
   })
   await write(
     'README.md',
-    `custom introduction\n\n${region}\n\ncustom footer\n`
+    `custom introduction\n\n${region}\n\ncustom footer\n`,
   )
   await write('docs/index.md', `custom docs\n\n${region}\n`)
   await write('packages/bytemd/README.md', `custom core docs\n\n${region}\n`)
@@ -64,7 +64,10 @@ async function fixture(t) {
   })
   await write(
     'scripts/plugin-template.md',
-    await fs.readFile(new URL('../plugin-template.md', import.meta.url), 'utf8')
+    await fs.readFile(
+      new URL('../plugin-template.md', import.meta.url),
+      'utf8',
+    ),
   )
   return {
     root,
@@ -97,9 +100,9 @@ test('generation is read-only while planning and preserves custom config/exports
   const references = JSON.parse(await f.read('tsconfig.json')).references
   assert.equal(
     references.filter(
-      (ref) => ref.path.replace(/\\/g, '/') === 'packages/bytemd'
+      (ref) => ref.path.replace(/\\/g, '/') === 'packages/bytemd',
     ).length,
-    1
+    1,
   )
   assert(references.some((ref) => ref.path === 'custom/project'))
   assert(references.some((ref) => ref.path === 'packages/plugin-math'))
@@ -114,11 +117,11 @@ test('new plugin README/default config/license are created and a second run chan
   assert.match(readme, /<!-- bytemd:usage:start -->/)
   assert.equal(
     await f.read('packages/plugin-math/LICENSE'),
-    'MIT license fixture\n'
+    'MIT license fixture\n',
   )
   assert.deepEqual(
     JSON.parse(await f.read('packages/plugin-math/tsconfig.json')).references,
-    [{ path: '../bytemd' }]
+    [{ path: '../bytemd' }],
   )
   const second = await planGeneration(f.root)
   assert.deepEqual(second.changes, [])
@@ -139,7 +142,7 @@ test('unmarked plugin docs and manual text outside generated regions survive upd
   assert.match(root, /Support math formula/)
   await f.write(
     'packages/plugin-math/README.md',
-    'custom intro\n\n<!-- bytemd:usage:start -->\n\nold usage\n\n<!-- bytemd:usage:end -->\n\ncustom async failures\n'
+    'custom intro\n\n<!-- bytemd:usage:start -->\n\nold usage\n\n<!-- bytemd:usage:end -->\n\ncustom async failures\n',
   )
   await applyGeneration(await planGeneration(f.root))
   const marked = await f.read('packages/plugin-math/README.md')
@@ -217,7 +220,7 @@ test('invalid exports or markers reject the entire plan without writing earlier 
     })
     await assert.rejects(
       planGeneration(f.root),
-      /non-object exports|conditional root exports/
+      /non-object exports|conditional root exports/,
     )
     assert.equal(await f.read('packages/bytemd/package.json'), before)
   }
@@ -226,7 +229,7 @@ test('invalid exports or markers reject the entire plan without writing earlier 
   })
   await f.write(
     'README.md',
-    '<!-- bytemd:plugins:start -->\nmissing end marker'
+    '<!-- bytemd:plugins:start -->\nmissing end marker',
   )
   await assert.rejects(planGeneration(f.root), /Invalid or duplicate/)
   assert.equal(await f.read('packages/bytemd/package.json'), before)
@@ -245,7 +248,7 @@ test('edits made after planning are detected before any writes', async (t) => {
 test('region replacement keeps CRLF and rejects duplicate/reversed/orphan markers', () => {
   const source = `intro\r\n\r\n${region.replace(
     /\n/g,
-    '\r\n'
+    '\r\n',
   )}\r\n\r\nfooter\r\n`
   const result = replaceRegion(source, 'plugins', 'new\nrows')
   assert.equal(result.replace(/\r\n/g, '').includes('\n'), false)
@@ -258,14 +261,14 @@ test('region replacement keeps CRLF and rejects duplicate/reversed/orphan marker
   ])
     assert.throws(
       () => replaceRegion(malformed, 'plugins', 'x'),
-      /Invalid or duplicate/
+      /Invalid or duplicate/,
     )
 })
 
 test('a linked documentation parent cannot redirect generation outside the workspace', async (t) => {
   const f = await fixture(t)
   const outside = await fs.mkdtemp(
-    path.join(os.tmpdir(), 'bytemd-generation-outside-')
+    path.join(os.tmpdir(), 'bytemd-generation-outside-'),
   )
   t.after(() => fs.rm(outside, { recursive: true }))
   await fs.writeFile(path.join(outside, 'index.md'), region)
@@ -275,7 +278,7 @@ test('a linked documentation parent cannot redirect generation outside the works
   await assert.rejects(planGeneration(f.root), /outside workspace/)
   assert.equal(
     await fs.readFile(path.join(outside, 'index.md'), 'utf8'),
-    region
+    region,
   )
   assert.equal(await f.read('packages/bytemd/package.json'), before)
 })

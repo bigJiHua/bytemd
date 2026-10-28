@@ -22,7 +22,7 @@ test('React forwards layout containment and restores the default when the prop i
     })
     expect(container.querySelector('.bytemd-body-contained')).toBeNull()
     expect((container.querySelector('.CodeMirror') as any).CodeMirror).toBe(
-      editor
+      editor,
     )
     expect(editor.getValue()).toBe('Document')
   } finally {

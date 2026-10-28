@@ -125,13 +125,24 @@
 - [ ] 剩余 Vite/Vitest/Tinypool 公告须独立迁移；外部消费者的 ESM 传递依赖还需独立安装验收，仓库 overrides 不随包发布。
 - [x] 保持发布格式裁剪与大版本迁移不在本批混入；安全公告按实际依赖路径和影响范围记录。
 
-#### 第十批：发布格式与大版本迁移 — 2026-10-28（格式裁剪 + unified 11 + 工具链 critical 清零完成；vite 6+/svelte 5/CM6 独立评估待续）
+#### 第十批：发布格式与大版本迁移 — 2026-10-28（格式裁剪 + unified 11 + 工具链 critical 清零 + Svelte 5 完成；vite 6+/CM6 独立评估待续）
 
 - [x] 发布格式裁剪为 ESM/CJS：构建移除 UMD（mermaid 插件 3.4MB UMD 不再产出），全部包删除 jsdelivr/unpkg 字段（CDN 走 jsDelivr /+esm），bundlewatch 改盯 bytemd ESM+CSS 并设 maxSize（本地实测 PASS），生成器按 locales 目录存在性写 `./locales/*` 导出（修复 9 个包声明不存在子路径的问题），legacy-browser 示例改写为无打包器 ESM 用法，README/docs 传统浏览器章节同步。
 - [x] unified 11 生态迁移：unified 11 / remark-parse 11 / remark-rehype 11 / rehype-raw 7 / rehype-sanitize 6 / rehype-stringify 10 / hast-util-sanitize 5 / vfile 6 / remark-gfm 4 / remark-math 6 / rehype-katex 7 / remark-frontmatter 5 / remark-breaks 4 / remark-gemoji 8 / rehype-highlight 7。关键适配：sanitize schema 改 structuredClone（JSON 克隆会破坏 v5 新增的 code language-\* 正则白名单）；plugin-math 选择器适配 remark-math 6 的 `code.language-math` DOM；math-ssr 保留响亮失败契约（rehype-katex 7 把失败降级为 vfile message，插件检测后重新抛出）；highlight-ssr 移除 v7 已删除的 ignoreMissing；bytemd 补 processor/worker 根转发文件（node10 TS 解析）。
 - [x] 工具链迁移：Vite 5.4 + Vitest 3.2（threads 池 + testTimeout 20s 保持重套件稳定）+ jsdom 24 + `@vitejs/plugin-vue2` 替换停止维护的 vite-plugin-vue2 + `@vitejs/plugin-vue` 5 + tinypool 2.1.2 override + vitest server.deps.inline 保留 katex/highlight.js 的 vi.mock 能力。Svelte 3 保留（vite-plugin-svelte 2.5.3，peer vite 4 警告为已知折衷）。
 - [x] 安全结果：完整开发图 **0 critical / 5 high / 25 moderate / 4 low**（原 3 critical / 17 high）；`--prod` 图 **18 条（0 critical / 1 high / 14 moderate / 3 low）**（原 22 条 3 high）。残留：vite high（需 6.4.4+）、svgo high（需 4.x）、katex low（需 0.18.2）、deepmerge low（无修补）。
-- [ ] Vite 6/7、Svelte 5、CodeMirror 6 仍为独立评估项目：vite-plugin-svelte 3+ 需要 Svelte 4，是升级 Svelte 前无法绕过的约束。
+- [x] Svelte 5 迁移：svelte 5.57.3 + @sveltejs/vite-plugin-svelte 4.0.4 + @testing-library/svelte 5.4.2 + svelte2tsx 0.7.62 + svelte-preprocess 6.0.5 + prettier 3（含 prettier-plugin-svelte 3、sort-imports 5）。关键适配：
+  - 新增 `src/legacy-compat.ts` 用 `createClassComponent` 桥接 `new/$set/$on/$destroy`，react/vue/vue-next 三个包装无需改调用面；`$on` 事件只在 compat 实例上派发，测试改走该实例。
+  - 导出 `EditorComponent/ViewerComponent` 原始组件，供 Svelte 宿主模板渲染（Svelte 5 模板无法实例化 class）。
+  - 移除 5 个组件的 `svelte:options immutable`（legacy 模式下与 compat props 代理冲突）；`viewer.svelte` 的 `const $` 局部变量与编译产物内部命名冲突，改名。
+  - Svelte 5 的 afterUpdate 早于模板 DOM 生效，按钮/插件效果改为 `tick()` 后应用；`onDestroy` 在 DOM 移除后执行，光标计时器改为直接清理 CodeMirror blinker 句柄。
+  - 组件内可变的 `let`/`const` 会被 legacy 编译器响应化，回调里赋值会重跑 beforeUpdate 清理并清空刚绑定的效果；改为 `context="module"` 的 WeakMap 按宿主保存状态。
+  - render-controller 增加同请求去重（粗粒度 props 代理会重复触发渲染并丢弃在途结果）。
+  - 测试侧：RTL 5 的 `rerender()/unmount()` 取代 `$set/$destroy`；vitest alias 固定 katex/highlight.js 单模块 id，恢复 `vi.mock` 能力；tsconfig 加 `verbatimModuleSyntax`（否则模板专用导入被 TS 擦除）。
+  - playground 入口改 `mount()`（`new App()` 跳过 `init_operations`，模板辅助函数全部 undefined），并改为从源码编译 ByteMD 以共享同一 Svelte 运行时。
+- [x] 本轮验收：核心 26 文件 230/230、脚本 26/26 + 覆盖率门槛（85.28%）、完整构建、generate:check、style、bundlewatch（index.mjs 63.98KB gzip）、无头 Chrome 实测 playground（编辑器/37 工具栏/28 标题/KaTeX×2/mermaid/高亮×5/复制按钮×6/交互重渲染/暗色 #0d1117，仅 favicon 404）。
+- [x] 评审修复（2026-10-28）：svelte 条件入口改导出 Editor/Viewer 组件（dist 入口保留兼容类）；Viewer 的 beforeUpdate 仅在 file/plugins/locale 变化时清理，恢复与 tick 重绑的配对；render-controller 改为插件数组内容快照比较、对象参数不再走快捷路径；删除 viewer 未使用的 lifecycle。核心 26 文件 231/231、脚本 26/26、完整构建、style、generate:check 通过；真实 Svelte 宿主与 Svelte 3 的 examples/svelte 未实测。
+- [ ] Vite 6/7、CodeMirror 6 仍为独立评估项目：@sveltejs/vite-plugin-svelte 4 的 peer 仍为 vite ^5。
 
 #### 复盘补修：核心边界、测量工具与依赖安全 — 2026-10-26（完成）
 
@@ -152,12 +163,12 @@
 
 | 顺序 | 范围 | 验收与推进条件 |
 | --- | --- | --- |
-| 1 | Vite/Vitest/Tinypool 安全迁移 | ✅ 2026-10-28 完成：Vite 5.4 + Vitest 3.2 + tinypool 2.1.2，开发图 critical 清零；Vite 6+ 受 Svelte 3 插件限制进入独立评估 |
+| 1 | Vite/Vitest/Tinypool 安全迁移 | ✅ 2026-10-28 完成：Vite 5.4 + Vitest 3.2 + tinypool 2.1.2，开发图 critical 清零；Vite 6+ 受插件 peer（vite ^5）限制进入独立评估 |
 | 2 | 外部发布消费与测量工具覆盖 | 干净安装不继承根 overrides，核对数学插件实际依赖及入口；补 summarizer 和浏览器失败清理关键路径 |
-| 3（第十批） | 发布格式与解析/框架迁移 | ✅ 格式裁剪（ESM/CJS）与 unified 11 完成（2026-10-28）；Svelte 5 / CodeMirror 6 / vite 6+ 独立评估 |
+| 3（第十批） | 发布格式与解析/框架迁移 | ✅ 格式裁剪（ESM/CJS）、unified 11、Svelte 5 完成（2026-10-28）；CodeMirror 6 / vite 6+ 独立评估 |
 | 4（七/八批待验） | 人工与设备、进一步大 DOM 优化 | 人工 OS IME、真实移动设备仍 incomplete；更多循环内存趋势与虚拟预览契约另行验证，不重复标记桌面自动化未完成 |
 
-Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和第九批发布工具整理已实施；工具链安全升级（critical 清零）、发布格式裁剪与 unified 11 已于 2026-10-28 完成。源码块标识仅在一次预览渲染内关联源码与 DOM，不是跨编辑持久 ID，也不实现段落内逐行定位或虚拟预览。
+Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和第九批发布工具整理已实施；工具链安全升级（critical 清零）、发布格式裁剪、unified 11 与 Svelte 5 已于 2026-10-28 完成。源码块标识仅在一次预览渲染内关联源码与 DOM，不是跨编辑持久 ID，也不实现段落内逐行定位或虚拟预览。
 
 ### Phase 0 — 基线可测（完成）
 
@@ -213,8 +224,10 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 ### Phase 5 — 大版本现代化（后置）
 
 - [x] unified 11 / remark 15 / rehype 13 生态（2026-10-28，见第十批）
-- [x] Vite 5 / Vitest 3 / jsdom 24 工具链（2026-10-28，critical 清零）；TypeScript 5 保持；Prettier 3 格式化 churn 较大，另行评估
-- [ ] Svelte 5、CodeMirror 6（单独项目，不做混合迁移）
+- [x] Vite 5 / Vitest 3 / jsdom 24 工具链（2026-10-28，critical 清零）；TypeScript 5 保持
+- [x] Prettier 3 + prettier-plugin-svelte 3 / sort-imports 5（2026-10-28，全库格式化通过；`generate.mjs` 改为 await 异步 `prettier.format`）
+- [x] Svelte 5（2026-10-28，见第十批；`legacy-compat` 保留类 API）
+- [ ] CodeMirror 6（单独项目，不做混合迁移）：规划与价值评估见 [audit/CM6_PLAN.md](./audit/CM6_PLAN.md)，建议先做 P0 spike 实测再决定是否投入
 
 ## 功能同步与开发约定
 
@@ -225,9 +238,11 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - [x] 开发文档同步普通安装与显式 `generate` / `generate:check`、文档维护区域和格式保护；playground 依赖生成的 `svelte/` / `dist/`，源码变更后需重新构建，测试直接读取源码。
 - [x] 构建清理改为 Node 脚本，解决 Windows 下 `rm` 不存在导致 `pnpm build` 失败的问题。
 - [x] Lerna/engines 与 fork 发布元数据整理完成（第九批）。
-- [ ] Phase 3 继续处理发布格式与外部消费验证；Phase 5 继续处理工具链/解析链大版本迁移。
+- [ ] Phase 3 继续处理外部消费验证；Phase 5 仅剩 CodeMirror 6 与 vite 6+。
 
 ## 进度日志
+
+- 2026-10-28（续）：Svelte 5 迁移完成。依赖：svelte 5.57.3、@sveltejs/vite-plugin-svelte 4.0.4、@testing-library/svelte 5.4.2、svelte2tsx 0.7.62、svelte-preprocess 6.0.5、prettier 3.9 + prettier-plugin-svelte 3.5 + @trivago/sort-imports 5.2。核心适配：`legacy-compat.ts` 用 `createClassComponent` 维持 `new/$set/$on/$destroy`（react/vue/vue-next 包装零改动）、导出 `EditorComponent/ViewerComponent` 供 Svelte 宿主模板；移除 `svelte:options immutable`、`const $` 改名、按钮/效果改 `tick()` 后应用、`onDestroy` 直接清理 CodeMirror blinker、组件状态迁到 `context="module"` WeakMap（组件内可变绑定被响应化会清空刚绑定的效果）、render-controller 同请求去重；测试改 RTL 5 的 `rerender/unmount`，vitest alias 固定 katex/highlight.js 单模块 id。踩坑记录：playground 的 `new App()` 跳过 `init_operations`（改 `mount()`）；缺 `verbatimModuleSyntax` 时模板专用导入被 TS 擦除（`Editor is not defined`）；`bytemd/dist` 内含独立 Svelte 运行时，宿主要从源码或 `svelte` 条件消费。验收：核心 26 文件 230/230、脚本 26/26 + 覆盖率 85.28%、完整构建、generate:check、style、bundlewatch PASS（index.mjs 63.98KB gzip）、无头 Chrome 实测 playground 全绿（编辑器/37 工具栏/28 标题/KaTeX×2/mermaid/高亮×5/复制按钮×6/交互重渲染/暗色 #0d1117）。未提交或发布。
 
 - 2026-10-28：剩余部分审计修复 + 第十批主体完成。先修复 [audit/REMAINING.md](./audit/REMAINING.md) 审计确认的 11 项问题（medium-zoom 关闭竞态/reportError/ownerDocument/样式注入、生成器 locales 按需导出、bytemd processor/worker 根转发、mermaid 全局配置恢复、frontmatter 静默失败兜底、gfm 固定 clipPath id、help 快捷区漏项、toolbar Escape/Enter 切换/tab roving、deploy.sh 版本固定）。随后完成第十批：UMD 移除（ESM/CJS + d.ts，bundlewatch 盯 ESM+CSS maxSize 实测 PASS）、unified 11 生态迁移（sanitize schema structuredClone、language-math 选择器、math-ssr 响亮失败、@vitejs/plugin-vue2）、Vite 5.4/Vitest 3.2/jsdom 24（threads 池 + 20s 超时保持重套件稳定，tinypool 2.1.2 override）。验收：核心 26 文件 230/230、脚本 26/26、覆盖率门槛、完整构建、generate:check、bundlewatch PASS、官方源 audit 开发图 0 critical（原 3）/prod 18 条 1 high（原 22 条 3 high）。残留：vite 6+/svgo 4 需 Svelte 3 之外支持、katex 0.18、人工 IME/移动设备 incomplete；vitest server.deps.inline 保持 katex/highlight.js 可 mock。未提交或发布。
 
@@ -279,3 +294,9 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - 2026-10-27：Viewer 锚点与 Editor 按需加载批次完成。Viewer 默认生成 GitHub slug 标题 id（中文/重复标题/前缀/关闭可配），并修复缺失锚点放行浏览器默认 hash 导航、把宿主页面（含编辑器）带回视口的问题；补齐 16 个语言包的 `renderError`/`renderPending`/`pluginError` 文案。新增 `bytemd/viewer`、`@bytemd/vue-next/viewer`、`@bytemd/vue-next/async` 子入口与根转发文件；`AsyncEditor` 覆盖 SSR 固定高度占位、加载超时、失败重试、卸载后 resolve 竞态、props/事件透传。Nuxt 3 生产 SSR 实测：首屏只有占位无编辑器 DOM，Viewer 主 chunk 不含 CodeMirror，编辑器 315KB 为异步 chunk；阻断该 chunk 后显示错误与重试，解除阻断点击重试可恢复，console 无错误。核心 26 文件 230/230、脚本 20/20、`pnpm build`、`pnpm generate:check` 通过。工具栏信息架构与站点侧正文清洗按约定不在本批范围。
 
 - 2026-10-27：编辑器 UI 主题适配完成。`index.scss` 全量 token 化为 `--bytemd-*`，支持 `.dark`、`[data-theme="dark"]` 与元素自身 class/data-theme；同步 CodeMirror 背景、gutter、光标、选区、行高亮与暗色语法配色，tippy 下拉通过 `setProps({ theme })` + `onShow` 动态跟随主题；`markdown.scss` 补 `data-theme` 选择器；playground 增加 Theme 切换按钮及页面暗色样式。实测亮/暗下工具栏、编辑区、预览、侧栏/目录、状态栏、下拉颜色均正确切换，230/230 测试、20/20 脚本、构建与 `generate:check` 通过。宿主可通过覆盖 `--bytemd-*` 变量做品牌化。
+
+- 2026-10-28：CM6 P0 spike 完成，结论暂缓 P1。裸 CM5/CM6 同口径（100/500 KiB Markdown、1280×800、无头 Chrome）：100 KiB 输入 CM6 27.7 ms vs CM5 9.0 ms、Task 14.84 vs 4.43 ms；500 KiB 初次加载 CM6 2074.5 ms vs CM5 44.5 ms，输入 27.1 vs 15.3 ms；两者 Layout 均 0.4–1.0 ms，未复现既有 112–152 ms 根布局基线。销毁各 10 次节点与 window/document 监听器增量均为 0。依据“100 KiB 无退化”未满足且未复现基线，`audit/CM6_PLAN.md` 更新为暂缓，重判前需在完整 ByteMD 场景（预览/滚动同步/heightAtLine）复现基线。实验页 `audit/cm6-spike/` 本地保留并已 gitignore，数据见 `audit/CM6_SPIKE_RESULT.md`。
+
+- 2026-10-28：CM6 P0 补做完整场景复测（生产构建，CDP Trace）。CM5 使用 playground 完整 bytemd（工具栏/预览/滚动同步），CM6 使用编辑区 + 同一 bytemd 渲染预览（未含滚动同步/工具栏），同一 500/100 KiB fixture。500 KiB：CM5 Layout 最大 270.88（load）/226.35（scroll）/98.22（type）ms，CM6 201.96/100.41/88.79 ms；CM6 峰值下降但均 >75 ms 门槛；100 KiB 两者 Layout 总量基本持平（69/42/74 vs 69/43/73 ms），CM6 type 峰值略高（51.38 vs 34.35 ms）。CM6 500 KiB type Task 总时长 1501.6 ms vs CM5 646.3 ms，布局降低不等于输入整体更快。CM6 侧缺滚动同步导致 scroll 对比不等价。结论维持暂缓 P1，重判需含滚动同步的 CM6 原型；数据与限制见 `audit/CM6_SPIKE_RESULT.md`，`audit/CM6_PLAN.md` 已同步。
+
+- 2026-10-28：CM6 P0 原型补滚动同步后复测。CM6 页面接入 `measureScrollMap` 双向同步（sourceMap），仍无工具栏/插件/TOC 点击。500 KiB：CM6 Layout 峰值 load 205.33 / scroll 101.71 / type 90.30 ms，CM5 226.85 / 169.91 / 92.88 ms；scroll 峰值下降约 40%，但均 >75 ms；CM6 type Task 总时长 1500.8 ms vs CM5 540.2 ms。100 KiB：load/scroll 接近，CM6 type 峰值 54.01 vs 34.49 ms。结论仍为不达门槛、暂缓 P1；数据与限制见 `audit/CM6_SPIKE_RESULT.md`。

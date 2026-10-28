@@ -27,7 +27,7 @@ class Bridge extends EventTarget {
           this.listener = undefined
         },
       },
-      configure
+      configure,
     )
   }
   postMessage(request: any) {
@@ -46,7 +46,7 @@ class Bridge extends EventTarget {
 const renderers: ReturnType<typeof createWorkerRenderer>[] = []
 const make = (
   factory: () => Bridge,
-  options?: Parameters<typeof createWorkerRenderer>[1]
+  options?: Parameters<typeof createWorkerRenderer>[1],
 ) => {
   const renderer = createWorkerRenderer(factory as () => RenderWorker, options)
   renderers.push(renderer)
@@ -73,7 +73,7 @@ test('Worker round-trip preserves HTML, source blocks, VFile data and messages',
               }),
           },
         ],
-      }))
+      })),
   )
   const result = await renderer({
     value: '# title\n\n[color=#f00]red[/color]',
@@ -141,7 +141,7 @@ test('explicit registry mapping keeps parser configuration inside the Worker', a
               }),
           },
         ],
-      }))
+      })),
   )
   const renderer = make(factory, {
     resolveOptions: (input) =>
@@ -164,10 +164,10 @@ test('queue cancellation drops old pending work and preserves another Viewer', a
   const active = new AbortController()
   const queued = new AbortController()
   const a = renderer({ value: '# first', signal: active.signal }).catch(
-    (error) => error.name
+    (error) => error.name,
   )
   const stale = renderer({ value: '# stale', signal: queued.signal }).catch(
-    (error) => error.name
+    (error) => error.name,
   )
   const peer = renderer({ value: '# peer' })
   await microtasks()
@@ -193,11 +193,11 @@ test('restart cancellation terminates the old Worker and carries queued work for
       bridges.push(b)
       return b
     },
-    { strategy: 'restart' }
+    { strategy: 'restart' },
   )
   const abort = new AbortController()
   const old = renderer({ value: '# old', signal: abort.signal }).catch(
-    (e) => e.name
+    (e) => e.name,
   )
   const fresh = renderer({ value: '# fresh' })
   await microtasks()
@@ -216,7 +216,7 @@ test('failed Worker creation and non-serializable registry values reject explici
   await expect(failed({ value: 'text' })).rejects.toThrow('startup failed')
   const factory = vi.fn(() => new Bridge())
   const renderer = make(factory, {
-    resolveOptions: () => ({ callback: () => {} } as any),
+    resolveOptions: () => ({ callback: () => {} }) as any,
   })
   await expect(renderer({ value: 'text' })).rejects.toThrow('serializable JSON')
   expect(factory).not.toHaveBeenCalled()
@@ -234,7 +234,7 @@ test('non-cloneable plugin metadata becomes a render error rather than being dro
               }),
           },
         ],
-      }))
+      })),
   )
   await expect(renderer({ value: 'text' })).rejects.toThrow()
 })
@@ -285,7 +285,7 @@ test.each(['error', 'messageerror'])(
     expect(await old).toContain('Worker rendering failed')
     expect(failed.active).toBe(false)
     expect((await peer).file.toString()).toContain('peer')
-  }
+  },
 )
 
 test('host destroy aborts active and queued requests and forbids new work', async () => {
@@ -317,12 +317,12 @@ test.each([{}, undefined])(
       },
     })
     await expect(
-      renderer({ value: 'text', signal: abort.signal })
+      renderer({ value: 'text', signal: abort.signal }),
     ).rejects.toMatchObject({
       name: 'AbortError',
     })
     expect(factory).not.toHaveBeenCalled()
-  }
+  },
 )
 
 test.each([{}, undefined])(
@@ -339,7 +339,7 @@ test.each([{}, undefined])(
       name: 'AbortError',
     })
     expect(factory).not.toHaveBeenCalled()
-  }
+  },
 )
 
 test('cancellation during configuration serialization rejects without starting a Worker', async () => {
@@ -356,7 +356,7 @@ test('cancellation during configuration serialization rejects without starting a
     }),
   })
   await expect(
-    renderer({ value: 'text', signal: abort.signal })
+    renderer({ value: 'text', signal: abort.signal }),
   ).rejects.toMatchObject({
     name: 'AbortError',
   })

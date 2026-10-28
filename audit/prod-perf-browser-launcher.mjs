@@ -70,7 +70,7 @@ export class BrowserLauncher {
           ).json()
           if (
             targets.some(
-              (target) => target.type === 'page' && target.url.startsWith(url)
+              (target) => target.type === 'page' && target.url.startsWith(url),
             )
           )
             return handle

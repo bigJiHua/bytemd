@@ -208,7 +208,7 @@ function lockBody(root: HTMLElement) {
 }
 
 export default function mediumZoom(
-  options?: BytemdPluginMediumZoomOptions
+  options?: BytemdPluginMediumZoomOptions,
 ): BytemdPlugin {
   let modulePromise: Promise<typeof M> | undefined
   const { filter, ...zoomOptions } = options ?? {}
@@ -257,17 +257,17 @@ export default function mediumZoom(
         const close = makeButton(
           'bytemd-zoom-close',
           'Close image preview',
-          '\u00d7'
+          '\u00d7',
         )
         const prev = makeButton(
           'bytemd-zoom-nav bytemd-zoom-prev',
           'Previous image',
-          '\u2039'
+          '\u2039',
         )
         const next = makeButton(
           'bytemd-zoom-nav bytemd-zoom-next',
           'Next image',
-          '\u203a'
+          '\u203a',
         )
         const caption = document.createElement('div')
         caption.className = 'bytemd-zoom-caption'
@@ -340,7 +340,7 @@ export default function mediumZoom(
           if (focusable.length === 0) return
           event.preventDefault()
           const current = focusable.indexOf(
-            doc.activeElement as HTMLButtonElement
+            doc.activeElement as HTMLButtonElement,
           )
           const step = event.shiftKey ? -1 : 1
           const target =

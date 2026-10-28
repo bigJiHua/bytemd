@@ -11,15 +11,15 @@ export interface WorkerScope {
   postMessage(message: WorkerResponse): void
   addEventListener(
     type: 'message',
-    listener: (event: MessageEvent) => void
+    listener: (event: MessageEvent) => void,
   ): void
   removeEventListener(
     type: 'message',
-    listener: (event: MessageEvent) => void
+    listener: (event: MessageEvent) => void,
   ): void
 }
 export type WorkerConfiguration = (
-  options: JsonValue
+  options: JsonValue,
 ) => Omit<RenderOptions, 'value' | 'sourceMap' | 'version' | 'signal'>
 
 const defaultConfiguration: WorkerConfiguration = (options) => {
@@ -30,7 +30,7 @@ const defaultConfiguration: WorkerConfiguration = (options) => {
     Object.keys(options).some((key) => key !== 'remarkRehype')
   )
     throw new Error(
-      'The default Worker only accepts remarkRehype configuration.'
+      'The default Worker only accepts remarkRehype configuration.',
     )
   return { remarkRehype: options.remarkRehype as RenderOptions['remarkRehype'] }
 }
@@ -38,7 +38,7 @@ const defaultConfiguration: WorkerConfiguration = (options) => {
 /** Register trusted parser plugins here, inside the Worker rather than transferring functions. */
 export function installWorkerRenderer(
   scope: WorkerScope,
-  configure: WorkerConfiguration = defaultConfiguration
+  configure: WorkerConfiguration = defaultConfiguration,
 ) {
   let active = true
   const listener = (event: MessageEvent<WorkerRequest>) => {

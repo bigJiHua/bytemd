@@ -34,32 +34,34 @@ export default defineComponent({
   emits: ['change'],
   setup(props, { emit }) {
     const el: Ref<HTMLElement | null> = ref(null)
-    const editorRef: Ref<Editor | null> = ref(null)
+    // The Svelte 5 compat instance carries private fields; a deep `ref` proxy
+    // would hide them from method receivers, so hold it non-reactively.
+    let editor: Editor | null = null
     let unsubscribe: (() => void) | undefined
 
     watch(
       () => props,
       (newValue) => {
-        editorRef.value?.$set({ ...newValue })
+        editor?.$set({ ...newValue })
       },
       { deep: true }
     )
 
     onMounted(() => {
-      const editor = new Editor({
+      const instance = new Editor({
         target: el.value!,
         props,
       })
-      unsubscribe = editor.$on('change', (e) => {
+      unsubscribe = instance.$on('change', (e) => {
         emit('change', e.detail.value)
       })
-      editorRef.value = editor
+      editor = instance
     })
 
     onBeforeUnmount(() => {
       unsubscribe?.()
-      editorRef.value?.$destroy()
-      editorRef.value = null
+      editor?.$destroy()
+      editor = null
     })
 
     return { el }

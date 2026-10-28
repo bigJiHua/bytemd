@@ -15,7 +15,7 @@ test('accordion with contiguous lines', () => {
   const $ = render(Viewer, { value: sample })
   const items = [
     ...$.container.querySelectorAll<HTMLDetailsElement>(
-      'details.bytemd-accordion-item'
+      'details.bytemd-accordion-item',
     ),
   ]
 
@@ -30,10 +30,10 @@ test('accordion with contiguous lines', () => {
   expect(items[1]).toHaveAttribute('open')
   expect(items[2]).not.toHaveAttribute('open')
   expect(
-    items.map((el) => el.querySelector('.bytemd-accordion-body')?.textContent)
+    items.map((el) => el.querySelector('.bytemd-accordion-body')?.textContent),
   ).toEqual(['内容0', '内容1', '内容2'])
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('accordion with blank lines between blocks', () => {
@@ -46,13 +46,13 @@ test('accordion with blank lines between blocks', () => {
   expect(items[0]).not.toHaveAttribute('open')
   expect(items[1]).toHaveAttribute('open')
   expect(items[0].querySelector('.bytemd-accordion-body')?.textContent).toBe(
-    '内容A'
+    '内容A',
   )
   expect(items[1].querySelector('.bytemd-accordion-body')?.textContent).toBe(
-    '内容B'
+    '内容B',
   )
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('unclosed accordion stays plain text', () => {
@@ -61,5 +61,5 @@ test('unclosed accordion stays plain text', () => {
   expect($.container.querySelector('.bytemd-accordion')).toBeNull()
   expect($.container.textContent).toContain('+++ 标题')
 
-  $.component.$destroy()
+  $.unmount()
 })

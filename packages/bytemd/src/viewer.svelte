@@ -1,4 +1,20 @@
-<svelte:options immutable={true} />
+<script lang="ts" context="module">
+  import type { BytemdPlugin, ViewerProps as Props } from './types'
+  import type { VFile } from 'vfile'
+
+  // Per-host imperative state. A component-scope const would still be wrapped
+  // by the Svelte 5 legacy compiler, and writing it from the post-flush tick
+  // re-triggered the beforeUpdate cleanup, wiping freshly bound effects.
+  const hostStates = new WeakMap<
+    HTMLElement,
+    {
+      cleanup?: () => void
+      file?: VFile
+      plugins?: BytemdPlugin[]
+      locale?: Props['locale']
+    }
+  >()
+</script>
 
 <script lang="ts">
   import { createRenderController } from './render-controller'
@@ -12,7 +28,6 @@
     onDestroy,
     onMount,
     createEventDispatcher,
-    afterUpdate,
     beforeUpdate,
   } from 'svelte'
   import type { VFile } from 'vfile'
@@ -32,30 +47,35 @@
   export let sourceMap = false
 
   let markdownBody: HTMLElement
-  let cleanupEffects: (() => void) | undefined
   let destroyed = false
   let mounted = false
   let renderVersion = 0
 
+  function host() {
+    if (!markdownBody) return undefined
+    let state = hostStates.get(markdownBody)
+    if (!state) hostStates.set(markdownBody, (state = {}))
+    return state
+  }
+
   function on() {
     if (!mounted || destroyed || !file) return
-    // console.log('von')
-    cleanupEffects = runViewerEffects(markdownBody, file, plugins, locale)
+    host()!.cleanup = runViewerEffects(markdownBody, file, plugins, locale)
   }
   function off() {
-    // console.log('voff')
-    cleanupEffects?.()
-    cleanupEffects = undefined
+    const state = host()
+    state?.cleanup?.()
+    if (state) state.cleanup = undefined
   }
 
   onMount(() => {
     mounted = true
 
     const handleClick = (e: MouseEvent) => {
-      const $ = e.target as HTMLElement
+      const el = e.target as HTMLElement
 
-      if ($.classList?.contains('bytemd-copy-btn')) {
-        copyCodeFromButton($ as HTMLButtonElement)
+      if (el.classList?.contains('bytemd-copy-btn')) {
+        copyCodeFromButton(el as HTMLButtonElement)
         return
       }
 
@@ -73,9 +93,6 @@
   })
 
   let file: VFile | undefined
-  let appliedFile: VFile | undefined
-  let appliedPlugins: BytemdPlugin[] | undefined
-  let appliedLocale: Props['locale']
   let failed = false
   let i = 0
 
@@ -116,25 +133,42 @@
   // Async rendering starts after mount so opt-in SSR does not create a Worker.
   $: if (renderer && mounted) controller.render(renderOptions, renderer)
   beforeUpdate(() => {
+    // Old plugin effects keep nodes from the previous render alive; drop them
+    // before the template rewrites the DOM. Cleanup must stay paired with the
+    // rebind below: a redundant update that keeps the same render inputs must
+    // not tear effects down, or Mermaid/zoom enhancements disappear for good.
+    const state = host()
+    if (!state) return
     if (
-      appliedFile !== file ||
-      appliedPlugins !== plugins ||
-      appliedLocale !== locale
+      state.file !== file ||
+      state.plugins !== plugins ||
+      state.locale !== locale
     )
       off()
   })
-  afterUpdate(() => {
-    if (!file || destroyed) return
-    const changed =
-      appliedFile !== file ||
-      appliedPlugins !== plugins ||
-      appliedLocale !== locale
-    if (changed) addCopyButtons(markdownBody, locale)
-    if (changed) on()
-    appliedFile = file
-    appliedPlugins = plugins
-    appliedLocale = locale
-  })
+  // Svelte 5 runs `afterUpdate` effects before template DOM effects, so the
+  // copy buttons and viewer effects are (re)applied after the flush instead.
+  // The array keeps `plugins`/`locale` in the reaction's dependency list; the
+  // applied* signature keeps the Svelte 3 "only re-run on real changes" rule.
+  $: if (mounted && !destroyed && file) {
+    const renderedFile = file
+    const deps = [plugins, locale]
+    tick().then(() => {
+      if (destroyed || !markdownBody || file !== renderedFile) return
+      const state = host()!
+      const changed =
+        state.file !== file ||
+        state.plugins !== plugins ||
+        state.locale !== locale
+      if (!changed) return
+      addCopyButtons(markdownBody, locale)
+      on()
+      state.file = file
+      state.plugins = plugins
+      state.locale = locale
+      void deps
+    })
+  }
 
   $: html = `${file ?? ''}<!--${i}-->`
 </script>

@@ -35,14 +35,26 @@ export default defineConfig({
       mermaid: fileURLToPath(
         new URL(
           './packages/plugin-mermaid/node_modules/mermaid/dist/mermaid.core.mjs',
-          import.meta.url
-        )
+          import.meta.url,
+        ),
+      ),
+      // Pin the plugin-local copies so `vi.mock('katex')` and the plugins'
+      // dynamic imports resolve to one module id under the Svelte 5 plugin's
+      // resolver conditions.
+      katex: fileURLToPath(
+        new URL('./packages/plugin-math/node_modules/katex', import.meta.url),
+      ),
+      'highlight.js': fileURLToPath(
+        new URL(
+          './packages/plugin-highlight/node_modules/highlight.js',
+          import.meta.url,
+        ),
       ),
       'bytemd/viewer': fileURLToPath(
-        new URL('./packages/bytemd/src/viewer.ts', import.meta.url)
+        new URL('./packages/bytemd/src/viewer.ts', import.meta.url),
       ),
       bytemd: fileURLToPath(
-        new URL('./packages/bytemd/src/index.ts', import.meta.url)
+        new URL('./packages/bytemd/src/index.ts', import.meta.url),
       ),
     },
   },
@@ -83,8 +95,8 @@ export default defineConfig({
         const runtime = source.includes('/packages/vue-next/')
           ? './packages/vue-next/node_modules/vue/dist/vue.runtime.esm-bundler.js'
           : source.includes('/packages/vue/')
-          ? './packages/vue/node_modules/vue/dist/vue.runtime.esm.js'
-          : undefined
+            ? './packages/vue/node_modules/vue/dist/vue.runtime.esm.js'
+            : undefined
         // Resolve pnpm's symlink so nested @vue imports use that Vue runtime's
         // dependency directory, including under Vite 4.5's resolver.
         if (runtime)

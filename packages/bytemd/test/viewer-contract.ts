@@ -11,12 +11,12 @@ interface MountedViewer {
 }
 
 export function testViewer(
-  mount: (props: ViewerProps) => Promise<MountedViewer>
+  mount: (props: ViewerProps) => Promise<MountedViewer>,
 ) {
   let viewer: MountedViewer | undefined
   const clipboardDescriptor = Object.getOwnPropertyDescriptor(
     navigator,
-    'clipboard'
+    'clipboard',
   )
 
   afterEach(async () => {
@@ -38,7 +38,7 @@ export function testViewer(
     }[] = []
     const renderer = vi.fn(
       (input: RenderOptions) =>
-        new Promise<RenderResult>((resolve) => jobs.push({ input, resolve }))
+        new Promise<RenderResult>((resolve) => jobs.push({ input, resolve })),
     )
     const effect = vi.fn()
     const plugins = [{ viewerEffect: effect }]
@@ -54,7 +54,7 @@ export function testViewer(
     jobs[1].resolve(fresh)
     await viewer.update(props)
     await waitFor(() =>
-      expect(viewer!.root.querySelector('.bytemd-copy-btn')).not.toBeNull()
+      expect(viewer!.root.querySelector('.bytemd-copy-btn')).not.toBeNull(),
     )
     expect(viewer.root.querySelector('h1')?.textContent).toBe('fresh')
     expect(viewer.root.querySelector('.bytemd-copy-btn')).not.toBeNull()
@@ -85,12 +85,12 @@ export function testViewer(
     await viewer.update(props)
     await viewer.update(props)
     await waitFor(() =>
-      expect(viewer!.root.querySelector('[role="alert"]')).not.toBeNull()
+      expect(viewer!.root.querySelector('[role="alert"]')).not.toBeNull(),
     )
     expect(off).toHaveBeenCalledOnce()
     expect(viewer.root.querySelector('h1')).toBeNull()
     expect(viewer.root.querySelector('[role="alert"]')?.textContent).toBe(
-      '渲染失败 <safe>'
+      '渲染失败 <safe>',
     )
     expect(viewer.root.querySelector('safe')).toBeNull()
     await viewer.update({ value: '# recovered', plugins, renderer: undefined })
@@ -227,7 +227,7 @@ export function testViewer(
     })
     expect(viewer.root.textContent).not.toContain('previous preview')
     expect(viewer.root.querySelector('[role="alert"]')?.textContent).toBe(
-      '无法渲染 <unsafe>'
+      '无法渲染 <unsafe>',
     )
     expect(viewer.root.querySelector('unsafe')).toBeNull()
     expect(off).toHaveBeenCalledTimes(1)
@@ -273,7 +273,7 @@ export function testViewer(
     })
     const events: CustomEvent[] = []
     viewer.root.addEventListener('bytemd-plugin-error', (event) =>
-      events.push(event as CustomEvent)
+      events.push(event as CustomEvent),
     )
     const error = new Error('private diagnostic')
     const report = contexts[0].reportError!
@@ -287,7 +287,7 @@ export function testViewer(
     })
     expect(viewer.root.querySelectorAll('.bytemd-plugin-error')).toHaveLength(1)
     expect(viewer.root.querySelector('[role="alert"]')?.textContent).toBe(
-      'Test: 失败 <unsafe>'
+      'Test: 失败 <unsafe>',
     )
     expect(viewer.root.querySelector('unsafe')).toBeNull()
     expect(viewer.root.querySelector('pre code')?.textContent).toBe('source\n')

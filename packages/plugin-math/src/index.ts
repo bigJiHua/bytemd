@@ -59,7 +59,7 @@ export default function math({
 
       const renderMath = async (
         elements: HTMLElement[],
-        displayMode: boolean
+        displayMode: boolean,
       ) => {
         const els = elements
         if (els.length === 0) return
@@ -99,7 +99,7 @@ export default function math({
             const parseError = el.querySelector<HTMLElement>('.katex-error')
             if (parseError) {
               const error = new Error(
-                parseError.title || 'Invalid math expression'
+                parseError.title || 'Invalid math expression',
               )
               el.textContent = source
               fail(error, el)

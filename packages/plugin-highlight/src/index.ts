@@ -47,7 +47,7 @@ export default function highlight({
       >()
       const restore = (
         el: HTMLElement,
-        original: { html: string; className: string; highlighted?: string }
+        original: { html: string; className: string; highlighted?: string },
       ) => {
         el.innerHTML = original.html
         el.className = original.className

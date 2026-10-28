@@ -17,7 +17,7 @@ test('SSR math keeps inline, display and valid trusted HTML data rendering', () 
   expect(result.container.querySelectorAll('.katex')).toHaveLength(3)
   expect(result.container.querySelectorAll('.katex-display')).toHaveLength(1)
   expect(
-    result.container.querySelector('[data-note="approved"]')
+    result.container.querySelector('[data-note="approved"]'),
   ).not.toBeNull()
   expect(result.container.querySelector('.katex-error')).toBeNull()
 })
@@ -39,7 +39,7 @@ test('SSR math rejects injected HTML attribute names and recovers on safe input'
   expect(result.container.querySelector('[onmouseover]')).toBeNull()
   expect(result.container.querySelector('[role="alert"]')).not.toBeNull()
   expect(report).toHaveBeenCalled()
-  result.component.$set({ value: '$x^2+1$' })
+  await result.rerender({ value: '$x^2+1$' })
   await act()
   expect(result.container.querySelector('[role="alert"]')).toBeNull()
   expect(result.container.querySelector('.katex')).not.toBeNull()

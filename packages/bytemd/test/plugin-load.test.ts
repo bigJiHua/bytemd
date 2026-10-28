@@ -10,13 +10,13 @@ const cases = [
   {
     name: 'KaTeX',
     load: () => import('../../plugin-math/src'),
-    id: '../../plugin-math/node_modules/katex',
+    id: 'katex',
     html: '<p><code class="language-math">x</code></p>',
   },
   {
     name: 'highlight.js',
     load: () => import('../../plugin-highlight/src'),
-    id: '../../plugin-highlight/node_modules/highlight.js',
+    id: 'highlight.js',
     html: '<pre><code>source</code></pre>',
   },
 ]
@@ -47,7 +47,7 @@ test.each(cases)(
     expect(root.textContent).toBe(original)
     expect(root.querySelector('.bytemd-mermaid')).toBeNull()
     if (dispose) dispose()
-  }
+  },
 )
 
 test.each(cases)(
@@ -59,7 +59,7 @@ test.each(cases)(
       () =>
         new Promise((_, fail) => {
           reject = fail
-        })
+        }),
     )
     const plugin = (await load()).default()
     const root = document.body.appendChild(document.createElement('div'))
@@ -75,5 +75,5 @@ test.each(cases)(
     reject(new Error('late failure'))
     await act()
     expect(reportError).not.toHaveBeenCalled()
-  }
+  },
 )

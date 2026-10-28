@@ -15,7 +15,7 @@ export async function evalInPage(session, expression) {
   if (reply.exceptionDetails)
     throw new Error(
       reply.exceptionDetails.exception?.description ||
-        reply.exceptionDetails.text
+        reply.exceptionDetails.text,
     )
   return reply.result.value
 }
@@ -35,7 +35,7 @@ export async function withPageEvent(session, type, action, timeoutMs = 180000) {
   const message = new Promise((resolve, reject) => {
     timer = setTimeout(
       () => reject(new Error(`Timeout waiting for ${type}`)),
-      timeoutMs
+      timeoutMs,
     )
     unsubscribe = session.on('Runtime.consoleAPICalled', ({ args }) => {
       for (const arg of args) {
@@ -58,7 +58,7 @@ export async function withPageEvent(session, type, action, timeoutMs = 180000) {
 export async function mountFixture(session, options) {
   return evalInPage(
     session,
-    `return await window.__prodPerf.prepare(${JSON.stringify(options)})`
+    `return await window.__prodPerf.prepare(${JSON.stringify(options)})`,
   )
 }
 
@@ -75,7 +75,7 @@ export function validateSample(sample, keyCount) {
   if (sample.errors?.length) throw new Error(sample.errors.join('; '))
   if (sample.keyCount !== keyCount || !sample.valueMatchesPreview)
     throw new Error(
-      `Lost keys/stale preview: expected ${keyCount}, got ${sample.keyCount}`
+      `Lost keys/stale preview: expected ${keyCount}, got ${sample.keyCount}`,
     )
   if (!sample.firstLine?.startsWith('a'.repeat(keyCount) + '# Long document'))
     throw new Error('Final text did not contain every dispatched key')
@@ -103,7 +103,7 @@ export async function runPerformanceSampling(session, archiver, options = {}) {
         modes.map((mode) => [
           mode,
           { size, mode, profile, samples: [], validSamples: 0 },
-        ])
+        ]),
       )
       // Alternate modes within each repetition to reduce time/order bias.
       for (let repetition = 0; repetition < samples; repetition++) {
@@ -143,7 +143,7 @@ export async function runPerformanceSampling(session, archiver, options = {}) {
               totalMs: sample.totalMs,
               maxLongTaskMs: sample.maxLongTaskMs,
               costs: sample.costMarks,
-            })
+            }),
           )
         }
       }
@@ -155,7 +155,7 @@ export async function runPerformanceSampling(session, archiver, options = {}) {
 export async function runCompositionValidation(
   session,
   archiver,
-  options = {}
+  options = {},
 ) {
   const results = []
   for (const mode of ['worker', 'sync'])
@@ -168,7 +168,7 @@ export async function runCompositionValidation(
       })
       const before = await evalInPage(
         session,
-        'return window.__prodPerf.resetComposition()'
+        'return window.__prodPerf.resetComposition()',
       )
       await session.send('Input.imeSetComposition', {
         text: '你',
@@ -187,7 +187,7 @@ export async function runCompositionValidation(
         await waitForPage(
           session,
           'window.__prodPerf.trace().inCompositionAsyncResult',
-          5000
+          5000,
         )
         asyncResultCovered = true
       } catch {
@@ -196,11 +196,11 @@ export async function runCompositionValidation(
       await session.send('Input.insertText', { text: '你好世界' })
       await waitForPage(
         session,
-        '!window.__prodPerf.trace().composing && window.__prodPerf.state().renderedMatchesEditor'
+        '!window.__prodPerf.trace().composing && window.__prodPerf.state().renderedMatchesEditor',
       )
       const submit = await evalInPage(
         session,
-        'return window.__prodPerf.trace()'
+        'return window.__prodPerf.trace()',
       )
       if (
         submit.value !== '你好世界' + before ||
@@ -220,7 +220,7 @@ export async function runCompositionValidation(
       }
       await archiver.archive(
         JSON.stringify(submitRecord, null, 2),
-        `ime-${mode}-${size}kib-submit.json`
+        `ime-${mode}-${size}kib-submit.json`,
       )
       results.push({
         ...submitRecord,
@@ -229,7 +229,7 @@ export async function runCompositionValidation(
       })
       const cancelBefore = await evalInPage(
         session,
-        'return window.__prodPerf.resetComposition()'
+        'return window.__prodPerf.resetComposition()',
       )
       await session.send('Input.imeSetComposition', {
         text: '取消',
@@ -243,11 +243,11 @@ export async function runCompositionValidation(
       })
       await waitForPage(
         session,
-        '!window.__prodPerf.trace().composing && window.__prodPerf.state().renderedMatchesEditor'
+        '!window.__prodPerf.trace().composing && window.__prodPerf.state().renderedMatchesEditor',
       )
       const cancel = await evalInPage(
         session,
-        'return window.__prodPerf.trace()'
+        'return window.__prodPerf.trace()',
       )
       if (
         cancel.value !== cancelBefore ||
@@ -264,7 +264,7 @@ export async function runCompositionValidation(
       }
       await archiver.archive(
         JSON.stringify(cancelRecord, null, 2),
-        `ime-${mode}-${size}kib-cancel.json`
+        `ime-${mode}-${size}kib-cancel.json`,
       )
       results.push({
         ...cancelRecord,
@@ -279,7 +279,7 @@ export async function runCompositionValidation(
           submit: 'passed',
           cancel: 'passed',
           asyncResultDuringComposition: submit.inCompositionAsyncResult,
-        })
+        }),
       )
     }
   return {
@@ -307,7 +307,7 @@ export function heapNodeSummary(snapshot) {
     const name = heap.strings[heap.nodes[index + fields.indexOf('name')]]
     if (
       /CodeMirror|Worker|ResizeObserver|MutationObserver|Detached|HTML.*Element/.test(
-        name
+        name,
       )
     )
       named[name] = (named[name] || 0) + 1
@@ -389,7 +389,7 @@ export async function runMemoryCheck(session, archiver, options = {}) {
       Object.keys(before.snapshot.counts).map((key) => [
         key,
         (after.snapshot.counts[key] || 0) - before.snapshot.counts[key],
-      ])
+      ]),
     )
     const result = {
       loop,
@@ -406,7 +406,7 @@ export async function runMemoryCheck(session, archiver, options = {}) {
     }
     await archiver.archive(
       JSON.stringify(result, null, 2),
-      `heap-counters-loop${loop}.json`
+      `heap-counters-loop${loop}.json`,
     )
     results.push(result)
     console.log(
@@ -414,7 +414,7 @@ export async function runMemoryCheck(session, archiver, options = {}) {
         phase: 'memory',
         loop,
         delta: result.afterDestroyMinusBefore,
-      })
+      }),
     )
   }
   return results
@@ -449,11 +449,11 @@ export async function runAllSampling(options) {
     })
     await waitForPage(
       session,
-      '!!window.__prodPerf && document.readyState === "complete"'
+      '!!window.__prodPerf && document.readyState === "complete"',
     )
     await evalInPage(
       session,
-      'await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))'
+      'await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))',
     )
     for (const [phase, run] of Object.entries({
       performance: runPerformanceSampling,
@@ -474,7 +474,7 @@ export async function runAllSampling(options) {
     }
     await archiver.archive(
       JSON.stringify(report, null, 2),
-      'prod-perf-summary.json'
+      'prod-perf-summary.json',
     )
     return report
   } finally {
@@ -488,7 +488,7 @@ export async function runDiagnostic(session, archiver) {
   await session.send('Profiler.start')
   const events = []
   const detach = session.on('Tracing.dataCollected', ({ value }) =>
-    events.push(...value)
+    events.push(...value),
   )
   await session.send('Tracing.start', {
     categories: 'devtools.timeline',
@@ -507,7 +507,7 @@ export async function runDiagnostic(session, archiver) {
   await archiver.archive(JSON.stringify(profile), 'cost-key-cpu.cpuprofile')
   await archiver.archive(
     JSON.stringify({ traceEvents: events }),
-    'cost-key-trace.json'
+    'cost-key-trace.json',
   )
   const timeByFunction = {}
   const nodes = new Map(profile.nodes.map((node) => [node.id, node]))
@@ -524,20 +524,20 @@ export async function runDiagnostic(session, archiver) {
       .slice(0, 15),
     layout: events
       .filter(
-        (event) => event.name === 'Layout' || event.name === 'UpdateLayoutTree'
+        (event) => event.name === 'Layout' || event.name === 'UpdateLayoutTree',
       )
       .map(({ name, ts, dur, args }) => ({ name, ts, ms: dur / 1000, args })),
   }
   await archiver.archive(
     JSON.stringify(result, null, 2),
-    'cost-key-diagnostic.json'
+    'cost-key-diagnostic.json',
   )
   console.log(
     JSON.stringify({
       phase: 'diagnostic',
       topFunctions: result.topFunctions,
       layouts: result.layout.map(({ name, ms }) => ({ name, ms })),
-    })
+    }),
   )
   return result
 }
@@ -564,7 +564,7 @@ export async function runInteractionChecks(session, archiver) {
     await window.__prodPerf.configure({layoutContainment: true});
     return {enabled, disabled, selectionKept: selection === JSON.stringify(cm.listSelections()),
       allTextPresent: document.querySelector('.markdown-body').textContent.includes('End of document.')};
-  `
+  `,
   )
   if (
     JSON.stringify(layout.enabled) !== JSON.stringify(layout.disabled) ||
@@ -572,7 +572,7 @@ export async function runInteractionChecks(session, archiver) {
     !layout.allTextPresent
   )
     throw new Error(
-      'Containment changed document dimensions, content or selection'
+      'Containment changed document dimensions, content or selection',
     )
   const toc = await evalInPage(
     session,
@@ -591,7 +591,7 @@ export async function runInteractionChecks(session, archiver) {
       headingDelta: Math.abs(heading.getBoundingClientRect().top - preview.getBoundingClientRect().top),
       scrollMarginTop,
       active: document.querySelector('.bytemd-toc-active')?.textContent.trim()};
-  `
+  `,
   )
   if (
     toc.editorTop <= 0 ||
@@ -608,7 +608,7 @@ export async function runInteractionChecks(session, archiver) {
     details.open = !details.open;
     await new Promise(r => requestAnimationFrame(r));
     return {before, after: document.querySelector('.bytemd-preview').scrollHeight};
-  `
+  `,
   )
   if (accordion.before === accordion.after)
     throw new Error('Accordion did not change preview layout')
@@ -616,7 +616,7 @@ export async function runInteractionChecks(session, archiver) {
   await waitForPage(session, '!!document.querySelector(".bytemd-render-error")')
   const errorCleared = await evalInPage(
     session,
-    'return !document.querySelector(".bytemd-preview svg") && !document.querySelector(".bytemd-toc-button")'
+    'return !document.querySelector(".bytemd-preview svg") && !document.querySelector(".bytemd-toc-button")',
   )
   if (!errorCleared) throw new Error('Failed preview retained old effects/TOC')
   await evalInPage(session, 'await window.__prodPerf.recover()')
@@ -625,7 +625,7 @@ export async function runInteractionChecks(session, archiver) {
   await evalInPage(session, 'await window.__prodPerf.stale()')
   await waitForPage(
     session,
-    'document.querySelector(".markdown-body")?.textContent.includes("Only the latest preview should remain.")'
+    'document.querySelector(".markdown-body")?.textContent.includes("Only the latest preview should remain.")',
   )
   const result = {
     layout,
@@ -638,7 +638,7 @@ export async function runInteractionChecks(session, archiver) {
   }
   await archiver.archive(
     JSON.stringify(result, null, 2),
-    'prod-perf-interaction.json'
+    'prod-perf-interaction.json',
   )
   console.log(JSON.stringify({ phase: 'interaction', result }))
   return result
@@ -669,21 +669,21 @@ export async function runLayoutComparison(session, archiver, options = {}) {
             variant.startsWith('body-')
               ? '.bytemd-body'
               : variant === 'editor-layout'
-              ? '.bytemd-editor'
-              : '.bytemd-preview'
+                ? '.bytemd-editor'
+                : '.bytemd-preview',
           )});
           target.style.contain = ${JSON.stringify(
             variant === 'baseline'
               ? ''
               : variant === 'body-size'
-              ? 'size'
-              : variant === 'body-size-layout'
-              ? 'size layout'
-              : 'layout'
+                ? 'size'
+                : variant === 'body-size-layout'
+                  ? 'size layout'
+                  : 'layout',
           )};
           target.getBoundingClientRect();
           await new Promise(resolve => requestAnimationFrame(resolve));
-        `
+        `,
           )
           const { sample } = await realKeys(session, 1)
           validateSample(sample, 1)
@@ -691,7 +691,7 @@ export async function runLayoutComparison(session, archiver, options = {}) {
           results.push(record)
           await archiver.archive(
             JSON.stringify(record, null, 2),
-            `cost-layout-${size}kib-${profile}-${variant}-${repetition}.json`
+            `cost-layout-${size}kib-${profile}-${variant}-${repetition}.json`,
           )
           console.log(
             JSON.stringify({
@@ -704,7 +704,7 @@ export async function runLayoutComparison(session, archiver, options = {}) {
               maxLongTaskMs: sample.maxLongTaskMs,
               totalMs: sample.totalMs,
               costs: sample.costMarks,
-            })
+            }),
           )
         }
       }

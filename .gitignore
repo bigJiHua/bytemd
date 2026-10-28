@@ -42,3 +42,6 @@ packages/vue-next/async.d.ts
 packages/vue-next/viewer.js
 packages/vue-next/viewer.mjs
 packages/vue-next/viewer.d.ts
+
+# CM6 P0 spike (local experiment)
+audit/cm6-spike/

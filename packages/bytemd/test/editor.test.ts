@@ -1,5 +1,6 @@
 /// <reference types="vitest/globals" />
-import { Editor } from '../src'
+import { Editor as EditorCompat } from '../src'
+import Editor from '../src/editor.svelte'
 import '@testing-library/jest-dom'
 import {
   render,
@@ -30,31 +31,30 @@ beforeEach(() => {
 })
 
 test('value', async () => {
-  const $ = render(Editor, { value: heading })
+  const host = document.body.appendChild(document.createElement('div'))
+  // Svelte 5 dispatcher events reach compat `$on` listeners, not the DOM.
+  // The compat class from the package index mirrors the wrapper packages.
+  const mounted = new EditorCompat({ target: host, props: { value: heading } })
   const onChange = vi.fn()
-  $.component.$on('change', onChange)
+  mounted.$on('change', onChange)
   await act()
-  expect(getCodeMirror($).getValue()).toEqual(heading)
+  expect(host.querySelector('.CodeMirror') != null).toBe(true)
+  const editor = (host.querySelector('.CodeMirror') as any).CodeMirror
 
-  // // change from UI
-  // getCodeMirror($).setValue(paragraph);
-  // await act();
-  // expect(getCodeMirror($).getValue()).toEqual(paragraph);
-  // expect(onChange).toBeCalled();
-  // expect(onChange).toBeCalledTimes(1);
-  // // expect(onChange).toBeCalledWith()
-
-  // change from props
-  $.component.$set({ value: heading })
-  expect(getCodeMirror($).getValue()).toEqual(heading)
+  // change from props does not emit `change`
+  mounted.$set({ value: heading })
+  await act()
+  expect(editor.getValue()).toEqual(heading)
   expect(onChange).not.toBeCalled()
+  mounted.$destroy()
+  host.remove()
 })
 
 test('preview debounce', async () => {
   const $ = render(Editor, {})
-  $.component.$set({ value: paragraph })
+  await $.rerender({ value: paragraph })
   expect(
-    stripComment($.container.querySelector('.markdown-body').innerHTML)
+    stripComment($.container.querySelector('.markdown-body').innerHTML),
   ).toEqual('')
   await sleep(400)
   const body = $.container.querySelector('.markdown-body')!
@@ -78,7 +78,7 @@ describe('mode', () => {
     expect(handle).toHaveAttribute('aria-valuenow', '55')
 
     const icon = $.container.querySelector(
-      '.bytemd-toolbar-left .bytemd-toolbar-icon'
+      '.bytemd-toolbar-left .bytemd-toolbar-icon',
     )
     expect(icon).toHaveAttribute('role', 'button')
     expect(icon).toHaveAttribute('tabindex', '0')
@@ -96,7 +96,7 @@ describe('mode', () => {
     expect(write).toHaveAttribute('aria-selected', 'true')
 
     const narrowActions = $.container.querySelectorAll(
-      '.bytemd-toolbar-actions .bytemd-toolbar-icon'
+      '.bytemd-toolbar-actions .bytemd-toolbar-icon',
     )
     expect(narrowActions.length).toBeGreaterThan(0)
 
@@ -114,7 +114,7 @@ describe('plugin', () => {
     const editorOff = vi.fn()
     const editorEffect = vi.fn(() => editorOff)
 
-    $.component.$set({ plugins: [{ editorEffect }] })
+    await $.rerender({ plugins: [{ editorEffect }] })
     await act()
     expect(editorEffect).toBeCalled()
     expect(editorEffect).toBeCalledTimes(1)
@@ -122,10 +122,10 @@ describe('plugin', () => {
       expect.objectContaining({
         // $el: $.container.querySelector('.bytemd'),
         editor: getCodeMirror($),
-      })
+      }),
     )
 
-    $.component.$set({ plugins: [{ editorEffect }] })
+    await $.rerender({ plugins: [{ editorEffect }] })
     await act()
     expect(editorOff).toBeCalled()
     expect(editorOff).toBeCalledTimes(1)

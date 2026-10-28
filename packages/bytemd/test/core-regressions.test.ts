@@ -1,10 +1,12 @@
-﻿import { Editor, Viewer, getProcessor } from '../src'
+﻿import { Editor as EditorCompat, getProcessor } from '../src'
 import {
   createCodeMirror,
   createEditorUtils,
   handleImageUpload,
 } from '../src/editor'
+import Editor from '../src/editor.svelte'
 import { copyCodeFromButton } from '../src/utils'
+import Viewer from '../src/viewer.svelte'
 import { render, act, cleanup } from '@testing-library/svelte'
 
 afterEach(() => {
@@ -18,14 +20,19 @@ function codeMirror(result: ReturnType<typeof render>) {
 }
 
 test('host value updates emit the complete new value once', async () => {
-  const result = render(Editor, { value: 'old' })
+  // Exercise the Svelte 5 compat class surface that wrapper packages use:
+  // dispatcher events reach `$on` listeners instead of the DOM.
+  const host = document.body.appendChild(document.createElement('div'))
+  const editor = new EditorCompat({ target: host, props: { value: 'old' } })
   const changed = vi.fn()
-  result.component.$on('change', changed)
+  editor.$on('change', changed)
   await act()
-  result.component.$set({ value: 'new' })
+  editor.$set({ value: 'new' })
   await act()
   expect(changed).toHaveBeenCalledTimes(1)
   expect(changed.mock.calls[0][0].detail.value).toBe('new')
+  editor.$destroy()
+  host.remove()
 })
 
 test('changing previewDebounce to zero takes effect for subsequent input', async () => {
@@ -33,11 +40,11 @@ test('changing previewDebounce to zero takes effect for subsequent input', async
   const result = render(Editor, { value: 'old', previewDebounce: 300 })
   await act()
   await vi.advanceTimersByTimeAsync(300)
-  result.component.$set({ value: 'new', previewDebounce: 0 })
+  await result.rerender({ value: 'new', previewDebounce: 0 })
   await act()
   await vi.advanceTimersByTimeAsync(1)
   expect(result.container.querySelector('.markdown-body')?.textContent).toBe(
-    'new'
+    'new',
   )
 })
 
@@ -50,7 +57,7 @@ test('destroying an editor cancels pending overridePreview work', async () => {
     overridePreview,
   })
   await act()
-  result.component.$set({ value: 'pending' })
+  await result.rerender({ value: 'pending' })
   await act()
   result.unmount()
   await vi.advanceTimersByTimeAsync(400)
@@ -86,14 +93,14 @@ test('uploading a filename with Markdown delimiters keeps it as one image', asyn
   await handleImageUpload(
     context,
     async () => [{ url: 'https://example.invalid/photo.png' }],
-    [file]
+    [file],
   )
   const html = String(getProcessor({}).processSync(context.editor.getValue()))
   const root = document.createElement('div')
   root.innerHTML = html
   expect(root.querySelectorAll('img')).toHaveLength(1)
   expect(root.querySelector('img')?.getAttribute('src')).toBe(
-    'https://example.invalid/photo.png'
+    'https://example.invalid/photo.png',
   )
   expect(root.querySelector('img')?.getAttribute('alt')).toBe(file.name)
 })
@@ -161,7 +168,7 @@ test.each([
   const root = document.createElement('div')
   root.innerHTML = String(getProcessor({}).processSync(value))
   expect(
-    root.querySelector('script,iframe,svg,[onerror],[onclick],[onload]')
+    root.querySelector('script,iframe,svg,[onerror],[onclick],[onload]'),
   ).toBeNull()
   for (const element of root.querySelectorAll('*')) {
     expect(element.getAttribute('href') ?? '').not.toMatch(/^javascript:/i)
@@ -182,7 +189,7 @@ test('rehype plugins run after sanitization and are a trusted boundary', () => {
       }),
   }
   expect(
-    String(getProcessor({ plugins: [plugin] }).processSync('safe'))
+    String(getProcessor({ plugins: [plugin] }).processSync('safe')),
   ).toContain('<script>alert(1)</script>')
 })
 
@@ -195,22 +202,22 @@ test('render failures do not silently leave the previous preview on screen', asy
   const result = render(Viewer, { value: 'previous preview' })
   await act()
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  result.component.$set({
+  await result.rerender({
     value: '[size=20]'.repeat(4096) + 'new content' + '[/size]'.repeat(4096),
   })
   await act()
   expect(
-    result.container.querySelector('.markdown-body')?.textContent
+    result.container.querySelector('.markdown-body')?.textContent,
   ).not.toBe('previous preview')
 })
 
 test('contiguous accordion content can contain ordinary Markdown emphasis', () => {
   const root = document.createElement('div')
   root.innerHTML = String(
-    getProcessor({}).processSync('+++ Title\n**bold**\n+++')
+    getProcessor({}).processSync('+++ Title\n**bold**\n+++'),
   )
   expect(
-    root.querySelector('details.bytemd-accordion-item strong')?.textContent
+    root.querySelector('details.bytemd-accordion-item strong')?.textContent,
   ).toBe('bold')
 })
 
@@ -234,17 +241,17 @@ test('changing debounce back to a delay cancels obsolete work', async () => {
   const result = render(Editor, { value: 'old', previewDebounce: 0 })
   await act()
   await vi.advanceTimersByTimeAsync(1)
-  result.component.$set({ value: 'pending', previewDebounce: 300 })
+  await result.rerender({ value: 'pending', previewDebounce: 300 })
   await act()
   await vi.advanceTimersByTimeAsync(1)
   expect(result.container.querySelector('.markdown-body')?.textContent).toBe(
-    'old'
+    'old',
   )
-  result.component.$set({ value: 'latest' })
+  await result.rerender({ value: 'latest' })
   await act()
   await vi.advanceTimersByTimeAsync(300)
   expect(result.container.querySelector('.markdown-body')?.textContent).toBe(
-    'latest'
+    'latest',
   )
 })
 
@@ -268,7 +275,7 @@ test('failed and empty uploads and completion after unmount do not edit', async 
     async () => {
       throw new Error('upload failed')
     },
-    files
+    files,
   )
   expect(editor.getValue()).toBe('original')
   let finish!: (value: any) => void
@@ -278,7 +285,7 @@ test('failed and empty uploads and completion after unmount do not edit', async 
       new Promise((resolve) => {
         finish = resolve
       }),
-    files
+    files,
   )
   destroyed = true
   result.unmount()
@@ -304,7 +311,7 @@ test('uploads preserve special alt/title and parentheses in URLs', async () => {
   await handleImageUpload(
     context,
     async () => [{ url: 'https://example.invalid/a(b).png', alt, title }],
-    [new File(['x'], 'x.png')]
+    [new File(['x'], 'x.png')],
   )
   const root = document.createElement('div')
   root.innerHTML = String(getProcessor({}).processSync(editor.getValue()))
@@ -312,7 +319,7 @@ test('uploads preserve special alt/title and parentheses in URLs', async () => {
   expect(root.querySelector('img')?.getAttribute('alt')).toBe(alt)
   expect(root.querySelector('img')?.getAttribute('title')).toBe(title)
   expect(root.querySelector('img')?.getAttribute('src')).toBe(
-    'https://example.invalid/a(b).png'
+    'https://example.invalid/a(b).png',
   )
 })
 
@@ -325,7 +332,7 @@ test.each([64, 65, 4096])(
     root.innerHTML = String(getProcessor({}).processSync(source))
     expect(root.textContent).toBe(depth > 64 ? source : 'content')
     expect(root.querySelectorAll('span')).toHaveLength(depth > 64 ? 0 : depth)
-  }
+  },
 )
 
 test('wide inline style input degrades under its node budget', () => {
@@ -340,11 +347,11 @@ test('accordion preserves lists and fenced code without blank marker lines', () 
   const root = document.createElement('div')
   root.innerHTML = String(
     getProcessor({}).processSync(
-      '+++ Title\n- **one**\n- two\n```js\nconsole.log(1)\n```\n+++'
-    )
+      '+++ Title\n- **one**\n- two\n```js\nconsole.log(1)\n```\n+++',
+    ),
   )
   expect(root.querySelector('details ul strong')?.textContent).toBe('one')
   expect(root.querySelector('details pre code')?.textContent).toBe(
-    'console.log(1)\n'
+    'console.log(1)\n',
   )
 })

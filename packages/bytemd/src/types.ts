@@ -111,7 +111,7 @@ export interface BytemdViewerContext {
   /** Report a failed DOM enhancement; reports after cleanup are ignored. */
   reportError?(
     error: unknown,
-    details?: { plugin?: string; element?: HTMLElement }
+    details?: { plugin?: string; element?: HTMLElement },
   ): void
 }
 
@@ -194,7 +194,7 @@ export interface BytemdPlugin {
    * https://github.com/remarkjs/remark/blob/main/doc/plugins.md
    */
   remark?: (
-    p: Processor<any, any, any, any, any>
+    p: Processor<any, any, any, any, any>,
   ) => Processor<any, any, any, any, any>
   /**
    * Customize HTML parse by rehype plugins:
@@ -202,7 +202,7 @@ export interface BytemdPlugin {
    * https://github.com/rehypejs/rehype/blob/main/doc/plugins.md
    */
   rehype?: (
-    p: Processor<any, any, any, any, any>
+    p: Processor<any, any, any, any, any>,
   ) => Processor<any, any, any, any, any>
   /**
    * Register actions in toolbar, cheatsheet and shortcuts
@@ -263,7 +263,7 @@ export interface EditorProps extends ViewerProps {
    * Handle images upload
    */
   uploadImages?: (
-    files: File[]
+    files: File[],
   ) => Promise<Pick<Image, 'url' | 'alt' | 'title'>[]>
   /**
    * Override the default preview area render

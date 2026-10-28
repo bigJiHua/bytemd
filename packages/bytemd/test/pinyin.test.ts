@@ -12,15 +12,15 @@ test('pinyin pairs each character', () => {
   expect($.container.querySelectorAll('.bytemd-pinyin').length).toBe(1)
   expect(items.length).toBe(2)
   expect(
-    items.map((el) => el.querySelector('.bytemd-pinyin-rt')?.textContent)
+    items.map((el) => el.querySelector('.bytemd-pinyin-rt')?.textContent),
   ).toEqual(['Ping', 'Yin'])
   expect(items.map((el) => el.textContent)).toEqual(['Ping拼', 'Yin音'])
   expect($.container.querySelector('.bytemd-pinyin')).toHaveAttribute(
     'title',
-    'Ping Yin'
+    'Ping Yin',
   )
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('pinyin syllable is capped at five characters', () => {
@@ -32,10 +32,10 @@ test('pinyin syllable is capped at five characters', () => {
   expect(rt.map((el) => el.textContent)).toEqual(['Zhang', 'Yin'])
   expect($.container.querySelector('.bytemd-pinyin')).toHaveAttribute(
     'title',
-    'Zhangdddddddddddddddd Yin'
+    'Zhangdddddddddddddddd Yin',
   )
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('multiple annotations keep surrounding text', () => {
@@ -44,7 +44,7 @@ test('multiple annotations keep surrounding text', () => {
   expect($.container.querySelectorAll('.bytemd-pinyin').length).toBe(2)
   expect($.container.textContent).toBe('Pin拼 和 Yin音 都在')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('unbalanced syllables use one annotation', () => {
@@ -55,7 +55,7 @@ test('unbalanced syllables use one annotation', () => {
   expect(items[0].querySelector('.bytemd-pinyin-rt')?.textContent).toBe('Ping')
   expect(items[0].textContent).toBe('Ping拼音')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('pinyin inside inline code is untouched', () => {
@@ -64,5 +64,5 @@ test('pinyin inside inline code is untouched', () => {
   expect($.container.querySelector('.bytemd-pinyin')).toBeNull()
   expect($.container.textContent).toContain('{拼 音|Ping Yin}')
 
-  $.component.$destroy()
+  $.unmount()
 })

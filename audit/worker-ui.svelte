@@ -40,7 +40,7 @@
         tasks.push(
           ...list
             .getEntries()
-            .map(({ startTime, duration }) => ({ startTime, duration }))
+            .map(({ startTime, duration }) => ({ startTime, duration })),
         )
       })
     : undefined
@@ -62,12 +62,12 @@
           callbacks.every(
             (p, i) =>
               p.remark === parserCallbacks[i].remark &&
-              p.rehype === parserCallbacks[i].rehype
+              p.rehype === parserCallbacks[i].rehype,
           )
         )
           return { profile: 'enhanced', fail: forceFailure }
       },
-    }
+    },
   )
   // Paired performance uses the same asynchronous component lifecycle in both modes.
   // This adapter deliberately runs the identical built processor on the main thread.
@@ -112,7 +112,7 @@
         checks,
       },
       null,
-      2
+      2,
     ))
 
   function begin(operation: string) {
@@ -138,7 +138,7 @@
       if (sample !== current || current.ended) return
       current.frameMaxGapMs = Math.max(
         current.frameMaxGapMs,
-        now - current.previousFrame
+        now - current.previousFrame,
       )
       current.previousFrame = now
       if (current.firstFrameMs === undefined)
@@ -232,13 +232,13 @@
     const entries = tasks.filter(
       (t) =>
         t.startTime + t.duration > current.started &&
-        t.startTime < performance.now()
+        t.startTime < performance.now(),
     )
     current.longTasks = entries
     current.maxLongTaskMs = Math.max(0, ...entries.map((t) => t.duration))
     current.blockingMs = entries.reduce(
       (sum, t) => sum + Math.max(0, t.duration - 50),
-      0
+      0,
     )
     for (const key of [
       'frameMaxGapMs',

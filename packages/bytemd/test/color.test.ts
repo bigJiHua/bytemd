@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import { Viewer } from '../src'
+import Viewer from '../src/viewer.svelte'
 import '@testing-library/jest-dom'
 import { render } from '@testing-library/svelte'
 
@@ -15,7 +15,7 @@ test('applies font color and background color after sanitize', () => {
   expect(bg?.getAttribute('style')).toContain('background-color:#fff3bf')
   expect(bg?.textContent).toBe('高亮')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('normalizes hex colors and keeps inline nodes', () => {
@@ -28,7 +28,7 @@ test('normalizes hex colors and keeps inline nodes', () => {
   expect(span?.querySelector('code')?.textContent).toBe('code')
   expect(span?.getAttribute('style')).toContain('color:#e03131')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('nests size, font color and background color', () => {
@@ -44,7 +44,7 @@ test('nests size, font color and background color', () => {
   expect(color?.getAttribute('style')).toContain('color:#1971c2')
   expect(size?.getAttribute('style')).toContain('font-size:24px')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('invalid or mismatched color markers stay literal', () => {
@@ -59,5 +59,5 @@ test('invalid or mismatched color markers stay literal', () => {
   expect(body.textContent).toContain('[color=#12345]')
   expect(body.textContent).toContain('[color=#e03131]错配[/size]')
 
-  $.component.$destroy()
+  $.unmount()
 })

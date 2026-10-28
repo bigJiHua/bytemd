@@ -35,7 +35,7 @@ test('CDP discovery actually sends its HTTP request and filters the requested pa
           url: 'http://fixture/',
           webSocketDebuggerUrl: 'ws://fixture',
         },
-      ])
+      ]),
     )
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -54,7 +54,7 @@ test('CDP discovery actually sends its HTTP request and filters the requested pa
   try {
     const session = await new CDPClient().connect(
       server.address().port,
-      'http://fixture/'
+      'http://fixture/',
     )
     assert.equal(connected, 'ws://fixture')
     await session.disconnect()
@@ -107,7 +107,7 @@ test('CDP ignores late replies after timeout and clears pending jobs on disconne
   const session = new CDPSession(ws)
   await assert.rejects(session.send('slow', {}, 5), /Timeout/)
   assert.doesNotThrow(() =>
-    events.emit('message', { data: '{"id":1,"result":{}}' })
+    events.emit('message', { data: '{"id":1,"result":{}}' }),
   )
   const pending = session.send('pending')
   const rejected = assert.rejects(pending, CDPConnectionError)
@@ -115,7 +115,7 @@ test('CDP ignores late replies after timeout and clears pending jobs on disconne
   await rejected
   await assert.rejects(
     session.send('after-disconnect', {}, 5),
-    CDPConnectionError
+    CDPConnectionError,
   )
   assert.equal(sends, 2)
   assert.equal(session._pending.size, 0)
@@ -134,7 +134,7 @@ test('CDP synchronous send failures clear the request and its timer', async (t) 
   const clearTimer = t.mock.method(globalThis, 'clearTimeout')
   await assert.rejects(
     session.send('Runtime.enable'),
-    (error) => error === failure
+    (error) => error === failure,
   )
   assert.equal(session._pending.size, 0)
   assert.equal(clearTimer.mock.callCount(), 1)
@@ -172,19 +172,19 @@ test('valid sample counts require every key, current preview and fixed visible v
   validateSample(sample, 5)
   assert.throws(
     () => validateSample({ ...sample, keyCount: 1 }, 5),
-    /Lost keys/
+    /Lost keys/,
   )
   assert.throws(
     () => validateSample({ ...sample, valueMatchesPreview: false }, 5),
-    /stale preview/
+    /stale preview/,
   )
   assert.throws(
     () =>
       validateSample(
         { ...sample, active: { ...environment, visibilityState: 'hidden' } },
-        5
+        5,
       ),
-    /hidden/
+    /hidden/,
   )
 })
 
@@ -214,20 +214,20 @@ test('evidence archiving rejects collisions on repeated runs without replacing b
     await archive.archive('first', 'prod-perf-sample.json')
     await assert.rejects(
       archive.archive('second', 'prod-perf-sample.json'),
-      /already exists/
+      /already exists/,
     )
     await assert.rejects(
       new EvidenceArchiver(dir).archive('third', 'prod-perf-sample.json'),
-      /already exists/
+      /already exists/,
     )
     assert.equal(
       readFileSync(join(dir, 'prod-perf-sample.json'), 'utf8'),
-      'first'
+      'first',
     )
   } finally {
     assert.ok(
       resolve(dir).startsWith(resolve(tmpdir()) + sep) &&
-        dir.split(sep).at(-1).startsWith('bytemd-prod-perf-test-')
+        dir.split(sep).at(-1).startsWith('bytemd-prod-perf-test-'),
     )
     rmSync(dir, { recursive: true, force: true })
   }
@@ -279,7 +279,7 @@ test('comparison summaries retain custom sizes and only report measured groups',
           },
         ],
       }),
-      'prod-perf-summary.json'
+      'prod-perf-summary.json',
     )
     assert.deepEqual(summarize(dir).comparison, [
       {
@@ -300,7 +300,7 @@ test('comparison summaries retain custom sizes and only report measured groups',
   } finally {
     assert.ok(
       resolve(dir).startsWith(resolve(tmpdir()) + sep) &&
-        dir.split(sep).at(-1).startsWith('bytemd-prod-perf-test-')
+        dir.split(sep).at(-1).startsWith('bytemd-prod-perf-test-'),
     )
     rmSync(dir, { recursive: true, force: true })
   }

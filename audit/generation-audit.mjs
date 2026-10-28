@@ -12,7 +12,7 @@ if (
   (other && !/^[a-z0-9-]+$/.test(other))
 )
   throw new Error(
-    'Usage: generation-audit.mjs sources|outputs NAME; compare BEFORE AFTER'
+    'Usage: generation-audit.mjs sources|outputs NAME; compare BEFORE AFTER',
   )
 const artifact = (name) => new URL(`./generation-${name}.json`, import.meta.url)
 if (operation === 'compare') {
@@ -23,7 +23,7 @@ if (operation === 'compare') {
   ].sort()
   const changed = keys.filter(
     (key) =>
-      JSON.stringify(before.files[key]) !== JSON.stringify(after.files[key])
+      JSON.stringify(before.files[key]) !== JSON.stringify(after.files[key]),
   )
   const result = {
     before: label,
@@ -33,7 +33,7 @@ if (operation === 'compare') {
   }
   await fs.writeFile(
     artifact(`${label}-vs-${other}`),
-    JSON.stringify(result, null, 2)
+    JSON.stringify(result, null, 2),
   )
   console.log(JSON.stringify(result))
   assert.deepEqual(changed, [])
@@ -101,7 +101,7 @@ if (operation === 'compare') {
   }
   await fs.writeFile(
     artifact(label),
-    JSON.stringify({ operation, files }, null, 2)
+    JSON.stringify({ operation, files }, null, 2),
   )
   console.log(JSON.stringify({ label, files: Object.keys(files).length }))
 }

@@ -21,7 +21,7 @@ const renderer = createWorkerRenderer(
   () =>
     new Worker(new URL('./markdown-worker.ts', import.meta.url), {
       type: 'module',
-    })
+    }),
 )
 const editor = new Editor({
   target: document.querySelector('#editor')!,
@@ -112,7 +112,7 @@ const renderer = createWorkerRenderer(
         return { profile: 'gfm' }
       return undefined
     },
-  }
+  },
 )
 // 将 plugins 和 renderer 一起传给 Editor / Viewer。
 ```

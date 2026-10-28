@@ -156,7 +156,7 @@ another task      : 24d`,
       const replacements: { pre: HTMLElement; container: HTMLElement }[] = []
       const stages = new Set<HTMLElement>()
       for (const el of markdownBody.querySelectorAll<HTMLElement>(
-        'pre>code.language-mermaid'
+        'pre>code.language-mermaid',
       )) {
         const pre = el.parentElement!
         const source = el.textContent ?? ''
@@ -185,7 +185,7 @@ another task      : 24d`,
             const result = await m.render(
               `bytemd-mermaid-${++diagramId}`,
               source,
-              container
+              container,
             )
             if (!active || !markdownBody.contains(pre)) return
             container.innerHTML = result.svg
@@ -241,7 +241,7 @@ another task      : 24d`,
                 const { line } = appendBlock('```mermaid\n' + code + '\n```')
                 editor.setSelection(
                   codemirror.Pos(line + 1, 0),
-                  codemirror.Pos(line + code.split('\n').length)
+                  codemirror.Pos(line + code.split('\n').length),
                 )
                 editor.focus()
               },

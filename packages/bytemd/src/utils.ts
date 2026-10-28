@@ -6,12 +6,12 @@ import type { BytemdLocale } from './types'
  */
 export function addCopyButtons(
   root: HTMLElement,
-  locale?: Partial<BytemdLocale>
+  locale?: Partial<BytemdLocale>,
 ) {
   root.querySelectorAll('pre').forEach((pre) => {
     const code = pre.querySelector('code')
     const langClass = Array.from(code?.classList ?? []).find((name) =>
-      name.startsWith('language-')
+      name.startsWith('language-'),
     )
     if (langClass) {
       pre.dataset.codeLang = langClass.slice('language-'.length)
@@ -90,7 +90,7 @@ export function scrollToAnchor(root: HTMLElement, event: MouseEvent) {
   if (!id) return
   const prefixed = 'user-content-' + id
   const destination = [...root.querySelectorAll<HTMLElement>('[id]')].find(
-    (element) => element.id === prefixed || element.id === id
+    (element) => element.id === prefixed || element.id === id,
   )
   if (destination) {
     event.preventDefault()
@@ -112,9 +112,9 @@ export function renderErrorHtml(locale?: Partial<BytemdLocale>) {
   const escaped = text.replace(
     /[&<>"']/g,
     (char) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
         char
-      ]!)
+      ]!,
   )
   return `<p role="alert" class="bytemd-render-error">${escaped}</p>`
 }

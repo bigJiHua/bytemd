@@ -19,7 +19,7 @@ const preview = spawn(
     '4198',
     '--strictPort',
   ],
-  { cwd: root, stdio: 'ignore' }
+  { cwd: root, stdio: 'ignore' },
 )
 let browser, session
 try {
@@ -32,15 +32,16 @@ try {
   session.on('Runtime.exceptionThrown', (data) =>
     console.log(
       'EXCEPTION',
-      data.exceptionDetails.exception?.description || data.exceptionDetails.text
-    )
+      data.exceptionDetails.exception?.description ||
+        data.exceptionDetails.text,
+    ),
   )
   session.on('Runtime.consoleAPICalled', (data) =>
     console.log(
       'CONSOLE',
       data.type,
-      data.args.map((a) => a.value || a.description?.slice(0, 300))
-    )
+      data.args.map((a) => a.value || a.description?.slice(0, 300)),
+    ),
   )
   await session.send('Runtime.enable')
   await session.send('Emulation.setDeviceMetricsOverride', {
@@ -56,7 +57,7 @@ try {
       expression:
         'JSON.stringify({api:!!window.__prodPerf,body:document.body.innerText.slice(0,300)})',
       returnByValue: true,
-    })
+    }),
   )
   console.log(
     'START',
@@ -64,7 +65,7 @@ try {
       expression:
         'window.__prodPerf.prepare({size:10,mode:"worker",profile:"core",layoutContainment:true})',
       objectGroup: 'debug',
-    })
+    }),
   )
   await pause(5000)
   console.log(
@@ -73,12 +74,12 @@ try {
       expression:
         'JSON.stringify({state:window.__prodPerf.state(),status:document.querySelector("#audit-status").textContent,html:document.querySelector(".markdown-body")?.innerHTML.slice(0,300),bodyStyle:document.querySelector(".bytemd-body")?.getAttribute("class")})',
       returnByValue: true,
-    })
+    }),
   )
   const shot = await session.send('Page.captureScreenshot')
   writeFileSync(
     root + '/audit/prod-perf-debug-mount.png',
-    Buffer.from(shot.data, 'base64')
+    Buffer.from(shot.data, 'base64'),
   )
 } finally {
   await session?.disconnect()

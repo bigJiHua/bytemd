@@ -21,7 +21,7 @@ export default defineConfig({
     outDir: '../audit/worker-production',
     rollupOptions: {
       input: fileURLToPath(
-        new URL('../playground/worker-audit.html', import.meta.url)
+        new URL('../playground/worker-audit.html', import.meta.url),
       ),
     },
   },

@@ -6,13 +6,13 @@ export function runViewerEffects(
   markdownBody: HTMLElement,
   file: VFile,
   plugins: BytemdPlugin[] = [],
-  locale?: Partial<BytemdLocale>
+  locale?: Partial<BytemdLocale>,
 ): () => void {
   let active = true
   const messages = new Map<HTMLElement, Map<string, HTMLElement>>()
   const reportError = (
     error: unknown,
-    { plugin, element }: { plugin?: string; element?: HTMLElement } = {}
+    { plugin, element }: { plugin?: string; element?: HTMLElement } = {},
   ) => {
     if (!active || (element && !markdownBody.contains(element))) return
     const target = element ?? markdownBody
@@ -41,7 +41,7 @@ export function runViewerEffects(
     const detail: BytemdPluginError = { error, plugin, element, file }
     const Event = markdownBody.ownerDocument.defaultView!.CustomEvent
     markdownBody.dispatchEvent(
-      new Event('bytemd-plugin-error', { bubbles: true, detail })
+      new Event('bytemd-plugin-error', { bubbles: true, detail }),
     )
   }
   const cleanups = plugins.map(({ viewerEffect }) => {

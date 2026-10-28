@@ -17,8 +17,12 @@ export type {
   WorkerRendererOptions,
   RenderWorker,
 } from './worker-renderer'
-export { default as Editor } from './editor.svelte'
-export { default as Viewer } from './viewer.svelte'
+export { Editor, Viewer } from './legacy-compat'
+export type {
+  Editor as EditorInstance,
+  Viewer as ViewerInstance,
+} from './legacy-compat'
+export { EditorComponent, ViewerComponent } from './legacy-compat'
 export { runViewerEffects } from './viewer-effects'
 export {
   addCopyButtons,

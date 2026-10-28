@@ -23,7 +23,7 @@ export function summarize(auditDir) {
     JSON.parse(readFileSync(join(auditDir, filename), 'utf8'))
   const groups = new Map()
   for (const filename of files.filter((name) =>
-    /^prod-perf-\d+kib-(worker|sync)-(core|enhanced)-\d+\.json$/.test(name)
+    /^prod-perf-\d+kib-(worker|sync)-(core|enhanced)-\d+\.json$/.test(name),
   )) {
     const record = read(filename)
     const key = `${record.size}/${record.mode}/${record.profile}`
@@ -49,7 +49,7 @@ export function summarize(auditDir) {
       ].map((metric) => [
         metric,
         distribution(samples.map((sample) => sample[metric])),
-      ])
+      ]),
     )
     const costs = Object.fromEntries(
       [
@@ -57,7 +57,7 @@ export function summarize(auditDir) {
       ].map((cost) => [
         cost,
         distribution(samples.map((sample) => sample.costMarks[cost])),
-      ])
+      ]),
     )
     return {
       ...group,
@@ -81,7 +81,7 @@ export function summarize(auditDir) {
         devtoolsConsoleCleared: after.devtoolsConsoleCleared,
         measuredDomNodes: after.page.domNodes,
         snapshots: Object.values(record.phases).map(
-          (phase) => phase.snapshot.filename
+          (phase) => phase.snapshot.filename,
         ),
       }
     })
@@ -108,7 +108,7 @@ export function summarize(auditDir) {
       ? [...comparisons.values()].map(({ samples, ...group }) => ({
           ...group,
           firstFrameMs: distribution(
-            samples.map((sample) => sample.firstFrameMs)
+            samples.map((sample) => sample.firstFrameMs),
           ),
           totalMs: distribution(samples.map((sample) => sample.totalMs)),
         }))

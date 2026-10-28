@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import { Viewer } from '../src'
+import Viewer from '../src/viewer.svelte'
 import '@testing-library/jest-dom'
 import { render } from '@testing-library/svelte'
 
@@ -16,7 +16,7 @@ test('renders a centered text divider', () => {
   expect($.container.querySelector('hr')).toBeNull()
   expect(divider?.textContent).not.toContain('---')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('plain --- stays a horizontal rule', () => {
@@ -25,7 +25,7 @@ test('plain --- stays a horizontal rule', () => {
   expect($.container.querySelector('hr')).toBeInTheDocument()
   expect($.container.querySelector('.bytemd-hr-text')).toBeNull()
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('allows an image label and caps it to icon size', () => {
@@ -44,7 +44,7 @@ test('allows an image label and caps it to icon size', () => {
   expect(style).toContain('max-width:8em')
   expect(divider?.querySelectorAll('.bytemd-hr-text-line').length).toBe(2)
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('keeps inline Markdown inside the label', () => {
@@ -55,7 +55,7 @@ test('keeps inline Markdown inside the label', () => {
   expect(label?.querySelector('code')?.textContent).toBe('code')
   expect(label?.textContent).toBe('重点与code')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('keeps inline style ranges inside the label', () => {
@@ -69,7 +69,7 @@ test('keeps inline style ranges inside the label', () => {
   expect(color?.getAttribute('style')).toContain('color:#e03131')
   expect(color?.textContent).toBe('红字')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('leaves multi-line and four-hyphen ranges as text', () => {
@@ -82,5 +82,5 @@ test('leaves multi-line and four-hyphen ranges as text', () => {
   expect(body.textContent).toContain('---第一行')
   expect(body.textContent).toContain('----你好----')
 
-  $.component.$destroy()
+  $.unmount()
 })

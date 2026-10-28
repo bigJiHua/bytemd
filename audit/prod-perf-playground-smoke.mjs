@@ -19,7 +19,7 @@ try {
   })
   await waitForPage(
     session,
-    '!!document.querySelector(".bytemd-mermaid svg") && document.querySelectorAll(".katex").length >= 2'
+    '!!document.querySelector(".bytemd-mermaid svg") && document.querySelectorAll(".katex").length >= 2',
   )
   const result = await evalInPage(
     session,
@@ -32,7 +32,7 @@ try {
       math:preview.querySelectorAll('.katex').length, highlight:preview.querySelectorAll('pre code.hljs').length,
       mermaid:preview.querySelectorAll('.bytemd-mermaid svg').length, copy:preview.querySelectorAll('.bytemd-copy-btn').length,
       errors:root.querySelectorAll('[role="alert"]').length, pending:root.querySelectorAll('.bytemd-render-pending').length};
-  `
+  `,
   )
   if (
     !result.editor ||
@@ -50,12 +50,12 @@ try {
     throw new Error(`Playground fixture mismatch: ${JSON.stringify(result)}`)
   writeFileSync(
     root + '/audit/prod-perf-review-playground.json',
-    JSON.stringify(result, null, 2)
+    JSON.stringify(result, null, 2),
   )
   const screenshot = await session.send('Page.captureScreenshot')
   writeFileSync(
     root + '/audit/prod-perf-review-playground.png',
-    Buffer.from(screenshot.data, 'base64')
+    Buffer.from(screenshot.data, 'base64'),
   )
   console.log(JSON.stringify(result, null, 2))
 } finally {

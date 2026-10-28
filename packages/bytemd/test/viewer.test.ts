@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
-import { Viewer } from '../src'
 import { addCopyButtons, copyCodeFromButton } from '../src/utils'
+import Viewer from '../src/viewer.svelte'
 import { testViewer } from './viewer-contract'
 import '@testing-library/jest-dom'
 import { render, act } from '@testing-library/svelte'
@@ -12,7 +12,7 @@ describe('Svelte Viewer contract', () => {
     return {
       root: result.container,
       async update(nextProps) {
-        result.component.$set(nextProps)
+        await result.rerender(nextProps)
         await act()
       },
       async destroy() {
@@ -29,9 +29,9 @@ function stripComment(str: string) {
 test('value', async () => {
   const $ = render(Viewer, { value: '# title' })
   expect(
-    stripComment($.container.querySelector('.markdown-body')?.innerHTML)
+    stripComment($.container.querySelector('.markdown-body')?.innerHTML),
   ).toEqual('<h1 id="title">title</h1>')
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('[warning] callout', async () => {
@@ -40,7 +40,7 @@ test('[warning] callout', async () => {
   expect(bq).toBeInTheDocument()
   expect(stripComment(bq?.innerHTML ?? '')).not.toContain('[warning]')
   expect(stripComment(bq?.innerHTML ?? '')).toContain('危险操作')
-  $.component.$destroy()
+  $.unmount()
 })
 
 test.each([
@@ -54,7 +54,7 @@ test.each([
 ])('%s -> %s', (value, cls) => {
   const $ = render(Viewer, { value })
   expect($.container.querySelector(`blockquote.${cls}`)).toBeInTheDocument()
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('unknown marker keeps plain blockquote', async () => {
@@ -63,7 +63,7 @@ test('unknown marker keeps plain blockquote', async () => {
   expect(bq).toBeInTheDocument()
   expect(bq?.classList.contains('bytemd-callout')).toBe(false)
   expect(stripComment(bq?.innerHTML ?? '')).toContain('[foo]')
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('marker absent keeps plain blockquote', async () => {
@@ -71,7 +71,7 @@ test('marker absent keeps plain blockquote', async () => {
   const bq = $.container.querySelector('blockquote')
   expect(bq).toBeInTheDocument()
   expect(bq?.classList.contains('bytemd-callout')).toBe(false)
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('code block copy button helpers', async () => {
@@ -105,11 +105,21 @@ test('code block copy button helpers', async () => {
 })
 
 test('plugin', async () => {
-  const $ = render(Viewer)
+  const $ = render(Viewer, {})
+  await act()
   const off = vi.fn()
-  const viewerEffect = vi.fn(() => off)
+  const viewerEffect = vi.fn(({ markdownBody }: any) => {
+    const enhancement = document.createElement('div')
+    enhancement.className = 'viewer-enhancement'
+    markdownBody.append(enhancement)
+    return off
+  })
+  // Keep the array identity stable across rerenders: the Svelte 5 bridge
+  // re-runs on new prop objects, and the applied signature must stay the
+  // source of truth for whether effects rebind.
+  const plugins = [{ viewerEffect }]
 
-  $.component.$set({ plugins: [{ viewerEffect }] })
+  await $.rerender({ plugins })
   await act()
   expect(viewerEffect).toBeCalled()
   expect(viewerEffect).toBeCalledTimes(1)
@@ -125,8 +135,43 @@ test('plugin', async () => {
   //   })
   // )
 
-  $.component.$set({ plugins: [{ viewerEffect }] })
+  // Identical render inputs must not tear the bound effect down: cleanup and
+  // rebinding stay paired, so the enhancement survives a redundant update.
+  await $.rerender({ plugins })
   await act()
-  expect(off).toBeCalled()
+  expect(viewerEffect).toBeCalledTimes(1)
+  expect(off).not.toBeCalled()
+  expect($.container.querySelector('.viewer-enhancement')).not.toBeNull()
+
+  const nextOff = vi.fn()
+  const nextEffect = vi.fn(() => nextOff)
+  await $.rerender({
+    value: '# changed',
+    plugins: [{ viewerEffect: nextEffect }],
+  })
+  await act()
   expect(off).toBeCalledTimes(1)
+  expect(nextEffect).toBeCalledTimes(1)
+})
+
+test('in-place plugin additions still re-render the preview', async () => {
+  const plugins: any[] = []
+  const $ = render(Viewer, { value: '# title', plugins })
+  await act()
+  expect($.container.querySelector('.mutated-marker')).toBeNull()
+
+  plugins.push({
+    rehype: (processor: any) =>
+      processor.use(() => (tree: any) => {
+        tree.children.push({
+          type: 'element',
+          tagName: 'div',
+          properties: { className: ['mutated-marker'] },
+          children: [],
+        })
+      }),
+  })
+  await $.rerender({ plugins })
+  await act()
+  expect($.container.querySelector('.mutated-marker')).not.toBeNull()
 })

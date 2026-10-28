@@ -1,4 +1,13 @@
-<svelte:options immutable={true} />
+<script lang="ts" context="module">
+  import type { BytemdPlugin } from './types'
+
+  // Per-host imperative state; see viewer.svelte for why this cannot live in
+  // the component scope under the Svelte 5 legacy compiler.
+  const hostStates = new WeakMap<
+    HTMLElement,
+    { cbs: ReturnType<NonNullable<BytemdPlugin['editorEffect']>>[] }
+  >()
+</script>
 
 <script lang="ts">
   import en from '../locales/en.json'
@@ -93,8 +102,8 @@
       splitRatio = Math.round(
         Math.min(
           90,
-          Math.max(10, ((ev.clientX - rect.left) / rect.width) * 100)
-        )
+          Math.max(10, ((ev.clientX - rect.left) / rect.width) * 100),
+        ),
       )
       refreshEditor()
     }
@@ -148,7 +157,14 @@
     return context
   })()
 
-  let cbs: ReturnType<NonNullable<BytemdPlugin['editorEffect']>>[] = []
+  // Per-host imperative holders; see viewer.svelte / hostStates for why a
+  // component-scope object is not safe under the Svelte 5 legacy compiler.
+  function host() {
+    if (!root) return undefined
+    let state = hostStates.get(root)
+    if (!state) hostStates.set(root, (state = { cbs: [] }))
+    return state
+  }
   let keyMap: KeyMap = {}
 
   function on() {
@@ -160,7 +176,7 @@
       ...createEditorUtils(codemirror, editor),
       isDestroyed: () => destroyed,
     }
-    cbs = plugins.map((p) => p.editorEffect?.(effectContext))
+    host()!.cbs = plugins.map((p) => p.editorEffect?.(effectContext))
 
     keyMap = {}
     // TODO: nested shortcuts
@@ -175,8 +191,13 @@
   }
   function off() {
     // console.log('off', plugins);
-    const cleanups = cbs
-    cbs = []
+    const state = host()
+    if (!state) {
+      editor?.removeKeyMap(keyMap) // onDestroy runs at SSR, optional chaining here
+      return
+    }
+    const cleanups = state.cbs
+    state.cbs = []
     cleanups.forEach((cb) => cb && cb())
 
     editor?.removeKeyMap(keyMap) // onDestroy runs at SSR, optional chaining here
@@ -228,10 +249,10 @@
 
   function scrollToBlock(id: string | undefined) {
     const blocks = previewEl.querySelectorAll<HTMLElement>(
-      '[data-bytemd-block]'
+      '[data-bytemd-block]',
     )
     const targets = [...blocks].filter(
-      (node) => node.dataset.bytemdBlock === id
+      (node) => node.dataset.bytemdBlock === id,
     )
     if (targets.length === 1) targets[0].scrollIntoView()
   }
@@ -296,7 +317,7 @@
           previewEl,
           sourceBlocks,
           info.height - info.clientHeight,
-          (line) => editor.heightAtLine(line, 'local')
+          (line) => editor.heightAtLine(line, 'local'),
         )
       }
       return map
@@ -382,7 +403,7 @@
     // handle image drop and paste
     const handleImages = async (
       e: Event,
-      itemList: DataTransferItemList | undefined
+      itemList: DataTransferItemList | undefined,
     ) => {
       if (!uploadImages) return
 
@@ -434,6 +455,12 @@
   onDestroy(() => {
     destroyed = true
     if (editor) cancelEditorInteractions(editor)
+    // Svelte 5 runs destroy callbacks after DOM removal, so the blur event
+    // no longer reaches CodeMirror. Clear the blink interval handle directly
+    // so a focused, detached editor cannot keep it (and its DOM) alive.
+    const blinker = (editor as unknown as { display?: { blinker?: unknown } })
+      ?.display?.blinker
+    if (blinker !== undefined && blinker !== null) clearInterval(blinker)
     // A focused, detached CodeMirror otherwise keeps its document/DOM alive
     // until the cursor interval notices the lost focus. Stop it immediately
     // through the public option and let the input stop its focus polling.
@@ -521,8 +548,8 @@
             e.code === 'ArrowLeft' || e.code === 'ArrowUp'
               ? -5
               : e.code === 'ArrowRight' || e.code === 'ArrowDown'
-              ? 5
-              : 0
+                ? 5
+                : 0
           if (!delta) return
           e.preventDefault()
           splitRatio = Math.min(90, Math.max(10, splitRatio + delta))

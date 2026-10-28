@@ -1,9 +1,10 @@
-import { Editor, Viewer } from '../src'
 import { createCodeMirror } from '../src/editor'
+import Editor from '../src/editor.svelte'
 import { renderMarkdown } from '../src/processor'
 import type { RenderOptions, RenderResult } from '../src/render-types'
 import { measureScrollMap, mapScrollRatio } from '../src/scroll'
 import type { SourceBlock } from '../src/scroll'
+import Viewer from '../src/viewer.svelte'
 import '@testing-library/jest-dom'
 import { render, act, cleanup, waitFor } from '@testing-library/svelte'
 
@@ -17,7 +18,7 @@ function geometry(element: HTMLElement, top: () => number) {
   vi.spyOn(element, 'getClientRects').mockReturnValue([{}] as any)
   return vi
     .spyOn(element, 'getBoundingClientRect')
-    .mockImplementation(() => ({ top: top() } as DOMRect))
+    .mockImplementation(() => ({ top: top() }) as DOMRect)
 }
 
 function previewGeometry(preview: HTMLElement) {
@@ -42,7 +43,7 @@ test('mapping retains source identity when plugins wrap and remove blocks', () =
   geometry(preview.querySelector('h2')!, () => 400)
   const map = measureScrollMap(preview, blocks, 900, (line) => line * 100)!
   expect(mapScrollRatio(400 / 900, map.edit, map.preview)).toBeCloseTo(
-    300 / 900
+    300 / 900,
   )
   expect(map.tocBlocks).toContain(2)
 })
@@ -66,10 +67,10 @@ test.each(['duplicate', 'reordered'])(
           { id: 'b', line: 2, index: 1 },
         ],
         900,
-        (line) => line * 100
-      )
+        (line) => line * 100,
+      ),
     ).toBeUndefined()
-  }
+  },
 )
 
 test.each([0, -1, Infinity, NaN])(
@@ -78,7 +79,7 @@ test.each([0, -1, Infinity, NaN])(
     const preview = document.createElement('div')
     previewGeometry(preview)
     expect(measureScrollMap(preview, [], height, () => 0)).toBeUndefined()
-  }
+  },
 )
 
 test('interpolation clamps overscroll and rejects nonfinite values', () => {
@@ -108,14 +109,14 @@ async function mountMappedEditor(plugins: any[] = []) {
     clientWidth: 500,
   }))
   vi.spyOn(editor, 'heightAtLine').mockImplementation(
-    (line: number) => line * 100
+    (line: number) => line * 100,
   )
   const previewScroll = vi.fn()
   preview.scrollTo = previewScroll
   const editScroll = vi.spyOn(editor, 'scrollTo').mockImplementation(() => {})
   const nodes = preview.querySelectorAll<HTMLElement>('[data-bytemd-block]')
   const rects = [...nodes].map((node, index) =>
-    geometry(node, () => 120 + index * 100 - preview.scrollTop)
+    geometry(node, () => 120 + index * 100 - preview.scrollTop),
   )
   await act()
   return {
@@ -155,7 +156,7 @@ test('unchanged scrolling reuses geometry, DOM mutations invalidate immediately'
   expect(mounted.rects[2]).toHaveBeenCalledTimes(measured)
   const heading = mounted.preview.querySelector<HTMLElement>('h2')!
   const top = 420
-  mounted.rects[2].mockImplementation(() => ({ top } as DOMRect))
+  mounted.rects[2].mockImplementation(() => ({ top }) as DOMRect)
   heading.style.marginTop = '200px'
   await act()
   mounted.setEditTop(400)
@@ -170,12 +171,12 @@ test.each(['load', 'toggle'])(
     const mounted = await mountMappedEditor()
     mounted.scrollEditor()
     const measured = mounted.rects[2].mock.calls.length
-    mounted.rects[2].mockImplementation(() => ({ top: 420 } as DOMRect))
+    mounted.rects[2].mockImplementation(() => ({ top: 420 }) as DOMRect)
     mounted.preview.querySelector('h2')!.dispatchEvent(new Event(event))
     mounted.scrollEditor()
     expect(mounted.rects[2].mock.calls.length).toBeGreaterThan(measured)
     expect(mounted.previewScroll).toHaveBeenLastCalledWith(0, 320)
-  }
+  },
 )
 
 test('scrolling skips an obsolete preview while controlled input is debounced', async () => {
@@ -183,7 +184,7 @@ test('scrolling skips an obsolete preview while controlled input is debounced', 
   const mounted = await mountMappedEditor()
   mounted.scrollEditor()
   mounted.previewScroll.mockClear()
-  mounted.result.component.$set({ value: '# changed\n\nnew content' })
+  await mounted.result.rerender({ value: '# changed\n\nnew content' })
   await act()
   mounted.scrollEditor()
   expect(mounted.previewScroll).not.toHaveBeenCalled()
@@ -212,7 +213,7 @@ test('font loading invalidates layout and unsubscribes on unmount', async () => 
     expect(mounted.rects[2].mock.calls.length).toBeGreaterThan(measured)
     mounted.result.unmount()
     expect(removed.mock.calls.some(([type]) => type === 'loadingdone')).toBe(
-      true
+      true,
     )
   } finally {
     if (previous) Object.defineProperty(document, 'fonts', previous)
@@ -237,7 +238,7 @@ test('layout invalidation preserves pending scroll feedback suppression', async 
   mounted.setEditTop(target)
   // CodeMirror can refine offscreen line heights during a programmatic jump.
   // A layout notification must not turn the resulting scroll into a return jump.
-  mounted.rects[2].mockImplementation(() => ({ top: 420 } as DOMRect))
+  mounted.rects[2].mockImplementation(() => ({ top: 420 }) as DOMRect)
   mounted.preview.dispatchEvent(new Event('load'))
   mounted.scrollEditor()
   expect(mounted.previewScroll).not.toHaveBeenCalled()
@@ -261,7 +262,7 @@ test('table of contents targets source blocks rather than nested DOM heading ord
   target.scrollIntoView = jump
   const buttons =
     mounted.result.container.querySelectorAll<HTMLButtonElement>(
-      '.bytemd-toc-button'
+      '.bytemd-toc-button',
     )
   expect([...buttons].map((button) => button.textContent)).toEqual(['A', 'B'])
   buttons[1].click()
@@ -276,7 +277,7 @@ test('render failure clears the previous table of contents', async () => {
   vi.useFakeTimers()
   const mounted = await mountMappedEditor()
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  mounted.result.component.$set({
+  await mounted.result.rerender({
     value: 'failed',
     previewDebounce: 0,
     plugins: [
@@ -292,7 +293,7 @@ test('render failure clears the previous table of contents', async () => {
   await vi.advanceTimersByTimeAsync(1)
   await act()
   expect(
-    mounted.result.container.querySelector('.bytemd-toc-button')
+    mounted.result.container.querySelector('.bytemd-toc-button'),
   ).toBeNull()
 })
 
@@ -306,8 +307,8 @@ test('table of contents honors scroll margin when the heading stays below the vi
   await act()
   expect(
     mounted.result.container.querySelector(
-      '.bytemd-toc [aria-current="location"]'
-    )?.textContent
+      '.bytemd-toc [aria-current="location"]',
+    )?.textContent,
   ).toBe('B')
 })
 
@@ -315,7 +316,7 @@ test('table of contents resets indentation when the document heading levels chan
   vi.useFakeTimers()
   const result = render(Editor, { value: '# initial', previewDebounce: 0 })
   await act()
-  result.component.$set({ value: '#### replacement' })
+  await result.rerender({ value: '#### replacement' })
   await act()
   await vi.advanceTimersByTimeAsync(1)
   await act()
@@ -327,9 +328,9 @@ test('table of contents resets indentation when the document heading levels chan
 test('returning to the rendered source resumes synchronization before debounce fires', async () => {
   vi.useFakeTimers()
   const mounted = await mountMappedEditor()
-  mounted.result.component.$set({ value: 'pending' })
+  await mounted.result.rerender({ value: 'pending' })
   await act()
-  mounted.result.component.$set({ value: source })
+  await mounted.result.rerender({ value: source })
   await act()
   mounted.scrollEditor()
   expect(mounted.previewScroll).toHaveBeenCalled()
@@ -372,16 +373,16 @@ test('async Editor preserves source blocks and clears stale table of contents wh
   requests[0].resolve(renderMarkdown(requests[0].options))
   await waitFor(() =>
     expect(
-      result.container.querySelector('.bytemd-toc-button')?.textContent
-    ).toBe('First')
+      result.container.querySelector('.bytemd-toc-button')?.textContent,
+    ).toBe('First'),
   )
   expect(result.container.querySelector('h1')).toHaveAttribute(
-    'data-bytemd-block'
+    'data-bytemd-block',
   )
-  result.component.$set({ value: '# Superseded' })
+  await result.rerender({ value: '# Superseded' })
   await waitFor(() => expect(requests).toHaveLength(2))
   expect(result.container.querySelector('.bytemd-toc-button')).toBeNull()
-  result.component.$set({ value: '## Latest' })
+  await result.rerender({ value: '## Latest' })
   await waitFor(() => expect(requests).toHaveLength(3))
   expect(requests[1].options.signal?.aborted).toBe(true)
   requests[1].resolve(renderMarkdown(requests[1].options))
@@ -390,10 +391,10 @@ test('async Editor preserves source blocks and clears stale table of contents wh
   requests[2].resolve(renderMarkdown(requests[2].options))
   await waitFor(() =>
     expect(
-      result.container.querySelector('.bytemd-toc-button')?.textContent
-    ).toBe('Latest')
+      result.container.querySelector('.bytemd-toc-button')?.textContent,
+    ).toBe('Latest'),
   )
   expect(result.container.querySelector('h2')).toHaveAttribute(
-    'data-bytemd-block'
+    'data-bytemd-block',
   )
 })

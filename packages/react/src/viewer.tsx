@@ -15,7 +15,7 @@ export const Viewer: FC<ViewerProps> = ({
   const elRef = useRef<HTMLDivElement>(null)
   const request = useMemo(
     () => ({ value, sanitize, plugins, remarkRehype, headingIds }),
-    [value, sanitize, plugins, remarkRehype, headingIds, renderer]
+    [value, sanitize, plugins, remarkRehype, headingIds, renderer],
   )
   const [asyncState, setAsyncState] = useState<{
     request: typeof request

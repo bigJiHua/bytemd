@@ -57,7 +57,7 @@ export type EditorUtils = ReturnType<typeof createEditorUtils>
 
 export function createEditorUtils(
   codemirror: typeof CodeMirror,
-  editor: Editor
+  editor: Editor,
 ) {
   return {
     /**
@@ -97,7 +97,7 @@ export function createEditorUtils(
       const selectionTo = editor.posFromIndex(selectionStart + text.length)
       editor.setSelection(
         reversed ? selectionTo : selectionFrom,
-        reversed ? selectionFrom : selectionTo
+        reversed ? selectionFrom : selectionTo,
       )
     },
     /**
@@ -172,7 +172,7 @@ const getShortcutWithPrefix = (key: string, shift = false) => {
 export async function handleImageUpload(
   { editor, appendBlock, codemirror, isDestroyed }: BytemdEditorContext,
   uploadImages: NonNullable<EditorProps['uploadImages']>,
-  files: File[]
+  files: File[],
 ) {
   if (!files.length || isDestroyed?.()) return
   let imgs: Awaited<ReturnType<typeof uploadImages>>
@@ -200,7 +200,7 @@ export async function handleImageUpload(
           title ? ` "${escapeText(title)}"` : ''
         })`
       })
-      .join('\n\n')
+      .join('\n\n'),
   )
   editor.setSelection(pos, codemirror.Pos(pos.line + imgs.length * 2 - 2))
   editor.focus()
@@ -209,7 +209,7 @@ export async function handleImageUpload(
 export function getBuiltinActions(
   locale: BytemdLocale,
   plugins: BytemdPlugin[],
-  uploadImages: EditorProps['uploadImages']
+  uploadImages: EditorProps['uploadImages'],
 ): { leftActions: BytemdAction[]; rightActions: BytemdAction[] } {
   const headingAction = (level: number): BytemdAction => ({
     title: locale[`h${level}` as keyof BytemdLocale],
@@ -242,13 +242,13 @@ export function getBuiltinActions(
     kind: 'size' | 'color' | 'bg',
     value: string,
     title: string,
-    icon?: string
+    icon?: string,
   ): BytemdAction => {
     const open = `[${kind}=${value}]`
     const close = `[/${kind}]`
     const existingRange = new RegExp(
       `^\\[${kind}=[^\\]]+\\]([\\s\\S]*)\\[\\/${kind}\\]$`,
-      'i'
+      'i',
     )
 
     return {
@@ -262,7 +262,7 @@ export function getBuiltinActions(
           if (selected) {
             const existing = selected.match(existingRange)
             editor.replaceSelection(
-              open + (existing ? existing[1] : selected) + close
+              open + (existing ? existing[1] : selected) + close,
             )
             editor.focus()
             return
@@ -272,7 +272,7 @@ export function getBuiltinActions(
           const lineText = editor.getLine(from.line) ?? ''
           const prefix =
             lineText.match(
-              /^(\s*(?:(?:#{1,6}|>|[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?)*)/
+              /^(\s*(?:(?:#{1,6}|>|[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?)*)/,
             )?.[1] ?? ''
           const content = lineText.slice(prefix.length)
           const trailing = content.match(/\s*$/)?.[0] ?? ''
@@ -285,19 +285,19 @@ export function getBuiltinActions(
             editor.replaceRange(
               next,
               codemirror.Pos(from.line, prefix.length),
-              codemirror.Pos(from.line, prefix.length + body.length)
+              codemirror.Pos(from.line, prefix.length + body.length),
             )
             editor.setCursor(
-              codemirror.Pos(from.line, prefix.length + next.length)
+              codemirror.Pos(from.line, prefix.length + next.length),
             )
           } else {
             editor.replaceRange(
               open + close,
               codemirror.Pos(from.line, prefix.length),
-              codemirror.Pos(from.line, prefix.length)
+              codemirror.Pos(from.line, prefix.length),
             )
             editor.setCursor(
-              codemirror.Pos(from.line, prefix.length + open.length)
+              codemirror.Pos(from.line, prefix.length + open.length),
             )
           }
           editor.focus()
@@ -347,7 +347,7 @@ export function getBuiltinActions(
       handler: {
         type: 'dropdown',
         actions: [12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map((size) =>
-          rangeStyleAction('size', String(size), `${size}px`)
+          rangeStyleAction('size', String(size), `${size}px`),
         ),
       },
     },
@@ -359,7 +359,7 @@ export function getBuiltinActions(
       handler: {
         type: 'dropdown',
         actions: fontColors.map((color) =>
-          rangeStyleAction('color', color, color, colorSwatch(color))
+          rangeStyleAction('color', color, color, colorSwatch(color)),
         ),
       },
     },
@@ -371,7 +371,7 @@ export function getBuiltinActions(
       handler: {
         type: 'dropdown',
         actions: bgColors.map((color) =>
-          rangeStyleAction('bg', color, color, colorSwatch(color))
+          rangeStyleAction('bg', color, color, colorSwatch(color)),
         ),
       },
     },
@@ -429,7 +429,7 @@ export function getBuiltinActions(
           const cursor = editor.getCursor()
           editor.setSelection(
             codemirror.Pos(cursor.line, cursor.ch + 2),
-            codemirror.Pos(cursor.line, cursor.ch + 5)
+            codemirror.Pos(cursor.line, cursor.ch + 5),
           )
           editor.focus()
         },
@@ -463,7 +463,7 @@ export function getBuiltinActions(
               const cursor = editor.getCursor()
               editor.setSelection(
                 codemirror.Pos(cursor.line, cursor.ch + 2),
-                codemirror.Pos(cursor.line, cursor.ch + 5)
+                codemirror.Pos(cursor.line, cursor.ch + 5),
               )
               editor.focus()
             },
@@ -495,7 +495,7 @@ export function getBuiltinActions(
           const pos = appendBlock('```js\n```')
           editor.setSelection(
             codemirror.Pos(pos.line, 3),
-            codemirror.Pos(pos.line, 5)
+            codemirror.Pos(pos.line, 5),
           )
           editor.focus()
         },
@@ -554,7 +554,7 @@ export function getBuiltinActions(
           const { line } = appendBlock(`---${text}---`)
           editor.setSelection(
             codemirror.Pos(line, 3),
-            codemirror.Pos(line, 3 + text.length)
+            codemirror.Pos(line, 3 + text.length),
           )
           editor.focus()
         },
@@ -579,25 +579,23 @@ export function getBuiltinActions(
     { key: 'warning', label: locale.calloutWarning, color: '#e6a23c' },
     { key: 'info', label: locale.calloutInfo, color: '#909399' },
     { key: 'danger', label: locale.calloutDanger, color: '#f56c6c' },
-  ].map(
-    ({ key, label, color }): BytemdAction => ({
-      title: label,
-      group: 'custom',
-      icon: `<span class="bytemd-callout-dot" style="background-color:${color}"></span>`,
-      cheatsheet: `>[${key}] ${label}`,
-      handler: {
-        type: 'action',
-        click(ctx: BytemdEditorContext) {
-          const { editor } = ctx
-          const pos = editor.getCursor()
-          const lineText = editor.getLine(pos.line) ?? ''
-          const prefix = lineText.trim() === '' ? '' : '\n'
-          editor.replaceSelection(`${prefix}>[${key}] `)
-          editor.focus()
-        },
+  ].map(({ key, label, color }): BytemdAction => ({
+    title: label,
+    group: 'custom',
+    icon: `<span class="bytemd-callout-dot" style="background-color:${color}"></span>`,
+    cheatsheet: `>[${key}] ${label}`,
+    handler: {
+      type: 'action',
+      click(ctx: BytemdEditorContext) {
+        const { editor } = ctx
+        const pos = editor.getCursor()
+        const lineText = editor.getLine(pos.line) ?? ''
+        const prefix = lineText.trim() === '' ? '' : '\n'
+        editor.replaceSelection(`${prefix}>[${key}] `)
+        editor.focus()
       },
-    })
-  )
+    },
+  }))
 
   leftActions.push(
     ...calloutActions,
@@ -631,11 +629,11 @@ export function getBuiltinActions(
             editor.replaceSelection(`{${selected}|${pinyin}}`)
             const start = codemirror.Pos(
               from.line,
-              from.ch + selected.length + 2
+              from.ch + selected.length + 2,
             )
             editor.setSelection(
               start,
-              codemirror.Pos(start.line, start.ch + pinyin.length)
+              codemirror.Pos(start.line, start.ch + pinyin.length),
             )
           } else {
             editor.setCursor(from)
@@ -656,16 +654,16 @@ export function getBuiltinActions(
         type: 'action',
         click({ editor, appendBlock, codemirror }) {
           const { line } = appendBlock(
-            '::: timeline 时间线\n:: [done] 2024-01-01 事项\n:::'
+            '::: timeline 时间线\n:: [done] 2024-01-01 事项\n:::',
           )
           editor.setSelection(
             codemirror.Pos(line, 13),
-            codemirror.Pos(line, 16)
+            codemirror.Pos(line, 16),
           )
           editor.focus()
         },
       },
-    }
+    },
   )
   return {
     leftActions,

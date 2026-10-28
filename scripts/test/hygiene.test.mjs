@@ -61,13 +61,13 @@ test('plugin mirror directories stay byte-identical to their source side', () =>
     assert.deepEqual(
       mirrorFiles,
       sourceFiles,
-      `${mirror} file set diverged from ${source}`
+      `${mirror} file set diverged from ${source}`,
     )
     for (const name of mirrorFiles)
       assert.deepEqual(
         fs.readFileSync(path.join(root, mirror, name)),
         fs.readFileSync(path.join(root, source, name)),
-        `${mirror}/${name} diverged from ${source}/${name}`
+        `${mirror}/${name} diverged from ${source}/${name}`,
       )
   }
 })
@@ -75,6 +75,6 @@ test('plugin mirror directories stay byte-identical to their source side', () =>
 test('bytemd has no shadow src/locales directory', () => {
   assert.equal(
     fs.existsSync(path.join(root, 'packages/bytemd/src/locales')),
-    false
+    false,
   )
 })

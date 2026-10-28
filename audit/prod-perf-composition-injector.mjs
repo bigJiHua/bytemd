@@ -26,7 +26,7 @@ export class CompositionInjector {
       await session.send('Input.insertText', { text })
     } catch (e) {
       throw new CompositionNotSupportedError(
-        `CDP composition failed: ${e.message}`
+        `CDP composition failed: ${e.message}`,
       )
     } finally {
       unsubscribe()
@@ -57,7 +57,7 @@ export class CompositionInjector {
       })
     } catch (e) {
       throw new CompositionNotSupportedError(
-        `CDP composition cancel failed: ${e.message}`
+        `CDP composition cancel failed: ${e.message}`,
       )
     } finally {
       unsubscribe()

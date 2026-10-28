@@ -10,7 +10,7 @@ test('playground fixture keeps accordion and timeline block boundaries', () => {
   // so resolve the fixture from the repository root instead.
   const value = readFileSync(
     resolve(process.cwd(), 'playground/src/text.md'),
-    'utf8'
+    'utf8',
   )
   const $ = render(Viewer, { value })
   try {
@@ -19,16 +19,16 @@ test('playground fixture keeps accordion and timeline block boundaries', () => {
     expect(items).toHaveLength(3)
     expect(items[1]).toHaveAttribute('open')
     expect(items[1].querySelector('.bytemd-accordion-body')).toHaveTextContent(
-      '这段内容默认展开。'
+      '这段内容默认展开。',
     )
     expect($.container.querySelectorAll('.bytemd-timeline')).toHaveLength(1)
     expect($.container.querySelectorAll('.bytemd-timeline-item')).toHaveLength(
-      5
+      5,
     )
     expect(
-      $.container.querySelector('.bytemd-timeline-desc')
+      $.container.querySelector('.bytemd-timeline-desc'),
     ).toHaveTextContent('完成需求评审')
   } finally {
-    $.component.$destroy()
+    $.unmount()
   }
 })

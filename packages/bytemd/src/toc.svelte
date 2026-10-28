@@ -1,5 +1,3 @@
-<svelte:options immutable={true} />
-
 <script lang="ts">
   import type { BytemdLocale } from './types'
   import type { Root, Element } from 'hast'

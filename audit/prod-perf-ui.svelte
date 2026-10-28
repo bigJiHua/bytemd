@@ -95,7 +95,7 @@
         tasks.push(
           ...list
             .getEntries()
-            .map(({ startTime, duration }) => ({ startTime, duration }))
+            .map(({ startTime, duration }) => ({ startTime, duration })),
         )
       })
     : undefined
@@ -118,12 +118,12 @@
           callbacks.every(
             (p, i) =>
               p.remark === parserCallbacks[i].remark &&
-              p.rehype === parserCallbacks[i].rehype
+              p.rehype === parserCallbacks[i].rehype,
           )
         )
           return { profile: 'enhanced', fail: forceFailure }
       },
-    }
+    },
   )
   const mainThread = async (options: any) => renderMarkdown(options)
   const tracked = async (options: any) => {
@@ -145,8 +145,8 @@
           ? round(
               Math.max(
                 0,
-                current.receivedAt - requestedAt - result.timings.renderMs
-              )
+                current.receivedAt - requestedAt - result.timings.renderMs,
+              ),
             )
           : null
     }
@@ -180,7 +180,7 @@
         checks,
       },
       null,
-      2
+      2,
     ))
 
   function begin(operation: string) {
@@ -212,7 +212,7 @@
       if (sample !== current || current.ended) return
       current.frameMaxGapMs = Math.max(
         current.frameMaxGapMs,
-        now - current.previousFrame
+        now - current.previousFrame,
       )
       current.previousFrame = now
       if (current.firstFrameMs === undefined)
@@ -337,7 +337,7 @@
           current.counts = counts
           current.previewHeight = markdownBody.parentElement.scrollHeight
           current.costMarks.effectsToComplete = round(
-            performance.now() - current.effectsAt
+            performance.now() - current.effectsAt,
           )
           current.totalMs = performance.now() - current.started
           current.lastKeyToPreviewMs =
@@ -386,13 +386,13 @@
     const entries = tasks.filter(
       (t) =>
         t.startTime + t.duration > current.started &&
-        t.startTime < performance.now()
+        t.startTime < performance.now(),
     )
     current.longTasks = entries
     current.maxLongTaskMs = Math.max(0, ...entries.map((t) => t.duration))
     current.blockingMs = entries.reduce(
       (sum, t) => sum + Math.max(0, t.duration - 50),
-      0
+      0,
     )
     current.domNodeCount = sandbox.querySelectorAll('*').length
     current.jsHeapEstimate = (performance as any).memory?.usedJSHeapSize

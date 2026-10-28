@@ -25,10 +25,10 @@ export default function mathSsr({
         .use(
           () => (_tree: unknown, file: { messages: { source?: string }[] }) => {
             const failure = file.messages.find(
-              (message) => message.source === 'rehype-katex'
+              (message) => message.source === 'rehype-katex',
             )
             if (failure) throw failure
-          }
+          },
         ),
     actions: getMathActions(locale),
   }

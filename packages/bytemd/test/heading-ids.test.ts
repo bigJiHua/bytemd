@@ -1,11 +1,11 @@
-import { Viewer } from '../src'
 import { renderMarkdown } from '../src/processor'
+import Viewer from '../src/viewer.svelte'
 import '@testing-library/jest-dom'
 import { act, render } from '@testing-library/svelte'
 
 function html(
   value: string,
-  options: Parameters<typeof renderMarkdown>[0] = { value }
+  options: Parameters<typeof renderMarkdown>[0] = { value },
 ) {
   return renderMarkdown(options).file.toString()
 }
@@ -26,13 +26,13 @@ test('deduplicates repeated headings and preserves existing ids', () => {
 
 test('can be disabled or prefixed', () => {
   expect(html('# 标题', { value: '# 标题', headingIds: false })).not.toContain(
-    'id="标题"'
+    'id="标题"',
   )
   expect(
     html('# 标题', {
       value: '# 标题',
       headingIds: { prefix: 'user-content-' },
-    })
+    }),
   ).toContain('id="user-content-标题"')
 })
 

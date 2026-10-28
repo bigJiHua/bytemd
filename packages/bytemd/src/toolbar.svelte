@@ -1,5 +1,3 @@
-<svelte:options immutable={true} />
-
 <script lang="ts">
   import { icons } from './icons'
   import ToolbarActions from './toolbar-actions.svelte'
@@ -348,8 +346,8 @@
       e.key === 'ArrowLeft'
         ? 'write'
         : e.key === 'ArrowRight'
-        ? 'preview'
-        : undefined
+          ? 'preview'
+          : undefined
     if (!next) return
     // Roving tabindex: one stop for the tablist, arrows move selection.
     e.preventDefault()

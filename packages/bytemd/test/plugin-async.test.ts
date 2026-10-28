@@ -1,5 +1,5 @@
 import mermaid from '../../plugin-mermaid/src'
-import { Viewer } from '../src'
+import Viewer from '../src/viewer.svelte'
 import { render, act, cleanup, waitFor } from '@testing-library/svelte'
 import Mermaid from 'mermaid'
 
@@ -18,7 +18,7 @@ test('Mermaid restores replaced nodes on content updates and ignores late render
     () =>
       new Promise((resolve) => {
         finish = resolve
-      })
+      }),
   )
   const plugins = [mermaid()]
   const result = render(Viewer, {
@@ -27,12 +27,12 @@ test('Mermaid restores replaced nodes on content updates and ignores late render
   })
   await act()
   await waitFor(() =>
-    expect(result.container.querySelector('.bytemd-mermaid')).not.toBeNull()
+    expect(result.container.querySelector('.bytemd-mermaid')).not.toBeNull(),
   )
   expect(result.container.querySelector('pre code')?.textContent).toContain(
-    'A-->B'
+    'A-->B',
   )
-  result.component.$set({ value: 'new content', plugins })
+  await result.rerender({ value: 'new content', plugins })
   await act()
   expect(result.container.querySelector('.bytemd-mermaid')).toBeNull()
   finish({ svg: '<svg><text>old diagram</text></svg>' })
@@ -56,18 +56,18 @@ test('Mermaid serializes configuration with each render across Viewers', async (
           seen.push(theme)
           resolve({ svg: `<svg id="${id}"></svg>` } as any)
         })
-      })
+      }),
   )
   const value = '```mermaid\ngraph TD\nA-->B\n```'
   const a = render(
     Viewer,
     { value, plugins: [mermaid({ theme: 'dark' })] },
-    { container: document.body.appendChild(document.createElement('div')) }
+    { container: document.body.appendChild(document.createElement('div')) },
   )
   const b = render(
     Viewer,
     { value, plugins: [mermaid({ theme: 'forest' })] },
-    { container: document.body.appendChild(document.createElement('div')) }
+    { container: document.body.appendChild(document.createElement('div')) },
   )
   await waitFor(() => expect(finishes).toHaveLength(1))
   expect(Mermaid.initialize).toHaveBeenCalledTimes(1)
@@ -77,9 +77,9 @@ test('Mermaid serializes configuration with each render across Viewers', async (
   await waitFor(() => expect(b.container.querySelector('svg')).not.toBeNull())
   expect(seen).toEqual(['dark', 'dark', 'forest', 'forest'])
   expect(a.container.querySelector('svg')?.id).not.toBe(
-    b.container.querySelector('svg')?.id
+    b.container.querySelector('svg')?.id,
   )
-  a.component.$set({ value: value.replace('A-->B', 'A-->C') })
+  await a.rerender({ value: value.replace('A-->B', 'A-->C') })
   await waitFor(() => expect(finishes).toHaveLength(3))
   finishes[2]()
   await waitFor(() => expect(a.container.querySelector('svg')).not.toBeNull())
@@ -99,16 +99,16 @@ test('a failed Mermaid diagram keeps source and does not block the next diagram'
   })
   await waitFor(() =>
     expect(result.container.querySelector('svg')?.textContent).toBe(
-      'valid diagram'
-    )
+      'valid diagram',
+    ),
   )
   expect(result.container.querySelector('pre code')?.textContent).toBe(
-    'bad diagram\n'
+    'bad diagram\n',
   )
   expect(result.container.querySelector('[role="alert"]')?.textContent).toBe(
-    'Mermaid: 无法渲染'
+    'Mermaid: 无法渲染',
   )
-  result.component.$set({ value: 'recovered' })
+  await result.rerender({ value: 'recovered' })
   await act()
   expect(result.container.querySelector('[role="alert"]')).toBeNull()
 })
@@ -119,7 +119,7 @@ test('Mermaid skips queued stale jobs and removes in-flight staging on unmount',
     () =>
       new Promise((resolve) => {
         finish = resolve
-      })
+      }),
   )
   const value = '```mermaid\ngraph TD\nA-->B\n```'
   const a = render(Viewer, { value, plugins: [mermaid()] })
@@ -148,11 +148,11 @@ test('Mermaid binds interactions and restores source if binding fails', async ()
     plugins: [mermaid()],
   })
   await waitFor(() =>
-    expect(result.container.querySelector('[role="alert"]')).not.toBeNull()
+    expect(result.container.querySelector('[role="alert"]')).not.toBeNull(),
   )
   expect(bind).toHaveBeenCalledOnce()
   expect(result.container.querySelector('pre code')?.textContent).toContain(
-    'A-->B'
+    'A-->B',
   )
   expect(result.container.querySelector('svg')).toBeNull()
 })
@@ -168,7 +168,7 @@ test('Mermaid retains a successful diagram and removes it on unmount', async () 
   })
   await act()
   await waitFor(() =>
-    expect(result.container.querySelector('svg')?.textContent).toBe('diagram')
+    expect(result.container.querySelector('svg')?.textContent).toBe('diagram'),
   )
   result.unmount()
   expect(result.container.querySelector('.bytemd-mermaid')).toBeNull()
@@ -186,12 +186,12 @@ test('Mermaid replacements preserve Editor source block metadata', async () => {
   })
   await act()
   await waitFor(() =>
-    expect(result.container.querySelector('svg')).not.toBeNull()
+    expect(result.container.querySelector('svg')).not.toBeNull(),
   )
   expect(
     result.container
       .querySelector('.bytemd-mermaid')
-      ?.getAttribute('data-bytemd-block')
+      ?.getAttribute('data-bytemd-block'),
   ).toMatch(/^\d+-0$/)
 })
 
@@ -201,7 +201,7 @@ test('pending Mermaid staging does not duplicate Editor source identity', async 
     () =>
       new Promise((resolve) => {
         finish = resolve
-      })
+      }),
   )
   const result = render(Viewer, {
     value: '```mermaid\ngraph TD\nA-->B\n```',
@@ -210,14 +210,14 @@ test('pending Mermaid staging does not duplicate Editor source identity', async 
   })
   await waitFor(() => expect(Mermaid.render).toHaveBeenCalledOnce())
   expect(result.container.querySelectorAll('[data-bytemd-block]')).toHaveLength(
-    1
+    1,
   )
   expect(result.container.querySelector('[data-bytemd-block]')?.tagName).toBe(
-    'PRE'
+    'PRE',
   )
   finish({ svg: '<svg></svg>' })
   await waitFor(() => expect(result.container.querySelector('pre')).toBeNull())
   expect(result.container.querySelectorAll('[data-bytemd-block]')).toHaveLength(
-    1
+    1,
   )
 })

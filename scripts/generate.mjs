@@ -64,7 +64,7 @@ const portable = (value) => value.replace(/\\/g, '/').replace(/\/$/, '')
 async function checkParent(root, destination) {
   const relative = path.relative(
     await fs.realpath(root),
-    await fs.realpath(path.dirname(destination))
+    await fs.realpath(path.dirname(destination)),
   )
   if (relative.startsWith('..') || path.isAbsolute(relative))
     throw new Error(`Destination parent outside workspace: ${destination}`)
@@ -103,7 +103,7 @@ export async function planGeneration(root = rootDir) {
       before,
       before !== undefined && JSON.stringify(original) === JSON.stringify(next)
         ? before
-        : prettier.format(JSON.stringify(next), { parser: 'json' })
+        : await prettier.format(JSON.stringify(next), { parser: 'json' }),
     )
     return next
   }
@@ -140,11 +140,11 @@ export async function planGeneration(root = rootDir) {
       if (
         pkg.exports &&
         Object.keys(pkg.exports).some(
-          (key) => key !== '.' && !key.startsWith('./')
+          (key) => key !== '.' && !key.startsWith('./'),
         )
       )
         throw new Error(
-          `Cannot extend conditional root exports; use a subpath map: ${relative}`
+          `Cannot extend conditional root exports; use a subpath map: ${relative}`,
         )
       if (!hasLocales && pkg.exports) {
         delete pkg.exports['./locales/*']
@@ -221,7 +221,7 @@ export async function planGeneration(root = rootDir) {
         pkg.peerDependencies?.bytemd
           ? { references: [{ path: '../bytemd' }] }
           : {}),
-      })
+      }),
     )
     const license = await read('LICENSE')
     if (license === undefined) throw new Error('Missing root LICENSE.')
@@ -238,7 +238,7 @@ export async function planGeneration(root = rootDir) {
         !config.references.some(
           (ref) =>
             typeof ref.path === 'string' &&
-            portable(ref.path).replace(/^\.\//, '') === reference
+            portable(ref.path).replace(/^\.\//, '') === reference,
         )
       )
         config.references.push({ path: reference })
@@ -246,7 +246,7 @@ export async function planGeneration(root = rootDir) {
     return config
   })
   const plugins = packages.filter(({ directory }) =>
-    directory.startsWith('plugin-')
+    directory.startsWith('plugin-'),
   )
   const template = await read('scripts/plugin-template.md')
   for (const { directory, pkg } of plugins) {
@@ -260,7 +260,7 @@ export async function planGeneration(root = rootDir) {
     }
     if (template === undefined) throw new Error('Missing plugin template.')
     const name = directory.slice('plugin-'.length)
-    const rendered = prettier.format(
+    const rendered = await prettier.format(
       mustache.render(template, {
         name,
         packageName: pkg.name,
@@ -269,29 +269,27 @@ export async function planGeneration(root = rootDir) {
         header: directory.startsWith('plugin-math')
           ? 'import "katex/dist/katex.css"'
           : directory.startsWith('plugin-highlight')
-          ? 'import "highlight.js/styles/default.css"'
-          : '',
+            ? 'import "highlight.js/styles/default.css"'
+            : '',
       }),
       {
         parser: 'markdown',
         semi: false,
         singleQuote: true,
         proseWrap: 'never',
-        pluginSearchDirs: [],
-        plugins: [],
-      }
+      },
     )
     const [start, end] = markers('usage')
     const usage = rendered.slice(
       rendered.indexOf(start) + start.length,
-      rendered.indexOf(end)
+      rendered.indexOf(end),
     )
     if (!rendered.includes(start) || !rendered.includes(end))
       throw new Error('Template needs usage markers.')
     add(
       destination,
       before,
-      before === undefined ? rendered : replaceRegion(before, 'usage', usage)
+      before === undefined ? rendered : replaceRegion(before, 'usage', usage),
     )
   }
   const table = [
@@ -306,7 +304,7 @@ export async function planGeneration(root = rootDir) {
             : pkg.repository?.url) ?? 'https://github.com/bytedance/bytemd.git'
         const url = repo.replace(/^git\+/, '').replace(/\.git$/, '')
         const description = _.upperFirst(
-          (pkg.description ?? '').replace(/^ByteMD plugin to /, '')
+          (pkg.description ?? '').replace(/^ByteMD plugin to /, ''),
         )
           .replace(/\r?\n/g, ' ')
           .replace(/\|/g, '\\|')
@@ -359,8 +357,8 @@ export async function main(args = process.argv.slice(2)) {
         preservedDocs: plan.preservedDocs,
       },
       null,
-      2
-    )
+      2,
+    ),
   )
   if (args.includes('--check') && plan.changes.length) process.exitCode = 1
 }

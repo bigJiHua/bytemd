@@ -60,12 +60,12 @@ export class EvidenceArchiver {
     const base = basename(filename)
     if (!BATCH7_PREFIXES.some((p) => base.startsWith(p))) {
       throw new EvidenceConflictError(
-        `Filename must start with a batch-7 prefix: ${base}`
+        `Filename must start with a batch-7 prefix: ${base}`,
       )
     }
     if (this._baseline.has(base)) {
       throw new EvidenceConflictError(
-        `File already exists (prior batch): ${base}`
+        `File already exists (prior batch): ${base}`,
       )
     }
     const fullPath = join(this.auditDir, base)

@@ -10,6 +10,8 @@ packages/bytemd/README.md
 audit/**/*.json
 # Vendored Nuxt review app with its own generated .nuxt/.output artifacts.
 audit/nuxt-ssr-review/
+# Local CM6 spike experiment (gitignored, not repository source).
+audit/cm6-spike/
 # Raw custom Markdown syntax and intentionally long code lines are render fixtures.
 playground/src/text.md
 svelte

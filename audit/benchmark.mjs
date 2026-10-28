@@ -48,7 +48,7 @@ for (const depth of [64, 256, 1024, 4096]) {
     `nested inline size, depth ${depth}`,
     '[size=20]'.repeat(depth) + 'text' + '[/size]'.repeat(depth),
     false,
-    1
+    1,
   )
 }
 const artifact = {
@@ -63,5 +63,5 @@ const artifact = {
 fs.writeFileSync(
   process.argv[2] ??
     fileURLToPath(new URL('./benchmark-results.json', import.meta.url)),
-  JSON.stringify(artifact, null, 2) + '\n'
+  JSON.stringify(artifact, null, 2) + '\n',
 )

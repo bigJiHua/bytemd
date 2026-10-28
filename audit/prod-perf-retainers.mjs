@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 export function retainingPaths(
   snapshot,
-  pattern = /^<div class="bytemd|^<div class="CodeMirror/
+  pattern = /^<div class="bytemd|^<div class="CodeMirror/,
 ) {
   const heap = JSON.parse(snapshot.toString())
   const meta = heap.snapshot.meta
@@ -64,5 +64,5 @@ if (
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 )
   console.log(
-    JSON.stringify(retainingPaths(readFileSync(process.argv[2])), null, 2)
+    JSON.stringify(retainingPaths(readFileSync(process.argv[2])), null, 2),
   )

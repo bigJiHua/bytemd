@@ -9,7 +9,7 @@ export interface SourceBlock {
 /** Editor-only metadata, added after sanitization and user rehype transforms. */
 export function annotateSourceBlocks(
   tree: Root,
-  version: number
+  version: number,
 ): SourceBlock[] {
   const blocks: SourceBlock[] = []
   let index = 0

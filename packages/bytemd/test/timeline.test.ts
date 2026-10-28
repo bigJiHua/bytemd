@@ -21,11 +21,11 @@ test('timeline renders title, items, dates and descriptions', () => {
 
   expect($.container.querySelectorAll('.bytemd-timeline').length).toBe(1)
   expect($.container.querySelector('.bytemd-timeline-title')?.textContent).toBe(
-    '时间线'
+    '时间线',
   )
   expect(items.length).toBe(5)
   expect(
-    items.map((el) => el.querySelector('.bytemd-timeline-date')?.textContent)
+    items.map((el) => el.querySelector('.bytemd-timeline-date')?.textContent),
   ).toEqual([
     '2024-01-15',
     '2024-03-20',
@@ -34,18 +34,20 @@ test('timeline renders title, items, dates and descriptions', () => {
     '2024-08-01',
   ])
   expect(
-    items.map((el) => el.querySelector('.bytemd-timeline-heading')?.textContent)
+    items.map(
+      (el) => el.querySelector('.bytemd-timeline-heading')?.textContent,
+    ),
   ).toEqual(['项目立项', 'Alpha 版本', '正式上线', '严重回滚事件', '用户破万'])
   expect(
-    items.map((el) => el.querySelector('.bytemd-timeline-desc')?.textContent)
+    items.map((el) => el.querySelector('.bytemd-timeline-desc')?.textContent),
   ).toEqual(['完成需求评审', '正在联调', undefined, undefined, undefined])
   expect(
     items.map(
       (el) =>
         [...el.classList].find((name) =>
-          name.startsWith('bytemd-timeline-item-')
-        ) ?? ''
-    )
+          name.startsWith('bytemd-timeline-item-'),
+        ) ?? '',
+    ),
   ).toEqual([
     'bytemd-timeline-item-done',
     'bytemd-timeline-item-doing',
@@ -55,7 +57,7 @@ test('timeline renders title, items, dates and descriptions', () => {
   ])
   expect($.container.querySelectorAll('.bytemd-timeline-marker').length).toBe(5)
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('unknown status falls back to todo', () => {
@@ -66,10 +68,10 @@ test('unknown status falls back to todo', () => {
 
   expect(item).toHaveClass('bytemd-timeline-item-todo')
   expect(item?.querySelector('.bytemd-timeline-heading')?.textContent).toBe(
-    '等待依赖'
+    '等待依赖',
   )
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('timeline supports blank lines between entries', () => {
@@ -94,14 +96,14 @@ test('timeline supports blank lines between entries', () => {
   expect(items[0]).toHaveClass('bytemd-timeline-item-done')
   expect(items[1]).toHaveClass('bytemd-timeline-item-doing')
   expect(
-    items[0].querySelector('.bytemd-timeline-desc')?.textContent?.trim()
+    items[0].querySelector('.bytemd-timeline-desc')?.textContent?.trim(),
   ).toBe('完成需求评审')
   expect(
-    items[1].querySelector('.bytemd-timeline-desc')?.textContent?.trim()
+    items[1].querySelector('.bytemd-timeline-desc')?.textContent?.trim(),
   ).toBe('正在联调')
   expect($.container.textContent).not.toContain('::: timeline')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('unclosed timeline stays plain text', () => {
@@ -112,5 +114,5 @@ test('unclosed timeline stays plain text', () => {
   expect($.container.querySelector('.bytemd-timeline')).toBeNull()
   expect($.container.textContent).toContain('::: timeline 时间线')
 
-  $.component.$destroy()
+  $.unmount()
 })

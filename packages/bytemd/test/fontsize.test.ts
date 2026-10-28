@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import { Viewer } from '../src'
+import Viewer from '../src/viewer.svelte'
 import '@testing-library/jest-dom'
 import { render } from '@testing-library/svelte'
 
@@ -17,7 +17,7 @@ test('wraps an inline range and applies the font size after sanitize', () => {
   expect(markdownBody($).textContent).not.toContain('[size=24]')
   expect(markdownBody($).textContent).not.toContain('[/size]')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('keeps inline nodes inside the range', () => {
@@ -28,7 +28,7 @@ test('keeps inline nodes inside the range', () => {
   expect(span?.querySelector('code')?.textContent).toBe('code')
   expect(span?.getAttribute('style')).toContain('font-size:20px')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('supports nesting and px units', () => {
@@ -40,7 +40,7 @@ test('supports nesting and px units', () => {
   expect(inner?.textContent).toBe('B')
   expect(inner?.getAttribute('style')).toContain('font-size:30px')
 
-  $.component.$destroy()
+  $.unmount()
 })
 
 test('ignores out-of-range sizes, unclosed tags and code blocks', () => {
@@ -55,5 +55,5 @@ test('ignores out-of-range sizes, unclosed tags and code blocks', () => {
   expect(body.textContent).toContain('[size=20]')
   expect(body.querySelector('pre code')?.textContent).toContain('[size=24]')
 
-  $.component.$destroy()
+  $.unmount()
 })
