@@ -19,8 +19,6 @@
     "./lib/locales/*": "./locales/*"
   },
   "main": "./dist/index.js",
-  "jsdelivr": "./dist/index.umd.js",
-  "unpkg": "./dist/index.umd.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
@@ -30,7 +28,7 @@
   "dependencies": {
     "@types/katex": "^0.16.0",
     "katex": "^0.16.47",
-    "remark-math": "^5.1.1"
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "bytemd": "workspace:*"

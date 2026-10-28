@@ -22,6 +22,7 @@ async function fixture(t) {
     )
   }
   await write('LICENSE', 'MIT license fixture\n')
+  await write('packages/bytemd/locales/en.json', { cheatsheet: 'Cheatsheet' })
   await write('tsconfig.json', {
     files: [],
     references: [{ path: 'packages\\bytemd' }, { path: 'custom/project' }],
@@ -145,6 +146,33 @@ test('unmarked plugin docs and manual text outside generated regions survive upd
   assert(marked.startsWith('custom intro\n'))
   assert(marked.endsWith('custom async failures\n'))
   assert.match(marked, /import math from '@bytemd\/plugin-math'/)
+})
+
+test('locale exports are only generated for packages that ship locale data', async (t) => {
+  const f = await fixture(t)
+  await applyGeneration(await planGeneration(f.root))
+  const core = JSON.parse(await f.read('packages/bytemd/package.json'))
+  assert.equal(core.exports['./locales/*'], './locales/*')
+  assert.equal(core.exports['./lib/locales/*'], './locales/*')
+  assert.deepEqual(core.files, ['custom-assets', 'dist', 'locales', 'svelte'])
+  const math = JSON.parse(await f.read('packages/plugin-math/package.json'))
+  assert.equal(math.exports['./locales/*'], undefined)
+  assert.equal(math.exports['./lib/locales/*'], undefined)
+  assert.equal(math.files.includes('locales'), false)
+})
+
+test('a stale locales advertisement is removed when the directory is absent', async (t) => {
+  const f = await fixture(t)
+  await f.write('packages/plugin-math/package.json', {
+    name: '@bytemd/plugin-math',
+    description: 'ByteMD plugin to support math formula',
+    files: ['dist', 'locales'],
+    exports: { '.': './dist/index.js', './locales/*': './locales/*' },
+  })
+  await applyGeneration(await planGeneration(f.root))
+  const pkg = JSON.parse(await f.read('packages/plugin-math/package.json'))
+  assert.equal(pkg.exports['./locales/*'], undefined)
+  assert.deepEqual(pkg.files, ['dist'])
 })
 
 test('private plugins are absent from the public table; directories without manifests are ignored', async (t) => {

@@ -5,9 +5,6 @@
     "packages/*",
     "playground"
   ],
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
     "build": "pnpm clean && node scripts/build.mjs && tsc --build",
     "clean": "node scripts/clean.mjs",
@@ -31,20 +28,20 @@
   },
   "devDependencies": {
     "@icon-park/svg": "^1.4.2",
-    "@sveltejs/vite-plugin-svelte": "2.0.4",
+    "@sveltejs/vite-plugin-svelte": "2.5.3",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/svelte": "^3.2.2",
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/fs-extra": "^11.0.1",
     "@types/lodash-es": "^4.17.7",
     "@types/resolve": "^1.20.2",
-    "@vitest/coverage-c8": "0.29.8",
+    "bundlewatch": "^0.3.3",
     "c8": "^12.0.0",
     "decode-named-character-reference": "^1.0.2",
     "execa": "^7.1.1",
     "fast-glob": "^3.2.12",
     "fs-extra": "^11.1.1",
-    "jsdom": "^21.1.1",
+    "jsdom": "^24.1.3",
     "lodash-es": "^4.17.21",
     "mustache": "^4.2.0",
     "prettier": "^2.8.7",
@@ -52,19 +49,31 @@
     "resolve": "^1.22.1",
     "sass": "^1.60.0",
     "sort-package-json": "^2.4.1",
-    "svelte": "^3.57.0",
+    "svelte": "^3.59.2",
     "svelte-preprocess": "^5.0.3",
     "svelte2tsx": "^0.6.10",
     "svgo": "^3.0.2",
     "typescript": "^5.0.2",
-    "vite": "^4.5.14",
-    "vitest": "^0.29.8"
+    "vite": "^5.4.20",
+    "vitest": "^3.2.6"
   },
   "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
+  "engines": {
+    "node": ">=20"
+  },
   "bundlewatch": {
     "files": [
       {
-        "path": "packages/*/dist/index.umd.js"
+        "path": "packages/bytemd/dist/index.mjs",
+        "maxSize": "210 kB"
+      },
+      {
+        "path": "packages/bytemd/dist/index.css",
+        "maxSize": "30 kB"
+      },
+      {
+        "path": "packages/bytemd/dist/markdown.css",
+        "maxSize": "25 kB"
       }
     ],
     "ci": {
@@ -89,8 +98,11 @@
       "source-map-js@^1.0.0": "^1.2.2",
       "form-data@^4.0.0": "^4.0.6",
       "@babel/traverse@^7.0.0": "^7.23.2",
-      "rehype-katex@^6.0.0>katex": "0.16.47",
-      "micromark-extension-math@^2.0.0>katex": "0.16.47"
+      "rehype-katex@^7.0.0>katex": "0.16.47",
+      "micromark-extension-math@^3.0.0>katex": "0.16.47",
+      "bundlewatch>axios": "^1.7.9",
+      "cross-spawn@^7.0.0": "^7.0.5",
+      "tinypool@^1.0.0": "2.1.2"
     }
   }
 }

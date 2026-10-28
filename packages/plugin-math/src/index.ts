@@ -47,8 +47,21 @@ export default function math({
         })
       }
       const originals = new Map<HTMLElement, string>()
-      const renderMath = async (selector: string, displayMode: boolean) => {
-        const els = markdownBody.querySelectorAll<HTMLElement>(selector)
+      // remark-math 6 emits `code.language-math` nodes: display math wraps in
+      // a <pre>, inline math stays inside its paragraph.
+      const collectMath = (displayMode: boolean) =>
+        [
+          ...markdownBody.querySelectorAll<HTMLElement>('code.language-math'),
+        ].filter((el) => {
+          const parent = el.parentElement
+          return !!parent && (parent.tagName === 'PRE') === displayMode
+        })
+
+      const renderMath = async (
+        elements: HTMLElement[],
+        displayMode: boolean
+      ) => {
+        const els = elements
         if (els.length === 0) return
 
         const fail = (error: unknown, el: HTMLElement) => {
@@ -98,10 +111,10 @@ export default function math({
         }
       }
 
-      renderMath('.math.math-inline', false).catch((error) => {
+      renderMath(collectMath(false), false).catch((error) => {
         if (active) console.error(error)
       })
-      renderMath('.math.math-display', true).catch((error) => {
+      renderMath(collectMath(true), true).catch((error) => {
         if (active) console.error(error)
       })
       return () => {

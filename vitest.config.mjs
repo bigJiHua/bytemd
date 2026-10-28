@@ -50,7 +50,21 @@ export default defineConfig({
     include: ['packages/{bytemd,react,vue,vue-next}/**/*.test.{ts,tsx}'],
     globals: true,
     environment: 'jsdom',
+    // vitest 2+ defaults to a forks pool; the heavy jsdom suites need the
+    // faster threads pool the 0.x/1.x lines used.
+    pool: 'threads',
+    // The 100-cycle framework lifecycle and wide-input budget suites run
+    // slower under the vitest 3 runtime; keep a generous per-test budget.
+    testTimeout: 20000,
     setupFiles: 'packages/bytemd/test/setup.ts',
+    // Keep dynamic plugin imports inside Vite's module graph. Vitest 1
+    // externalizes node_modules deps and their native imports would bypass
+    // the vi.mock factories that simulate KaTeX/highlight behavior.
+    server: {
+      deps: {
+        inline: ['katex', 'highlight.js'],
+      },
+    },
   },
   plugins: [
     svelte({

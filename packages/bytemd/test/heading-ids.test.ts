@@ -1,9 +1,12 @@
-import '@testing-library/jest-dom'
-import { act, render } from '@testing-library/svelte'
 import { Viewer } from '../src'
 import { renderMarkdown } from '../src/processor'
+import '@testing-library/jest-dom'
+import { act, render } from '@testing-library/svelte'
 
-function html(value: string, options: Parameters<typeof renderMarkdown>[0] = { value }) {
+function html(
+  value: string,
+  options: Parameters<typeof renderMarkdown>[0] = { value }
+) {
   return renderMarkdown(options).file.toString()
 }
 

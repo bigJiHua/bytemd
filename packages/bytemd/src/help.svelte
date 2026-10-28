@@ -13,7 +13,8 @@
       if (handler?.type === 'dropdown') {
         items.push(...flatItems(handler.actions))
       }
-      if (cheatsheet) {
+      // Shortcut-only actions must reach the shortcuts section too.
+      if (cheatsheet || (handler?.type === 'action' && handler.shortcut)) {
         items.push(action)
       }
     })
@@ -30,7 +31,9 @@
     {#each items as action}
       {#if action.cheatsheet}
         <li>
-          <div class="bytemd-help-icon">{@html action.icon}</div>
+          {#if action.icon}<div class="bytemd-help-icon">
+              {@html action.icon}
+            </div>{/if}
           <div class="bytemd-help-title">{action.title}</div>
           <div class="bytemd-help-content">
             <code>{action.cheatsheet}</code>
@@ -44,7 +47,9 @@
     {#each items as action}
       {#if action.handler && action.handler.type === 'action' && action.handler.shortcut}
         <li>
-          <div class="bytemd-help-icon">{@html action.icon}</div>
+          {#if action.icon}<div class="bytemd-help-icon">
+              {@html action.icon}
+            </div>{/if}
           <div class="bytemd-help-title">{action.title}</div>
           <div class="bytemd-help-content">
             <kbd>{action.handler.shortcut}</kbd>

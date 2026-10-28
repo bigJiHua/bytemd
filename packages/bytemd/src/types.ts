@@ -15,6 +15,8 @@ export interface BytemdLocale {
   renderError?: string
   renderPending?: string
   pluginError?: string
+  /** Accessible name of the toolbar; falls back to English. */
+  toolbar?: string
   accordion: string
   calloutDefault: string
   calloutSuccess: string
@@ -191,13 +193,17 @@ export interface BytemdPlugin {
    *
    * https://github.com/remarkjs/remark/blob/main/doc/plugins.md
    */
-  remark?: (p: Processor) => Processor
+  remark?: (
+    p: Processor<any, any, any, any, any>
+  ) => Processor<any, any, any, any, any>
   /**
    * Customize HTML parse by rehype plugins:
    *
    * https://github.com/rehypejs/rehype/blob/main/doc/plugins.md
    */
-  rehype?: (p: Processor) => Processor
+  rehype?: (
+    p: Processor<any, any, any, any, any>
+  ) => Processor<any, any, any, any, any>
   /**
    * Register actions in toolbar, cheatsheet and shortcuts
    */

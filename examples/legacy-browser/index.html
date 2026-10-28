@@ -2,34 +2,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>IE9 Example</title>
+    <title>Bytemd without a bundler (ESM CDN)</title>
     <link
       rel="stylesheet"
-      href="https://unpkg.com/bytemd@1.11.0/dist/index.min.css"
+      href="https://cdn.jsdelivr.net/npm/bytemd/dist/index.min.css"
     />
     <link rel="stylesheet" href="https://unpkg.com/github-markdown-css" />
-    <script src="https://polyfill.io/v3/polyfill.min.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=Uint16Array,Array.prototype.find,smoothscroll"></script>
-    <script src="https://unpkg.com/bytemd@1.11.0/dist/index.es5.min.js"></script>
-    <script src="https://unpkg.com/@bytemd/plugin-gfm@1.11.0/dist/index.es5.min.js"></script>
   </head>
   <body>
-    <body>
-      <!-- prettier-ignore -->
-      <script>
-        var plugins = [bytemdPluginGfm()];
-        var editor = new bytemd.Editor({
-          target: document.body,
-          props: {
-            value: '# heading\n\nparagraph\n\n> blockquote',
-            plugins: plugins
-          }
-        });
-        editor.$on('change', function (e) {
-          editor.$set({ value: e.detail.value });
-        });
-      </script>
-    </body>
+    <!--
+      The fork ships ESM/CJS only; the UMD and ES5 bundles were retired.
+      Legacy browsers need a bundler plus an ESNext -> ES5 transpiler against
+      the npm package. This page demonstrates modern no-bundler usage through
+      jsDelivr's on-the-fly ESM transform.
+    -->
+    <script type="module">
+      import Editor from 'https://cdn.jsdelivr.net/npm/bytemd/+esm'
+      import { default as gfm } from 'https://cdn.jsdelivr.net/npm/@bytemd/plugin-gfm/+esm'
+
+      let value = '# heading\n\nparagraph\n\n> blockquote'
+      const editor = new Editor({
+        target: document.body,
+        props: {
+          value: value,
+          plugins: [gfm()],
+        },
+      })
+      editor.$on('change', function (e) {
+        value = e.detail.value
+      })
+    </script>
   </body>
 </html>

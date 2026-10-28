@@ -1,5 +1,5 @@
-import type { RenderOptions, RenderResult } from './render-types'
 import { rehypeHeadingIds } from './heading-ids'
+import type { RenderOptions, RenderResult } from './render-types'
 import { annotateSourceBlocks } from './source-blocks'
 import type { ViewerProps } from './types'
 import type { Root } from 'hast'
@@ -13,8 +13,6 @@ import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import type { Processor } from 'unified'
 import { visit } from 'unist-util-visit'
-
-const schemaStr = JSON.stringify(defaultSchema)
 
 /** Pure rendering entry: no UI, CSS, CodeMirror or DOM enhancement imports. */
 export function renderMarkdown(options: RenderOptions): RenderResult {
@@ -1077,11 +1075,11 @@ export function getProcessor({
   remarkRehype: remarkRehypeOptions = {},
   headingIds = true,
 }: Omit<ViewerProps, 'value'>) {
-  let processor: Processor = unified()
+  let processor: Processor<any, any, any, any, any> = unified()
     .use(remarkParse)
     .use(remarkTreeBudget as any)
     .use(remarkCallout)
-    // unified v10 typings reject a second custom plugin in the chain
+    // custom plugin chains need loose typings under unified 11
     .use(remarkAccordion as any)
     .use(remarkTimeline as any)
     .use(remarkPinyin as any)
@@ -1095,7 +1093,9 @@ export function getProcessor({
     .use(remarkRehype, { allowDangerousHtml: true, ...remarkRehypeOptions })
     .use(rehypeRaw)
 
-  let schema = JSON.parse(schemaStr) as Schema
+  // Clone without JSON: the default schema carries RegExp allow-lists (e.g.
+  // `code: [["className", /^language-./]]`) that JSON round-trips destroy.
+  let schema = structuredClone(defaultSchema) as Schema
   schema.attributes!['*'].push('className') // Allow class names by default
 
   if (typeof sanitize === 'function') {

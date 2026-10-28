@@ -299,16 +299,72 @@
     if (!['Enter', 'Space'].includes(e.code)) return
     const target = (e.target as Element).closest(`[${tippyPathKey}]`)
     if (!target) return
+    const handler = getPayloadFromElement(target)?.item?.handler
+    if (handler?.type === 'dropdown') {
+      // These triggers are divs: no native click is synthesized for
+      // Enter/Space, so toggle the tippy instance directly.
+      e.preventDefault()
+      const inst = (target as unknown as { _tippy?: DelegateInstance })._tippy
+      if (inst) {
+        if (inst.state.isVisible) inst.hide()
+        else inst.show()
+      }
+      return
+    }
+    if (handler?.type !== 'action') return
     e.preventDefault()
-    handleClick(e)
+    handler.click(context)
+    delegateInstance?.destroy()
+    init()
+  }
+
+  // tippy has no built-in Escape handling; without this, a menu can only be
+  // dismissed by clicking away. Only instances this toolbar owns are hidden.
+  function handleEscape(e: KeyboardEvent) {
+    if (e.key !== 'Escape') return
+    let hiddenAny = false
+    document.querySelectorAll(`.${tippyClass}`).forEach((el) => {
+      const inst = (el as unknown as { _tippy?: DelegateInstance })._tippy
+      if (inst?.state.isVisible) {
+        inst.hide()
+        hiddenAny = true
+      }
+    })
+    if (hiddenAny) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+
+  let writeTab: HTMLElement
+  let previewTab: HTMLElement
+
+  function handleTabKeydown(e: KeyboardEvent, tab: 'write' | 'preview') {
+    if (['Enter', 'Space'].includes(e.code)) {
+      dispatch('tab', tab)
+      return
+    }
+    const next =
+      e.key === 'ArrowLeft'
+        ? 'write'
+        : e.key === 'ArrowRight'
+        ? 'preview'
+        : undefined
+    if (!next) return
+    // Roving tabindex: one stop for the tablist, arrows move selection.
+    e.preventDefault()
+    dispatch('tab', next)
+    ;(next === 'write' ? writeTab : previewTab).focus()
   }
 </script>
+
+<svelte:window on:keydown={handleEscape} />
 
 <div
   class="bytemd-toolbar"
   role="toolbar"
   tabindex="-1"
-  aria-label={locale.cheatsheet}
+  aria-label={locale.toolbar ?? 'Editor toolbar'}
   bind:this={toolbar}
   on:click={handleClick}
   on:keydown={handleKeydown}
@@ -323,25 +379,25 @@
         aria-label={`${locale.write} / ${locale.preview}`}
       >
         <div
+          bind:this={writeTab}
           on:click={() => dispatch('tab', 'write')}
-          on:keydown|self={(e) =>
-            ['Enter', 'Space'].includes(e.code) && dispatch('tab', 'write')}
+          on:keydown|self={(e) => handleTabKeydown(e, 'write')}
           class="bytemd-toolbar-tab"
           class:bytemd-toolbar-tab-active={activeTab !== 'preview'}
           role="tab"
-          tabindex="0"
+          tabindex={activeTab !== 'preview' ? 0 : -1}
           aria-selected={activeTab !== 'preview'}
         >
           {locale.write}
         </div>
         <div
+          bind:this={previewTab}
           on:click={() => dispatch('tab', 'preview')}
-          on:keydown|self={(e) =>
-            ['Enter', 'Space'].includes(e.code) && dispatch('tab', 'preview')}
+          on:keydown|self={(e) => handleTabKeydown(e, 'preview')}
           class="bytemd-toolbar-tab"
           class:bytemd-toolbar-tab-active={activeTab === 'preview'}
           role="tab"
-          tabindex="0"
+          tabindex={activeTab === 'preview' ? 0 : -1}
           aria-selected={activeTab === 'preview'}
         >
           {locale.preview}

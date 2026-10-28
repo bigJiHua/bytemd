@@ -8,6 +8,8 @@ docs/index.md
 packages/bytemd/README.md
 # Machine-generated audit evidence retains its original serialization.
 audit/**/*.json
+# Vendored Nuxt review app with its own generated .nuxt/.output artifacts.
+audit/nuxt-ssr-review/
 # Raw custom Markdown syntax and intentionally long code lines are render fixtures.
 playground/src/text.md
 svelte

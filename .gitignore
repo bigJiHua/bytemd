@@ -27,6 +27,12 @@ audit/**/*.test.mjs
 audit/ssr-pack/
 audit/nuxt-ssr-review/
 # Generated subpath forwarding files (TypeScript node resolution)
+packages/bytemd/processor.js
+packages/bytemd/processor.mjs
+packages/bytemd/processor.d.ts
+packages/bytemd/worker.js
+packages/bytemd/worker.mjs
+packages/bytemd/worker.d.ts
 packages/bytemd/viewer.js
 packages/bytemd/viewer.mjs
 packages/bytemd/viewer.d.ts

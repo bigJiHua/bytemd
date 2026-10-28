@@ -27,7 +27,10 @@ export default function frontmatter({
         try {
           file.frontmatter = load(fisrtNode.value)
         } catch (err) {
-          onError?.(err)
+          // A silent failure would drop the frontmatter without any trace;
+          // fall back to the console when the host gave no handler.
+          if (onError) onError(err)
+          else console.error(err)
         }
       }),
   }

@@ -117,6 +117,16 @@ export async function planGeneration(root = rootDir) {
   for (const directory of packageDirs) {
     const relative = `packages/${directory}/package.json`
     if ((await read(relative)) === undefined) continue
+    // Locale exports/files only make sense for packages that actually ship
+    // locale data; advertising them otherwise breaks consumer resolution.
+    let hasLocales = false
+    try {
+      hasLocales = (
+        await fs.lstat(path.join(root, 'packages', directory, 'locales'))
+      ).isDirectory()
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
     const pkg = await json(relative, {}, (pkg) => {
       if (typeof pkg.name !== 'string')
         throw new Error(`Missing package name: ${relative}`)
@@ -136,6 +146,10 @@ export async function planGeneration(root = rootDir) {
         throw new Error(
           `Cannot extend conditional root exports; use a subpath map: ${relative}`
         )
+      if (!hasLocales && pkg.exports) {
+        delete pkg.exports['./locales/*']
+        delete pkg.exports['./lib/locales/*']
+      }
       const exports = {
         '.': {
           ...(pkg.name === 'bytemd'
@@ -143,8 +157,12 @@ export async function planGeneration(root = rootDir) {
             : {}),
           ...entry('index'),
         },
-        './locales/*': './locales/*',
-        './lib/locales/*': './locales/*',
+        ...(hasLocales
+          ? {
+              './locales/*': './locales/*',
+              './lib/locales/*': './locales/*',
+            }
+          : {}),
       }
       if (pkg.name === 'bytemd') {
         for (const name of ['processor', 'worker'])
@@ -157,12 +175,14 @@ export async function planGeneration(root = rootDir) {
         ])
           exports[`./dist/${name}`] = `./dist/${name}`
       }
+      // The fork ships ESM/CJS only: UMD and its CDN entry fields are retired
+      // with the publish-format trim (PLAN Phase 3).
+      delete pkg.jsdelivr
+      delete pkg.unpkg
       defaults(pkg, {
         types: './dist/index.d.ts',
         module: './dist/index.mjs',
         main: './dist/index.js',
-        unpkg: './dist/index.umd.js',
-        jsdelivr: './dist/index.umd.js',
         exports,
         files: [],
       })
@@ -181,9 +201,10 @@ export async function planGeneration(root = rootDir) {
       }
       if (!Array.isArray(pkg.files))
         throw new Error(`Expected files array: ${relative}`)
+      pkg.files = pkg.files.filter((value) => value !== 'locales' || hasLocales)
       for (const value of [
         'dist',
-        'locales',
+        ...(hasLocales ? ['locales'] : []),
         ...(pkg.name === 'bytemd' ? ['svelte'] : []),
       ])
         if (!pkg.files.includes(value)) pkg.files.push(value)

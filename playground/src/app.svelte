@@ -11,7 +11,10 @@
   import { Editor } from 'bytemd'
   import 'bytemd/dist/index.css'
   import 'bytemd/dist/markdown.css'
-  import 'highlight.js/styles/vs.css'
+  import hljsDarkUrl from 'highlight.js/styles/github-dark.css?url'
+  // Load the matching highlight.js theme for the active palette via <link>
+  // (below) so dark mode swaps the token colors instead of hardcoding white.
+  import hljsLightUrl from 'highlight.js/styles/github.css?url'
   // placed after highlight styles to override `code` padding
   import 'katex/dist/katex.css'
 
@@ -46,6 +49,8 @@
   let mode = 'auto'
   let localeKey = 'en'
   let dark = false
+
+  $: hljsThemeHref = dark ? hljsDarkUrl : hljsLightUrl
 
   function toggleTheme() {
     dark = !dark
@@ -89,6 +94,10 @@
     .filter(([, v]) => v)
     .map(([k]) => k)
 </script>
+
+<svelte:head>
+  <link rel="stylesheet" href={hljsThemeHref} />
+</svelte:head>
 
 <div class="container">
   <div class="line">

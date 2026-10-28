@@ -3,10 +3,13 @@ import Viewer from '../src/viewer.svelte'
 import '@testing-library/jest-dom'
 import { render } from '@testing-library/svelte'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 test('playground fixture keeps accordion and timeline block boundaries', () => {
+  // vitest 1 + vite 5 may serve a non-file scheme for import.meta.url here,
+  // so resolve the fixture from the repository root instead.
   const value = readFileSync(
-    new URL('../../../playground/src/text.md', import.meta.url),
+    resolve(process.cwd(), 'playground/src/text.md'),
     'utf8'
   )
   const $ = render(Viewer, { value })

@@ -37,20 +37,19 @@ import { build } from 'vite'
     // build js
     const pkg = await fs.readJson(path.resolve(root, 'package.json'))
 
-    for (let format of ['es', 'cjs', 'umd']) {
-      const legacy = format === 'umd' || format === 'iife'
+    // ESM + CJS only: UMD was retired with the publish-format trim (PLAN
+    // Phase 3). CDN consumers use jsDelivr's /+esm transform instead.
+    for (let format of ['es', 'cjs']) {
       const externalDeps = []
 
-      if (legacy) {
-        externalDeps.push(...Object.keys({ ...pkg.peerDependencies }))
-      } else if (format === 'es') {
+      if (format === 'es') {
         externalDeps.push(
           ...Object.keys({
             ...pkg.peerDependencies,
             ...pkg.dependencies,
           })
         )
-      } else if (format === 'cjs') {
+      } else {
         const deps = Object.keys({ ...pkg.dependencies })
           // exclude esm packages, bundle them to make it work for cjs
           .filter((dep) => {
@@ -72,11 +71,11 @@ import { build } from 'vite'
         externalDeps.push(...Object.keys({ ...pkg.peerDependencies }), ...deps)
       }
 
-      const alias = {
-        // https://github.com/rollup/plugins/issues/1159
-        // for plugin-highlight-ssr
-        lowlight: 'lowlight/lib/common',
-      }
+      // lowlight 3 (rehype-highlight 7) no longer exposes `lib/common`; its
+      // ESM sources are bundled into the CJS build like other ESM deps, so no
+      // special alias is needed anymore.
+      /** @type {Record<string, string>} */
+      const alias = {}
 
       if (format === 'cjs') {
         const pkgName = 'decode-named-character-reference'
@@ -91,7 +90,7 @@ import { build } from 'vite'
         root,
         build: {
           emptyOutDir: false,
-          minify: legacy,
+          minify: false,
           target: 'es2019', // nullish coalescing in es2020
           lib: {
             entry: 'src/index.ts',
@@ -117,7 +116,7 @@ import { build } from 'vite'
         ],
       }
       await build(buildOptions)
-      if (name === 'vue-next' && format !== 'umd') {
+      if (name === 'vue-next') {
         await build({
           ...buildOptions,
           build: {
@@ -159,7 +158,7 @@ import { build } from 'vite'
           await fs.writeFile(file, content)
         }
       }
-      if (name === 'bytemd' && format !== 'umd') {
+      if (name === 'bytemd') {
         for (const entry of ['processor', 'worker', 'viewer']) {
           await build({
             ...buildOptions,
@@ -211,6 +210,12 @@ import { build } from 'vite'
       await fs.writeFile('svelte/index.js', js)
 
       for (const [file, content] of [
+        ['processor.mjs', "export * from './dist/processor.mjs'\n"],
+        ['processor.js', "module.exports = require('./dist/processor.js')\n"],
+        ['processor.d.ts', "export * from './dist/processor'\n"],
+        ['worker.mjs', "export * from './dist/worker.mjs'\n"],
+        ['worker.js', "module.exports = require('./dist/worker.js')\n"],
+        ['worker.d.ts', "export * from './dist/worker'\n"],
         ['viewer.mjs', "export * from './dist/viewer.mjs'\n"],
         ['viewer.js', "module.exports = require('./dist/viewer.js')\n"],
         ['viewer.d.ts', "export * from './dist/viewer'\n"],
@@ -220,6 +225,8 @@ import { build } from 'vite'
 
       console.log('processing style files (backward compatibility)...')
       await fs.move('dist/style.css', 'dist/index.css')
+      // vite already emits minified CSS in lib builds, so index.css is the
+      // compressed artifact; index.min.css stays as a compatibility alias.
       await fs.copy('dist/index.css', 'dist/index.min.css')
 
       console.log('building standard markdown theme...')

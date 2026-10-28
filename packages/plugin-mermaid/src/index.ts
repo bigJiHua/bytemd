@@ -166,6 +166,7 @@ another task      : 24d`,
           if (!active || !markdownBody.contains(pre)) return
           // Mermaid's public renderer also queues work. Keep initialization
           // and the awaited render together so another Viewer cannot reset it.
+          const previousConfig = m.mermaidAPI?.getConfig?.()
           m.initialize({
             ...mermaidConfig,
             startOnLoad: false,
@@ -201,6 +202,10 @@ another task      : 24d`,
           } finally {
             stage.remove()
             stages.delete(stage)
+            // initialize() mutates mermaid's module-global configuration;
+            // restore the host snapshot so unrelated diagrams on the page
+            // are not re-themed by the plugin.
+            if (previousConfig) m.initialize(previousConfig)
           }
         })
         // A rejected diagram must not poison the shared queue.

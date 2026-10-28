@@ -30,7 +30,9 @@ test('math failures preserve source and continue with other expressions', async 
     plugins: [math()],
   })
   await waitFor(() => expect(K.render).toHaveBeenCalledTimes(2))
-  expect(result.container.querySelector('.math')?.textContent).toBe('bad')
+  expect(
+    result.container.querySelector('code.language-math')?.textContent
+  ).toBe('bad')
   expect(result.container.querySelector('.katex')?.textContent).toBe('good')
   expect(
     result.container.querySelectorAll('.bytemd-plugin-error')
@@ -47,7 +49,9 @@ test('KaTeX parse-error output receives the same fallback feedback', async () =>
   await waitFor(() =>
     expect(result.container.querySelector('[role="alert"]')).not.toBeNull()
   )
-  expect(result.container.querySelector('.math')?.textContent).toBe('invalid')
+  expect(
+    result.container.querySelector('code.language-math')?.textContent
+  ).toBe('invalid')
   expect(result.container.querySelector('.katex-error')).toBeNull()
 })
 

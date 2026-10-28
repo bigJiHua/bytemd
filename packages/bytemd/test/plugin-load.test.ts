@@ -11,7 +11,7 @@ const cases = [
     name: 'KaTeX',
     load: () => import('../../plugin-math/src'),
     id: '../../plugin-math/node_modules/katex',
-    html: '<p><span class="math math-inline">x</span></p>',
+    html: '<p><code class="language-math">x</code></p>',
   },
   {
     name: 'highlight.js',

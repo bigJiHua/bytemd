@@ -14,21 +14,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
-    },
-    "./locales/*": "./locales/*",
-    "./lib/locales/*": "./locales/*"
+    }
   },
   "main": "./dist/index.js",
-  "jsdelivr": "./dist/index.umd.js",
-  "unpkg": "./dist/index.umd.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "locales"
+    "dist"
   ],
   "dependencies": {
-    "remark-gemoji": "^7.0.1"
+    "remark-gemoji": "^8.0.0"
   },
   "devDependencies": {
     "bytemd": "workspace:*"

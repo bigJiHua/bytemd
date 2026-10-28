@@ -125,11 +125,13 @@
 - [ ] 剩余 Vite/Vitest/Tinypool 公告须独立迁移；外部消费者的 ESM 传递依赖还需独立安装验收，仓库 overrides 不随包发布。
 - [x] 保持发布格式裁剪与大版本迁移不在本批混入；安全公告按实际依赖路径和影响范围记录。
 
-#### 第十批：发布格式与大版本迁移（待确认兼容面）
+#### 第十批：发布格式与大版本迁移 — 2026-10-28（格式裁剪 + unified 11 + 工具链 critical 清零完成；vite 6+/svelte 5/CM6 独立评估待续）
 
-- [ ] 先确认宿主 ESM/CJS/UMD 使用范围，再决定格式裁剪和 bundlewatch 目标，完成四框架及 SSR/Worker 消费验证。
-- [ ] unified 11 及对应 remark/rehype 插件与维护工具链分步迁移；先按各包 major 确认兼容面，冻结现有语法和插件契约作为回归基线。
-- [ ] Svelte 5、CodeMirror 6 继续作为独立项目评估，不与其他批次做混合迁移。
+- [x] 发布格式裁剪为 ESM/CJS：构建移除 UMD（mermaid 插件 3.4MB UMD 不再产出），全部包删除 jsdelivr/unpkg 字段（CDN 走 jsDelivr /+esm），bundlewatch 改盯 bytemd ESM+CSS 并设 maxSize（本地实测 PASS），生成器按 locales 目录存在性写 `./locales/*` 导出（修复 9 个包声明不存在子路径的问题），legacy-browser 示例改写为无打包器 ESM 用法，README/docs 传统浏览器章节同步。
+- [x] unified 11 生态迁移：unified 11 / remark-parse 11 / remark-rehype 11 / rehype-raw 7 / rehype-sanitize 6 / rehype-stringify 10 / hast-util-sanitize 5 / vfile 6 / remark-gfm 4 / remark-math 6 / rehype-katex 7 / remark-frontmatter 5 / remark-breaks 4 / remark-gemoji 8 / rehype-highlight 7。关键适配：sanitize schema 改 structuredClone（JSON 克隆会破坏 v5 新增的 code language-\* 正则白名单）；plugin-math 选择器适配 remark-math 6 的 `code.language-math` DOM；math-ssr 保留响亮失败契约（rehype-katex 7 把失败降级为 vfile message，插件检测后重新抛出）；highlight-ssr 移除 v7 已删除的 ignoreMissing；bytemd 补 processor/worker 根转发文件（node10 TS 解析）。
+- [x] 工具链迁移：Vite 5.4 + Vitest 3.2（threads 池 + testTimeout 20s 保持重套件稳定）+ jsdom 24 + `@vitejs/plugin-vue2` 替换停止维护的 vite-plugin-vue2 + `@vitejs/plugin-vue` 5 + tinypool 2.1.2 override + vitest server.deps.inline 保留 katex/highlight.js 的 vi.mock 能力。Svelte 3 保留（vite-plugin-svelte 2.5.3，peer vite 4 警告为已知折衷）。
+- [x] 安全结果：完整开发图 **0 critical / 5 high / 25 moderate / 4 low**（原 3 critical / 17 high）；`--prod` 图 **18 条（0 critical / 1 high / 14 moderate / 3 low）**（原 22 条 3 high）。残留：vite high（需 6.4.4+）、svgo high（需 4.x）、katex low（需 0.18.2）、deepmerge low（无修补）。
+- [ ] Vite 6/7、Svelte 5、CodeMirror 6 仍为独立评估项目：vite-plugin-svelte 3+ 需要 Svelte 4，是升级 Svelte 前无法绕过的约束。
 
 #### 复盘补修：核心边界、测量工具与依赖安全 — 2026-10-26（完成）
 
@@ -150,12 +152,12 @@
 
 | 顺序 | 范围 | 验收与推进条件 |
 | --- | --- | --- |
-| 1 | Vite/Vitest/Tinypool 安全迁移 | 独立批次升级到有修补版本的兼容工具组合；冻结 221/20 回归，验收 CI、构建、开发页和生产消费页，复查两种依赖图 |
+| 1 | Vite/Vitest/Tinypool 安全迁移 | ✅ 2026-10-28 完成：Vite 5.4 + Vitest 3.2 + tinypool 2.1.2，开发图 critical 清零；Vite 6+ 受 Svelte 3 插件限制进入独立评估 |
 | 2 | 外部发布消费与测量工具覆盖 | 干净安装不继承根 overrides，核对数学插件实际依赖及入口；补 summarizer 和浏览器失败清理关键路径 |
-| 3（第十批） | 发布格式与解析/框架迁移 | 先调研宿主 ESM/CJS/UMD 使用范围，再裁剪格式/调整 bundlewatch；unified 与 Svelte/CodeMirror 各自独立评估 |
+| 3（第十批） | 发布格式与解析/框架迁移 | ✅ 格式裁剪（ESM/CJS）与 unified 11 完成（2026-10-28）；Svelte 5 / CodeMirror 6 / vite 6+ 独立评估 |
 | 4（七/八批待验） | 人工与设备、进一步大 DOM 优化 | 人工 OS IME、真实移动设备仍 incomplete；更多循环内存趋势与虚拟预览契约另行验证，不重复标记桌面自动化未完成 |
 
-Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和第九批发布工具整理已实施；剩余工具链安全升级、发布格式和大版本迁移仍待完成。源码块标识仅在一次预览渲染内关联源码与 DOM，不是跨编辑持久 ID，也不实现段落内逐行定位或虚拟预览。
+Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和第九批发布工具整理已实施；工具链安全升级（critical 清零）、发布格式裁剪与 unified 11 已于 2026-10-28 完成。源码块标识仅在一次预览渲染内关联源码与 DOM，不是跨编辑持久 ID，也不实现段落内逐行定位或虚拟预览。
 
 ### Phase 0 — 基线可测（完成）
 
@@ -185,13 +187,13 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - [x] 通过 `pnpm.overrides` 把 mermaid 传递的 `lodash-es` 升到 4.18.1
 - [x] 保留本阶段官方 registry audit 的历史记录；本轮复盘纠正嵌套依赖遗漏与影响面，当前工作区/完整开发图数量以 [复盘报告](./audit/REASSESSMENT.md) 为准，不沿用安全清零结论。
 
-### Phase 3 — 发布体积（待确认）
+### Phase 3 — 发布体积（UMD 裁剪完成，2026-10-28）
 
-- [ ] 评估/移除 UMD；确认是否保留 CJS
-- [ ] 插件包 UMD/CJS 裁剪（mermaid 的 UMD/chunk 是最大头）
+- [x] 移除 UMD；CJS 保留（构建只产 ESM/CJS + d.ts，CDN 走 jsDelivr /+esm）
+- [x] 插件包 UMD 裁剪（mermaid 3.4MB UMD 不再产出；CJS 保留以兼容 Node 工具链）
 - [x] 移除 postinstall 对 package.json/tsconfig/README 的自动改写；显式生成、文档区域维护与幂等验收见第六批
 - [x] 移除 Lerna，根 engines 为 Node >=20；CI 固定 Node 22 / pnpm 8.15.9（第九批）
-- [ ] bundlewatch 改为盯 ESM/CSS
+- [x] bundlewatch 改为盯 ESM/CSS（bytemd index.mjs/index.css/markdown.css，均设 maxSize，实测 PASS）
 
 ### Phase 4 — 体验与健壮性（完成）
 
@@ -210,8 +212,8 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 
 ### Phase 5 — 大版本现代化（后置）
 
-- [ ] unified 11 / remark 11 / rehype 10 生态
-- [ ] Vite/Vitest/TypeScript/Prettier/jsdom 工具链
+- [x] unified 11 / remark 15 / rehype 13 生态（2026-10-28，见第十批）
+- [x] Vite 5 / Vitest 3 / jsdom 24 工具链（2026-10-28，critical 清零）；TypeScript 5 保持；Prettier 3 格式化 churn 较大，另行评估
 - [ ] Svelte 5、CodeMirror 6（单独项目，不做混合迁移）
 
 ## 功能同步与开发约定
@@ -226,6 +228,8 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - [ ] Phase 3 继续处理发布格式与外部消费验证；Phase 5 继续处理工具链/解析链大版本迁移。
 
 ## 进度日志
+
+- 2026-10-28：剩余部分审计修复 + 第十批主体完成。先修复 [audit/REMAINING.md](./audit/REMAINING.md) 审计确认的 11 项问题（medium-zoom 关闭竞态/reportError/ownerDocument/样式注入、生成器 locales 按需导出、bytemd processor/worker 根转发、mermaid 全局配置恢复、frontmatter 静默失败兜底、gfm 固定 clipPath id、help 快捷区漏项、toolbar Escape/Enter 切换/tab roving、deploy.sh 版本固定）。随后完成第十批：UMD 移除（ESM/CJS + d.ts，bundlewatch 盯 ESM+CSS maxSize 实测 PASS）、unified 11 生态迁移（sanitize schema structuredClone、language-math 选择器、math-ssr 响亮失败、@vitejs/plugin-vue2）、Vite 5.4/Vitest 3.2/jsdom 24（threads 池 + 20s 超时保持重套件稳定，tinypool 2.1.2 override）。验收：核心 26 文件 230/230、脚本 26/26、覆盖率门槛、完整构建、generate:check、bundlewatch PASS、官方源 audit 开发图 0 critical（原 3）/prod 18 条 1 high（原 22 条 3 high）。残留：vite 6+/svgo 4 需 Svelte 3 之外支持、katex 0.18、人工 IME/移动设备 incomplete；vitest server.deps.inline 保持 katex/highlight.js 可 mock。未提交或发布。
 
 - 2026-10-27：复盘补修文档收尾。新增 `audit/REASSESSMENT.md`，同步 PLAN/AGENTS/AUDIT 当前阶段、实际验收范围、安全遗留及下一批顺序；文档定向格式、generate:check、Git 空白检查通过。本批数据和截图仍保留在 `audit/prod-perf-reassessment-20261026/`，临时开发页和本轮 5179 服务已清理；没有提交或发布。
 

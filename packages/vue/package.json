@@ -14,24 +14,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
-    },
-    "./locales/*": "./locales/*",
-    "./lib/locales/*": "./locales/*"
+    }
   },
   "main": "./dist/index.js",
-  "jsdelivr": "./dist/index.umd.js",
-  "unpkg": "./dist/index.umd.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "locales"
+    "dist"
   ],
   "dependencies": {
     "bytemd": "workspace:*"
   },
   "devDependencies": {
-    "vite-plugin-vue2": "^2.0.3",
+    "@vitejs/plugin-vue2": "^2.3.3",
     "vue": "^2.7.14",
     "vue-template-compiler": "^2.7.14"
   },

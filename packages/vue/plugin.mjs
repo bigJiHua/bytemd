@@ -1,1 +1,3 @@
-export { createVuePlugin } from 'vite-plugin-vue2'
+import createVuePlugin from '@vitejs/plugin-vue2'
+
+export { createVuePlugin }

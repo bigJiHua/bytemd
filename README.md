@@ -28,11 +28,7 @@ Playground: run `pnpm dev` at the repository root.
 
 ### Legacy browsers support
 
-The default entry of NPM package only supports modern browsers. To make legacy browsers (**IE9+**) work, You can compile it with ESNext -> ES5 transpilers, such as [Babel](https://babeljs.io/) or [SWC](https://swc.rs/).
-
-> The ES5 bundle will no longer be available after version 1.11.0. If you need it, you can use [version 1.11.0](https://unpkg.com/bytemd@1.11.0/dist/index.es5.min.js) or earlier versions
-
-Notice that polyfills are not included, and should be imported manually, see the [legacy browser example](https://github.com/bytedance/bytemd/blob/main/examples/legacy-browser/index.html).
+The published packages ship ESM and CJS only; the UMD and ES5 bundles were retired. To support legacy browsers, bundle the npm package with your own toolchain and transpile it with ESNext -> ES5 compilers such as [Babel](https://babeljs.io/) or [SWC](https://swc.rs/), then add the polyfills your targets require — polyfills are not included.
 
 ## Usage
 

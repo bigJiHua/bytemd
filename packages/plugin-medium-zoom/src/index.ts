@@ -31,6 +31,7 @@ const LIGHTBOX_CSS = `
 }
 .bytemd-zoom-ui.is-closing {
   opacity: 0;
+  pointer-events: none;
 }
 .bytemd-zoom-ui button {
   pointer-events: auto;
@@ -212,12 +213,23 @@ export default function mediumZoom(
   let modulePromise: Promise<typeof M> | undefined
   const { filter, ...zoomOptions } = options ?? {}
   return {
-    viewerEffect({ markdownBody }) {
+    viewerEffect({ markdownBody, reportError }) {
       let active = true
       let zoom: M.Zoom | undefined
       let images: HTMLImageElement[] = []
       let ui: Lightbox | undefined
       let uiCleanup: (() => void) | undefined
+      let closeFallback: ReturnType<typeof setTimeout> | undefined
+
+      // medium-zoom resolves open/close animations via transitionend on the
+      // zoomed clone. Hidden or reduced-motion documents may never emit it,
+      // leaving the vendor's isAnimating flag stuck and close() a no-op.
+      const flushTransition = () => {
+        // The vendor always attaches clones to the global document.
+        document
+          .querySelector('.medium-zoom-image--opened')
+          ?.dispatchEvent(new Event('transitionend'))
+      }
 
       const hideUi = () => {
         uiCleanup?.()
@@ -235,7 +247,9 @@ export default function mediumZoom(
       const showUi = (image: HTMLImageElement) => {
         hideUi()
 
-        const root = document.createElement('div')
+        // Host the UI in the same document as the preview, not the global one.
+        const doc = markdownBody.ownerDocument
+        const root = doc.createElement('div')
         root.className = 'bytemd-zoom-ui'
         root.setAttribute('role', 'dialog')
         root.setAttribute('aria-modal', 'true')
@@ -274,7 +288,7 @@ export default function mediumZoom(
         root.setAttribute('aria-label', text || 'Image preview')
 
         root.append(counter, caption, prev, next, close)
-        document.body.append(root)
+        doc.body.append(root)
 
         const go = (delta: number) => {
           if (!zoom || images.length < 2) return
@@ -282,11 +296,17 @@ export default function mediumZoom(
             images[(currentIndex() + delta + images.length) % images.length]
           if (!target) return
           target.scrollIntoView({ block: 'center', inline: 'nearest' })
+          // Pagination can also land inside the vendor's isAnimating window;
+          // complete any pending transition so close() really closes.
+          flushTransition()
           zoom
             .close()
-            .then(() =>
-              active && target.isConnected ? zoom?.open({ target }) : undefined
-            )
+            .then(() => {
+              flushTransition()
+              return active && target.isConnected
+                ? zoom?.open({ target })
+                : undefined
+            })
             .catch(() => {})
         }
 
@@ -303,7 +323,7 @@ export default function mediumZoom(
           zoom?.close()
         }
         const onKeyDown = (event: KeyboardEvent) => {
-          const roots = bodyLocks.get(document)?.roots
+          const roots = bodyLocks.get(doc)?.roots
           if (roots?.[roots.length - 1] !== root) return
           if (event.key === 'ArrowLeft' && multiple) {
             event.preventDefault()
@@ -320,7 +340,7 @@ export default function mediumZoom(
           if (focusable.length === 0) return
           event.preventDefault()
           const current = focusable.indexOf(
-            document.activeElement as HTMLButtonElement
+            doc.activeElement as HTMLButtonElement
           )
           const step = event.shiftKey ? -1 : 1
           const target =
@@ -331,19 +351,19 @@ export default function mediumZoom(
         prev.addEventListener('click', onPrev)
         next.addEventListener('click', onNext)
         close.addEventListener('click', onClose)
-        document.addEventListener('keydown', onKeyDown)
+        doc.addEventListener('keydown', onKeyDown)
 
-        const previousFocus = document.activeElement as HTMLElement | null
+        const previousFocus = doc.activeElement as HTMLElement | null
         const unlock = lockBody(root)
         close.focus()
 
         ui = { root, caption, counter, close, prev, next }
         uiCleanup = () => {
-          document.removeEventListener('keydown', onKeyDown)
+          doc.removeEventListener('keydown', onKeyDown)
           prev.removeEventListener('click', onPrev)
           next.removeEventListener('click', onNext)
           close.removeEventListener('click', onClose)
-          const restoreFocus = root.contains(document.activeElement)
+          const restoreFocus = root.contains(doc.activeElement)
           unlock()
           if (restoreFocus && previousFocus?.isConnected)
             previousFocus.focus?.()
@@ -355,12 +375,23 @@ export default function mediumZoom(
       }
       const onClose = () => {
         ui?.root.classList.add('is-closing')
+        // A close requested while the opening transition is animating is
+        // swallowed by the vendor's isAnimating guard, and a stalled
+        // transition would never emit `closed`. Retry after the open
+        // animation budget and force-complete as a last resort so the
+        // scroll lock and UI are always released.
+        clearTimeout(closeFallback)
+        closeFallback = setTimeout(() => {
+          flushTransition()
+          zoom?.close().catch(() => {})
+          closeFallback = setTimeout(flushTransition, 100)
+        }, 350)
       }
       const onClosed = () => {
+        clearTimeout(closeFallback)
         hideUi()
       }
 
-      ensureStyles()
       const imgs = [...markdownBody.querySelectorAll('img')].filter((e) => {
         return (
           (filter?.(e) ?? true) &&
@@ -385,6 +416,9 @@ export default function mediumZoom(
       ;(async () => {
         const m = await (modulePromise ??= import('medium-zoom'))
         if (!active) return
+        // Inject styles only when there is something to zoom and the module
+        // actually loaded; otherwise the stylesheet would be dead weight.
+        ensureStyles()
         zoom = controllers.get(markdownBody.ownerDocument)
         if (!zoom) {
           zoom = m.default([])
@@ -398,12 +432,15 @@ export default function mediumZoom(
         })
       })().catch((error) => {
         modulePromise = undefined
-        if (active) console.error(error)
+        if (!active) return
+        if (reportError) reportError(error, { plugin: 'medium-zoom' })
+        else console.error(error)
       })
 
       return () => {
         if (!active) return
         active = false
+        clearTimeout(closeFallback)
         hideUi()
         markdownBody.removeEventListener('click', beforeClick, true)
         if (zoom) {

@@ -6,8 +6,8 @@
 
 - ByteMD v1 定制 fork（上游 pd4d10/bytemd，本仓库 bigJiHua/bytemd），基于 ByteMD v1 定制开发。
 - Monorepo：pnpm workspace（`packages/**` 14 个发布包 + `playground` 私有包；examples 不在 workspace 内）。
-- 技术栈：TypeScript + Svelte 3（bytemd 核心）、CodeMirror 5、unified 10 / remark 14 / rehype 12；四框架包装（react / vue / vue-next）。
-- 构建：`scripts/build.mjs`（产物 ESM/CJS/UMD + d.ts）；测试：Vitest（jsdom）。
+- 技术栈：TypeScript + Svelte 3（bytemd 核心）、CodeMirror 5、unified 11 / remark 15 / rehype 13；四框架包装（react / vue / vue-next）。
+- 构建：`scripts/build.mjs`（产物 ESM/CJS + d.ts）；测试：Vitest（jsdom）。
 
 ## 常用命令
 
@@ -42,20 +42,17 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 | 第七批 生产大文档交互与内存验收 | 桌面自动化验收完成；人工 OS IME、真实移动设备 incomplete |
 | 第八批 大 DOM 与 CodeMirror 定向优化 | 桌面自动化验收完成；layoutContainment 默认关闭，同上两项 incomplete |
 | 第九批 依赖范围与发布工具链 | 工具整理与同大版本补修完成；剩余安全工具链迁移待续 |
-| 第十批 发布格式与大版本迁移 | 未启动 |
+| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 完成（2026-10-28）；vite 6+/svelte 5/CM6 独立评估待续 |
 
 本轮全量验收通过：核心 24 文件 221/221、脚本 20/20、四个关键脚本覆盖率门槛、完整构建、generate:check、style、纯入口/SSR 检查及普通 playground 冒烟。证据在 `audit/prod-perf-reassessment-20261026/`，本地不入库；此前完整桌面矩阵复验保留在 `audit/prod-perf-audit-verify/`。
 
 本轮浏览器定向复验覆盖 12 个 CDP composition 场景、10 KiB/core 两种尺寸隔离方案各 1 次及交互检查，不是完整性能矩阵重测。1 轮内存检查等待销毁 1 秒并强制 GC 后，nodes/listeners 增量为 0/0，JS heap 增量为 +709,296 bytes；该结果不证明无泄漏或整体性能提升。浏览器流程自身的 build/regression 标为 skipped，独立全量验收日志另存。
 
-## 安全审计结论（2026-10-26，pnpm audit --prod）
+## 安全审计结论（2026-10-28，pnpm audit 官方 registry）
 
-本轮复盘重新执行官方 registry 审计：`--prod` 工作区依赖图从 72 条（0 critical / 26 high / 38 moderate / 8 low）降到 22 条（0 critical / 3 high / 14 moderate / 5 low）。该图包含私有 playground，不能直接当作已发布包运行时的漏洞数量。
-
-- Vite 已升级到 4.5.14；剩余 3 high/6 moderate/3 low 的 Vite 公告没有 Vite 4 修补版本，不能宣称 Vite 安全清零。esbuild moderate、diff low 也仍存在。
-- 旧报告遗漏了数学插件实际使用的 KaTeX 0.13.24/0.15.6。现在工作区通过定向 overrides 统一为 0.16.47，旧 moderate 已从工作区图消除；KaTeX low 和 Svelte 3 的 7 条 moderate 仍在。根 overrides 不随 npm 包发布或继承，外部 ESM 消费者仍需独立验证/约束嵌套依赖。
-- 完整开发依赖图（不加 `--prod`）仍有 3 critical / 20 high / 37 moderate / 8 low；critical 来自 Vitest 0.29.8 与 Tinypool 0.4.0，须单独升级测试工具链。Babel traverse 和 form-data 的可兼容 critical 已修补。
-- 原始结果保留在 `audit/audit-prod-result.json`；本轮前后审计和验证在 `audit/prod-perf-reassessment-20261026/`，均只在本地保存。
+- `--prod` 工作区图（含私有 playground，不等同已发布包运行时）：**18 条（0 critical / 1 high / 14 moderate / 3 low）**，较 2026-10-26 的 22 条（3 high/5 low）下降。残留 1 high 为 vite（修补需 ≥6.4.4，受 Svelte 3 插件限制无法升 vite 6）；katex low 需 0.18.2（大版本）；deepmerge low 无修补版本。
+- 完整开发依赖图：**34 条（0 critical / 5 high / 25 moderate / 4 low）**，critical 已清零（Vitest 3.2.7 + tinypool 2.1.2 override）。残留 high：svgo（修补需 4.x，dev-only 图标工具）、lodash（无修补发布）等；axios/cross-spawn/vue-next 测试工具已通过 override 或升级收敛。
+- 根 overrides 不随 npm 包发布或继承，外部消费者仍需独立验收；原始结果与复现命令见安全段历史记录。
 
 ## 后续计划（按优先级）
 
@@ -64,18 +61,18 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 - [x] 核实 CI 已执行脚本测试；本轮改为带覆盖率门槛的 `pnpm run test:scripts:coverage`，包含全部 Node 脚本回归。
 - [x] 根/playground Vite 同步为 `^4.5.14`；旧 `^4.5.2` 建议不足以覆盖当前公告。
 - [x] 按各依赖大版本收敛安全修补：braces/minimatch/brace-expansion/nanoid/picomatch、micromatch/postcss/rollup/immutable/source-map-js、Babel traverse/form-data；保留其他大版本分支。
-- [ ] 下一优先项：独立升级 Vite/Vitest/Tinypool，处理残留 high/critical，再做发布格式决策。
+- [x] 下一优先项：独立升级 Vite/Vitest/Tinypool，处理残留 high/critical（Vitest 3.2.7 + tinypool 2.1.2 override 完成，开发图 critical 清零；Vite 6+ 受 Svelte 3 插件限制，残留 high 见安全段）。
 
 ### P1 第十批前置（确认兼容面）
 
-- [ ] 调研宿主实际使用的模块格式（ESM/CJS/UMD），决定发布格式裁剪；bundlewatch 从盯 UMD（653KB）改为盯 ESM+CSS。
+- [x] 调研宿主实际使用的模块格式（ESM/CJS/UMD），决定发布格式裁剪；bundlewatch 从盯 UMD（653KB）改为盯 ESM+CSS（裁剪为 ESM/CJS，bundlewatch 设 maxSize 实测 PASS）。
 - [x] 为 generate、CDP client、archiver、summarizer 四个关键模块启用 c8 聚合门槛：lines/statements/branches >=80%、functions >=75%。本轮 lines/statements 84.75%、branches 85.12%、functions 80%，不代表全部审计脚本或核心组件覆盖率。
 - [ ] 补充剩余浏览器采样/堆快照路径和核心组件覆盖率；当前 summarizer 单文件覆盖率仍低于整体门槛。
 
 ### P2 大版本迁移（各自独立批次，冻结回归基线）
 
-- [ ] unified 11 及对应 remark/rehype 插件分步升级，按各包 major 确认兼容面并评估 KaTeX 剩余公告的修复路径；以现有 221 用例 + 语法快照为基线。
-- [ ] Svelte 5 评估（含 Svelte 3 的 7 条 moderate 修复路径）。
+- [x] unified 11 及对应 remark/rehype 插件分步升级（2026-10-28 完成：unified 11 / remark-parse 11 / remark-rehype 11 / rehype-raw 7 / rehype-sanitize 6 / rehype-stringify 10 / remark-gfm 4 / remark-math 6 / rehype-katex 7 / remark-frontmatter 5 / remark-breaks 4 / remark-gemoji 8 / rehype-highlight 7；KaTeX low 修复路径仍需 0.18 大版本）。
+- [ ] Svelte 5 评估（含 Svelte 3 的 moderate 修复路径；当前 vite 插件锁定在 2.x 以支持 Svelte 3）。
 - [ ] CodeMirror 6 评估。
 
 ### P3 人工验收项（需人工/设备）
