@@ -3,37 +3,44 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, Ref, ref, watch } from 'vue'
+import {
+  defineComponent,
+  onMounted,
+  onBeforeUnmount,
+  Ref,
+  ref,
+  watch,
+} from 'vue'
 import { Editor } from 'bytemd'
 
 export default defineComponent({
   props: {
-    value: String,
-    plugins: Array,
+    value: { type: String, default: '' },
+    plugins: { type: Array, default: () => [] },
     sanitize: Function,
     remarkRehype: Object,
-    mode: String,
-    previewDebounce: Number,
+    headingIds: { type: [Boolean, Object], default: true },
+    mode: { type: String, default: 'auto' },
+    previewDebounce: { type: Number, default: 300 },
+    layoutContainment: { type: Boolean, default: false },
     placeholder: String,
     editorConfig: Object,
     locale: Object,
     uploadImages: Function,
+    maxLength: { type: Number, default: Infinity },
+    overridePreview: Function,
+    renderer: Function,
   },
   emits: ['change'],
   setup(props, { emit }) {
     const el: Ref<HTMLElement | null> = ref(null)
     const editorRef: Ref<Editor | null> = ref(null)
+    let unsubscribe: (() => void) | undefined
 
     watch(
       () => props,
       (newValue) => {
-        const copy = { ...newValue }
-        for (let k in copy) {
-          if (copy[k] === undefined) {
-            delete copy[k]
-          }
-        }
-        editorRef.value?.$set(copy)
+        editorRef.value?.$set({ ...newValue })
       },
       { deep: true }
     )
@@ -43,10 +50,16 @@ export default defineComponent({
         target: el.value!,
         props,
       })
-      editor.$on('change', (e) => {
+      unsubscribe = editor.$on('change', (e) => {
         emit('change', e.detail.value)
       })
       editorRef.value = editor
+    })
+
+    onBeforeUnmount(() => {
+      unsubscribe?.()
+      editorRef.value?.$destroy()
+      editorRef.value = null
     })
 
     return { el }

@@ -1,4 +1,10 @@
 {
+  "copy": "Copy",
+  "copySuccess": "Copied",
+  "copyFailed": "Copy failed; select the code to copy manually",
+  "renderError": "Preview could not be rendered.",
+  "renderPending": "Rendering preview…",
+  "pluginError": "Preview enhancement failed. Check the content or plugin.",
   "accordion": "Accordion",
   "bgColor": "Background color",
   "bold": "Bold",

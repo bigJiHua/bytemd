@@ -1,4 +1,7 @@
 {
+  "renderError": "No s'ha pogut renderitzar la previsualització.",
+  "renderPending": "S'està renderitzant la previsualització…",
+  "pluginError": "No s'ha pogut millorar la previsualització. Comprova el contingut o el connector.",
   "bold": "Negreta",
   "boldText": "text en negreta",
   "cheatsheet": "Referència ràpida del Markdown",

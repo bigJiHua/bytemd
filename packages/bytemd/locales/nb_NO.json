@@ -1,4 +1,7 @@
 {
+  "renderError": "Forhåndsvisningen kunne ikke gjengis.",
+  "renderPending": "Gjengir forhåndsvisning…",
+  "pluginError": "Utvidelsen av forhåndsvisningen mislyktes. Sjekk innholdet eller programtillegget.",
   "bold": "Fet",
   "boldText": "fet tekst",
   "cheatsheet": "Markdown-jukseark",

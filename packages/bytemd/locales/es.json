@@ -1,4 +1,7 @@
 {
+  "renderError": "No se pudo renderizar la vista previa.",
+  "renderPending": "Renderizando vista previa…",
+  "pluginError": "No se pudo mejorar la vista previa. Comprueba el contenido o el plugin.",
   "bold": "Negrita",
   "boldText": "texto en negritas",
   "cheatsheet": "Referencia rápida de Markdown",

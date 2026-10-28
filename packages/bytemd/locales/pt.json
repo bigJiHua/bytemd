@@ -1,4 +1,7 @@
 {
+  "renderError": "Não foi possível renderizar a pré-visualização.",
+  "renderPending": "A renderizar a pré-visualização…",
+  "pluginError": "Falha ao melhorar a pré-visualização. Verifique o conteúdo ou o plugin.",
   "bold": "Negrito",
   "boldText": "texto em negrito",
   "cheatsheet": "Referência de Markdown",

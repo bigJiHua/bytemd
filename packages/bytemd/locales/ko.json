@@ -1,4 +1,7 @@
 {
+  "renderError": "미리보기를 렌더링할 수 없습니다.",
+  "renderPending": "미리보기를 렌더링하는 중…",
+  "pluginError": "미리보기 확장에 실패했습니다. 콘텐츠 또는 플러그인을 확인하세요.",
   "bold": "굵게",
   "boldText": "굵은 글자",
   "cheatsheet": "참고용 마크다운",

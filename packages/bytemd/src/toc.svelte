@@ -13,7 +13,7 @@
 
   const dispatch = createEventDispatcher()
 
-  let items: { level: number; text: string }[]
+  let items: { level: number; text: string; blockId?: string }[]
   let minLevel = 6
   let currentHeadingIndex = 0
 
@@ -29,17 +29,19 @@
 
   $: (() => {
     items = []
+    minLevel = 6
     currentHeadingIndex = 0
 
     hast.children
       .filter((v): v is Element => v.type === 'element')
       .forEach((node, index) => {
-        if (node.tagName[0] === 'h' && !!node.children.length) {
+        if (/^h[1-6]$/.test(node.tagName) && !!node.children.length) {
           const i = Number(node.tagName[1])
           minLevel = Math.min(minLevel, i)
           items.push({
             level: i,
             text: stringifyHeading(node),
+            blockId: node.properties?.dataBytemdBlock as string | undefined,
           })
         }
 
@@ -65,7 +67,7 @@
           type="button"
           class="bytemd-toc-button"
           on:click={() => {
-            dispatch('click', index)
+            dispatch('click', { blockId: item.blockId })
           }}
           aria-current={currentHeadingIndex === index ? 'location' : undefined}
         >

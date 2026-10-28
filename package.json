@@ -2,17 +2,24 @@
   "name": "@bytemd/monorepo",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "playground"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "pnpm clean && node scripts/build.mjs && tsc --build",
     "clean": "node scripts/clean.mjs",
     "dev": "pnpm --filter playground dev",
-    "format": "prettier --write '**/*.{ts,tsx,json,md,svelte}' && sort-package-json package.json 'packages/*/package.json'",
-    "postinstall": "node scripts/postinstall.mjs && pnpm format && sort-json packages/*/locales/*.json",
-    "pub": "pnpm build && lerna publish",
-    "style": "prettier --check '**/*.{ts,tsx,json,md,svelte}'",
-    "test": "vitest"
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,svelte}\" && sort-package-json package.json \"packages/*/package.json\"",
+    "generate": "node scripts/generate.mjs",
+    "generate:check": "node scripts/generate.mjs --check",
+    "pub": "pnpm generate && pnpm generate:check && pnpm build && pnpm -r publish --no-git-checks",
+    "style": "prettier --check \"**/*.{ts,tsx,mjs,json,md,svelte}\"",
+    "test": "vitest",
+    "test:scripts": "node --test scripts/test/generate.test.mjs scripts/test/prod-perf.test.mjs scripts/test/hygiene.test.mjs",
+    "test:scripts:coverage": "c8 --all --include=\"scripts/generate.mjs\" --include=\"audit/prod-perf-cdp-client.mjs\" --include=\"audit/prod-perf-archiver.mjs\" --include=\"audit/prod-perf-summarize.mjs\" --reports-dir=audit/prod-perf-script-coverage --reporter=text --reporter=json-summary --check-coverage --lines=80 --statements=80 --branches=80 --functions=75 node --test scripts/test/generate.test.mjs scripts/test/prod-perf.test.mjs scripts/test/hygiene.test.mjs"
   },
   "prettier": {
     "pluginSearchDirs": [
@@ -31,33 +38,27 @@
     "@types/fs-extra": "^11.0.1",
     "@types/lodash-es": "^4.17.7",
     "@types/resolve": "^1.20.2",
-    "conventional-changelog-cli": "^2.2.2",
+    "@vitest/coverage-c8": "0.29.8",
+    "c8": "^12.0.0",
     "decode-named-character-reference": "^1.0.2",
     "execa": "^7.1.1",
     "fast-glob": "^3.2.12",
     "fs-extra": "^11.1.1",
     "jsdom": "^21.1.1",
-    "lerna": "^6.6.1",
     "lodash-es": "^4.17.21",
     "mustache": "^4.2.0",
     "prettier": "^2.8.7",
     "prettier-plugin-svelte": "^2.10.0",
     "resolve": "^1.22.1",
     "sass": "^1.60.0",
-    "sort-json": "^2.0.1",
     "sort-package-json": "^2.4.1",
     "svelte": "^3.57.0",
     "svelte-preprocess": "^5.0.3",
     "svelte2tsx": "^0.6.10",
     "svgo": "^3.0.2",
     "typescript": "^5.0.2",
-    "vite": "^4.2.1",
+    "vite": "^4.5.14",
     "vitest": "^0.29.8"
-  },
-  "pnpm": {
-    "overrides": {
-      "lodash-es": "^4.18.1"
-    }
   },
   "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
   "bundlewatch": {
@@ -71,6 +72,25 @@
       "trackBranches": [
         "main"
       ]
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "lodash-es": "^4.18.1",
+      "braces@^3.0.0": "^3.0.3",
+      "minimatch@^3.0.0": "^3.1.5",
+      "brace-expansion@^1.0.0": "^1.1.21",
+      "nanoid@^3.0.0": "^3.3.20",
+      "picomatch@^2.0.0": "^2.3.2",
+      "micromatch@^4.0.0": "^4.0.8",
+      "postcss@^8.0.0": "^8.5.31",
+      "rollup@^3.0.0": "^3.30.0",
+      "immutable@^4.0.0": "^4.3.9",
+      "source-map-js@^1.0.0": "^1.2.2",
+      "form-data@^4.0.0": "^4.0.6",
+      "@babel/traverse@^7.0.0": "^7.23.2",
+      "rehype-katex@^6.0.0>katex": "0.16.47",
+      "micromark-extension-math@^2.0.0>katex": "0.16.47"
     }
   }
 }

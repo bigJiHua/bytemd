@@ -1,5 +1,5 @@
-import * as bytemd from 'bytemd'
-import React, { useMemo, useEffect, useRef, FC } from 'react'
+import * as bytemd from 'bytemd/viewer'
+import React, { useMemo, useEffect, useRef, useState, FC } from 'react'
 
 export interface ViewerProps extends bytemd.ViewerProps {}
 
@@ -8,31 +8,52 @@ export const Viewer: FC<ViewerProps> = ({
   sanitize,
   plugins,
   remarkRehype,
+  headingIds,
+  locale,
+  renderer,
 }) => {
   const elRef = useRef<HTMLDivElement>(null)
-  const file = useMemo(() => {
+  const request = useMemo(
+    () => ({ value, sanitize, plugins, remarkRehype, headingIds }),
+    [value, sanitize, plugins, remarkRehype, headingIds, renderer]
+  )
+  const [asyncState, setAsyncState] = useState<{
+    request: typeof request
+    state: bytemd.RenderState
+  }>()
+  const syncResult = useMemo(() => {
+    if (renderer) return
     try {
-      return bytemd
-        .getProcessor({ sanitize, plugins, remarkRehype })
-        .processSync(value)
+      return bytemd.renderMarkdown(request)
     } catch (err) {
       console.error(err)
     }
-  }, [value, sanitize, plugins, remarkRehype])
+  }, [request, renderer])
+  useEffect(() => {
+    if (!renderer) return
+    const controller = bytemd.createRenderController((state) => {
+      if (state.status === 'error') console.error(state.error)
+      setAsyncState({ request, state })
+    })
+    controller.render(request, renderer)
+    return () => controller.destroy()
+  }, [request, renderer])
+  const state = asyncState?.request === request ? asyncState.state : undefined
+  const pending = !!renderer && (!state || state.status === 'pending')
+  const file = renderer
+    ? state?.status === 'ready'
+      ? state.result.file
+      : undefined
+    : syncResult?.file
 
   useEffect(() => {
     const markdownBody = elRef.current
     if (!markdownBody || !file) return
 
-    bytemd.addCopyButtons(markdownBody)
+    bytemd.addCopyButtons(markdownBody, locale)
 
-    const cbs = plugins?.map(({ viewerEffect }) =>
-      viewerEffect?.({ markdownBody, file })
-    )
-    return () => {
-      cbs?.forEach((cb) => cb && cb())
-    }
-  }, [file, plugins])
+    return bytemd.runViewerEffects(markdownBody, file, plugins, locale)
+  }, [file, plugins, locale])
 
   return (
     <div
@@ -42,18 +63,22 @@ export const Viewer: FC<ViewerProps> = ({
           bytemd.copyCodeFromButton($ as HTMLButtonElement)
           return
         }
-        if ($.tagName !== 'A') return
-
-        const href = $.getAttribute('href')
-        if (!href?.startsWith('#')) return
-
-        elRef.current
-          ?.querySelector('#user-content-' + href.slice(1))
-          ?.scrollIntoView()
+        if (elRef.current) bytemd.scrollToAnchor(elRef.current, e.nativeEvent)
       }}
       ref={elRef}
       className="markdown-body"
-      dangerouslySetInnerHTML={{ __html: file?.toString() ?? '' }}
-    ></div>
+      aria-busy={pending}
+      dangerouslySetInnerHTML={file ? { __html: file.toString() } : undefined}
+    >
+      {file ? undefined : pending ? (
+        <p role="status" className="bytemd-render-pending">
+          {locale?.renderPending ?? 'Rendering preview…'}
+        </p>
+      ) : (
+        <p role="alert" className="bytemd-render-error">
+          {locale?.renderError ?? 'Preview could not be rendered.'}
+        </p>
+      )}
+    </div>
   )
 }

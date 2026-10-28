@@ -1,1 +1,42 @@
-{"name":"@bytemd/plugin-frontmatter","version":"1.22.0","description":"ByteMD plugin to parse frontmatter","repository":{"type":"git","url":"https://github.com/bytedance/bytemd.git","directory":"packages/plugin-frontmatter"},"license":"MIT","author":"Rongjian Zhang","exports":{".":{"types":"./dist/index.d.ts","import":"./dist/index.mjs","require":"./dist/index.js"},"./locales/*":"./locales/*","./lib/locales/*":"./locales/*"},"main":"./dist/index.js","jsdelivr":"./dist/index.umd.js","unpkg":"./dist/index.umd.js","module":"./dist/index.mjs","types":"./dist/index.d.ts","files":["dist","locales"],"dependencies":{"@types/js-yaml":"^4.0.5","js-yaml":"^4.3.2","remark-frontmatter":"^4.0.1","vfile":"^5.3.7"},"devDependencies":{"bytemd":"workspace:*"},"peerDependencies":{"bytemd":"^1.5.0"}}
+{
+  "name": "@bytemd/plugin-frontmatter",
+  "version": "1.22.0",
+  "description": "ByteMD plugin to parse frontmatter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bigJiHua/bytemd.git",
+    "directory": "packages/plugin-frontmatter"
+  },
+  "license": "MIT",
+  "author": "Rongjian Zhang",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./locales/*": "./locales/*",
+    "./lib/locales/*": "./locales/*"
+  },
+  "main": "./dist/index.js",
+  "jsdelivr": "./dist/index.umd.js",
+  "unpkg": "./dist/index.umd.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "locales"
+  ],
+  "dependencies": {
+    "@types/js-yaml": "^4.0.5",
+    "js-yaml": "^4.3.2",
+    "remark-frontmatter": "^4.0.1",
+    "vfile": "^5.3.7"
+  },
+  "devDependencies": {
+    "bytemd": "workspace:*"
+  },
+  "peerDependencies": {
+    "bytemd": "^1.5.0"
+  }
+}

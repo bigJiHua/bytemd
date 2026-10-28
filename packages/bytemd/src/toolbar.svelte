@@ -2,6 +2,7 @@
 
 <script lang="ts">
   import { icons } from './icons'
+  import ToolbarActions from './toolbar-actions.svelte'
   import type { BytemdEditorContext, BytemdAction, BytemdLocale } from './types'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { DelegateInstance } from 'tippy.js'
@@ -40,6 +41,7 @@
         },
       },
       active: tocActive,
+      group: 'sidebar',
     },
     {
       title: helpActive ? locale.closeHelp : locale.help,
@@ -51,6 +53,7 @@
         },
       },
       active: helpActive,
+      group: 'sidebar',
     },
     {
       title: writeActive ? locale.exitWriteOnly : locale.writeOnly,
@@ -63,6 +66,7 @@
       },
       active: writeActive,
       hidden: !split,
+      group: 'mode',
     },
     {
       title: previewActive ? locale.exitPreviewOnly : locale.previewOnly,
@@ -75,6 +79,7 @@
       },
       active: previewActive,
       hidden: !split,
+      group: 'mode',
     },
     {
       title: fullscreen ? locale.exitFullscreen : locale.fullscreen,
@@ -85,6 +90,7 @@
           dispatch('click', 'fullscreen')
         },
       },
+      group: 'view',
     },
     {
       title: locale.source,
@@ -95,6 +101,7 @@
           window.open('https://github.com/bigJiHua/bytemd')
         },
       },
+      group: 'source',
     },
     ...rightAfferentActions,
   ] as RightAction[]
@@ -137,10 +144,30 @@
 
   let delegateInstance: DelegateInstance
 
+  function themeFor(reference: Element) {
+    const dark =
+      !!reference.closest('.dark') ||
+      !!reference.closest('[data-theme="dark"]') ||
+      document.documentElement.classList.contains('dark') ||
+      document.documentElement.dataset.theme === 'dark'
+    return dark ? 'light-border bytemd-dark' : 'light-border'
+  }
+
   function init() {
     delegateInstance = delegate(toolbar, {
       target: `.${tippyClass}`,
+      // Touch devices do not reliably synthesize mouseenter, so allow a tap
+      // to toggle the same menu that hover opens on desktop.
+      trigger: 'mouseenter focus click',
+      onShow(instance) {
+        const theme = themeFor(instance.reference)
+        if (instance.props.theme !== theme) instance.setProps({ theme })
+      },
       onCreate({ setProps, reference }) {
+        // Poppers attach to <body>. Use tippy's own theme attribute so the
+        // menu follows a local `.dark` container, not just the root element.
+        setProps({ theme: themeFor(reference) })
+
         const payload = getPayloadFromElement(reference)
         if (!payload) return
         const { item, paths } = payload
@@ -260,9 +287,10 @@
     const target = (e.target as Element).closest(`[${tippyPathKey}]`)
     if (!target) return
     const handler = getPayloadFromElement(target)?.item?.handler
-    if (handler?.type === 'action') {
-      handler.click(context)
-    }
+    // Dropdown triggers belong to tippy. Rebuilding the delegate here would
+    // close the menu that a tap just opened.
+    if (handler?.type !== 'action') return
+    handler.click(context)
     delegateInstance?.destroy()
     init()
   }
@@ -287,22 +315,7 @@
 >
   <div class="bytemd-toolbar-left">
     {#if split}
-      {#each actions as item, index}
-        {#if item.handler}
-          <div
-            class={['bytemd-toolbar-icon', tippyClass].join(' ')}
-            role="button"
-            tabindex="0"
-            aria-label={item.title ?? ''}
-            aria-haspopup={item.handler.type === 'dropdown'
-              ? 'menu'
-              : undefined}
-            bytemd-tippy-path={index}
-          >
-            {@html item.icon}
-          </div>
-        {/if}
-      {/each}
+      <ToolbarActions {actions} />
     {:else}
       <div
         class="bytemd-toolbar-tabs"
@@ -338,21 +351,7 @@
   </div>
 
   <div class="bytemd-toolbar-right">
-    {#each rightActions as item, index}
-      {#if !item.hidden}
-        <div
-          class={['bytemd-toolbar-icon', tippyClass, tippyClassRight].join(' ')}
-          class:bytemd-toolbar-icon-active={item.active}
-          role="button"
-          tabindex="0"
-          aria-label={item.title ?? ''}
-          aria-haspopup={item.handler?.type === 'dropdown' ? 'menu' : undefined}
-          bytemd-tippy-path={index}
-        >
-          {@html item.icon}
-        </div>
-      {/if}
-    {/each}
+    <ToolbarActions actions={rightActions} right />
   </div>
 
   {#if !split}
@@ -361,22 +360,7 @@
       role="group"
       aria-label={locale.cheatsheet}
     >
-      {#each actions as item, index}
-        {#if item.handler}
-          <div
-            class={['bytemd-toolbar-icon', tippyClass].join(' ')}
-            role="button"
-            tabindex="0"
-            aria-label={item.title ?? ''}
-            aria-haspopup={item.handler.type === 'dropdown'
-              ? 'menu'
-              : undefined}
-            bytemd-tippy-path={index}
-          >
-            {@html item.icon}
-          </div>
-        {/if}
-      {/each}
+      <ToolbarActions {actions} />
     </div>
   {/if}
 </div>

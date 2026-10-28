@@ -1,4 +1,7 @@
 {
+  "renderError": "Nie udało się wyrenderować podglądu.",
+  "renderPending": "Renderowanie podglądu…",
+  "pluginError": "Nie udało się ulepszyć podglądu. Sprawdź treść lub wtyczkę.",
   "bold": "Pogrubienie",
   "boldText": "pogrubienie",
   "cheatsheet": "Ściągawka markdowna",

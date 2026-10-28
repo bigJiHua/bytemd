@@ -19,7 +19,14 @@ import useYamlFrontmatter from 'codemirror-ssr/mode/yaml-frontmatter/yaml-frontm
 import useYaml from 'codemirror-ssr/mode/yaml/yaml.js'
 import selectFiles from 'select-files'
 
+// CodeMirror's factory installs window listeners and owns measuring DOM.
+// Reuse the initialized runtime in a document; editor instances keep their
+// own documents, history, selection and options.
+const codeMirrorRuntimes = new WeakMap<Document, typeof CodeMirror>()
+
 export function createCodeMirror() {
+  const existing = codeMirrorRuntimes.get(document)
+  if (existing) return existing
   const codemirror = factory()
   usePlaceholder(codemirror)
   useOverlay(codemirror)
@@ -29,7 +36,21 @@ export function createCodeMirror() {
   useYaml(codemirror)
   useYamlFrontmatter(codemirror)
   useContinuelist(codemirror)
+  codeMirrorRuntimes.set(document, codemirror)
   return codemirror
+}
+
+/** CM5 has no destroy API; its active mouse callbacks own document listeners. */
+export function cancelEditorInteractions(editor: Editor) {
+  const { selectingText, draggingText } = editor.state
+  if (typeof selectingText === 'function') selectingText()
+  if (typeof draggingText === 'function') {
+    // Complete only this editor's drag. Disable focus before the callback (and
+    // its delayed focus workaround), without dispatching events to peers.
+    editor.state.delayingBlurEvent = false
+    editor.setOption('readOnly', 'nocursor')
+    draggingText(new Event('mouseup', { cancelable: true }))
+  }
 }
 
 export type EditorUtils = ReturnType<typeof createEditorUtils>
@@ -52,28 +73,32 @@ export function createEditorUtils(
       const from = range.from() // use from/to instead of anchor/head for reverse select
       const to = range.to()
       const text = editor.getRange(from, to)
-      const fromBefore = codemirror.Pos(from.line, from.ch - before.length)
-      const toAfter = codemirror.Pos(to.line, to.ch + after.length)
+      const start = editor.indexFromPos(from)
+      const end = editor.indexFromPos(to)
+      const fromBefore = editor.posFromIndex(Math.max(0, start - before.length))
+      const toAfter = editor.posFromIndex(end + after.length)
+      const reversed =
+        editor.indexFromPos(range.anchor) > editor.indexFromPos(range.head)
+      let selectionStart: number
 
       if (
+        start >= before.length &&
         editor.getRange(fromBefore, from) === before &&
         editor.getRange(to, toAfter) === after
       ) {
         editor.replaceRange(text, fromBefore, toAfter)
-        editor.setSelection(
-          fromBefore,
-          codemirror.Pos(fromBefore.line, fromBefore.ch + text.length)
-        )
+        selectionStart = start - before.length
       } else {
         editor.replaceRange(before + text + after, from, to)
 
-        // select the original text
-        const cursor = editor.getCursor()
-        editor.setSelection(
-          codemirror.Pos(cursor.line, cursor.ch - after.length - text.length),
-          codemirror.Pos(cursor.line, cursor.ch - after.length)
-        )
+        selectionStart = start + before.length
       }
+      const selectionFrom = editor.posFromIndex(selectionStart)
+      const selectionTo = editor.posFromIndex(selectionStart + text.length)
+      editor.setSelection(
+        reversed ? selectionTo : selectionFrom,
+        reversed ? selectionFrom : selectionTo
+      )
     },
     /**
      * replace multiple lines
@@ -145,16 +170,35 @@ const getShortcutWithPrefix = (key: string, shift = false) => {
 }
 
 export async function handleImageUpload(
-  { editor, appendBlock, codemirror }: BytemdEditorContext,
+  { editor, appendBlock, codemirror, isDestroyed }: BytemdEditorContext,
   uploadImages: NonNullable<EditorProps['uploadImages']>,
   files: File[]
 ) {
-  const imgs = await uploadImages(files)
+  if (!files.length || isDestroyed?.()) return
+  let imgs: Awaited<ReturnType<typeof uploadImages>>
+  try {
+    imgs = await uploadImages(files)
+  } catch (error) {
+    if (!isDestroyed?.()) console.error(error)
+    return
+  }
+  if (isDestroyed?.() || !imgs?.length) return
+  const escapeText = (text: string) =>
+    text
+      .replace(/\r?\n/g, ' ')
+      .replace(/&/g, '&amp;')
+      .replace(/[\\[\]"*_`<>!]/g, '\\$&')
+  // Angle destinations preserve balanced/unbalanced parentheses; encode characters
+  // that would terminate the destination or turn it into multiple lines.
+  const escapeUrl = (url: string) =>
+    url.replace(/[<>\\\s]/g, (char) => encodeURIComponent(char))
   const pos = appendBlock(
     imgs
       .map(({ url, alt, title }, i) => {
-        alt = alt ?? files[i].name
-        return `![${alt}](${url}${title ? ` "${title}"` : ''})`
+        alt = alt ?? files[i]?.name ?? ''
+        return `![${escapeText(alt)}](<${escapeUrl(url)}>${
+          title ? ` "${escapeText(title)}"` : ''
+        })`
       })
       .join('\n\n')
   )
@@ -169,6 +213,8 @@ export function getBuiltinActions(
 ): { leftActions: BytemdAction[]; rightActions: BytemdAction[] } {
   const headingAction = (level: number): BytemdAction => ({
     title: locale[`h${level}` as keyof BytemdLocale],
+    group: 'heading',
+
     icon: [
       icons.H1,
       icons.H2,
@@ -283,6 +329,7 @@ export function getBuiltinActions(
   const leftActions: BytemdAction[] = [
     {
       title: locale.headingText,
+      group: 'heading',
       icon: icons.H,
       handler: {
         type: 'dropdown',
@@ -294,6 +341,7 @@ export function getBuiltinActions(
     headingAction(3),
     {
       title: locale.fontSize,
+      group: 'style',
       icon: icons.FontSize,
       cheatsheet: `[size=20]${locale.textSample}[/size]`,
       handler: {
@@ -305,6 +353,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.fontColor,
+      group: 'style',
       icon: icons.ColorCard,
       cheatsheet: `[color=#e03131]${locale.textSample}[/color]`,
       handler: {
@@ -316,6 +365,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.bgColor,
+      group: 'style',
       icon: icons.HighLight,
       cheatsheet: `[bg=#fff3bf]${locale.textSample}[/bg]`,
       handler: {
@@ -327,6 +377,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.bold,
+      group: 'inline',
       icon: icons.TextBold,
       cheatsheet: `**${locale.boldText}**`,
       handler: {
@@ -340,6 +391,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.italic,
+      group: 'inline',
       icon: icons.TextItalic,
       cheatsheet: `*${locale.italicText}*`,
       handler: {
@@ -353,6 +405,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.quote,
+      group: 'inline',
       icon: icons.Quote,
       cheatsheet: `> ${locale.quotedText}`,
       handler: {
@@ -365,6 +418,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.link,
+      group: 'inline',
       icon: icons.LinkOne,
       cheatsheet: `[${locale.linkText}](url)`,
       handler: {
@@ -383,6 +437,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.image,
+      group: 'inline',
       icon: icons.Pic,
       cheatsheet: `![${locale.imageAlt}](url "${locale.imageTitle}")`,
       handler: uploadImages
@@ -416,6 +471,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.code,
+      group: 'inline',
       icon: icons.Code,
       cheatsheet: '`' + locale.codeText + '`',
       handler: {
@@ -429,6 +485,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.codeBlock,
+      group: 'inline',
       icon: icons.CodeBrackets,
       cheatsheet: '```' + locale.codeLang + '↵',
       handler: {
@@ -446,6 +503,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.ul,
+      group: 'block',
       icon: icons.ListTwo,
       cheatsheet: `- ${locale.ulItem}`,
       handler: {
@@ -459,6 +517,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.ol,
+      group: 'block',
       icon: icons.OrderedList,
       cheatsheet: `1. ${locale.olItem}`,
       handler: {
@@ -472,6 +531,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.hr,
+      group: 'block',
       icon: icons.DividingLine,
       cheatsheet: '---',
       handler: {
@@ -484,6 +544,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.hrText,
+      group: 'block',
       icon: icons.DividingLineOne,
       cheatsheet: `---${locale.hrTextSample}---`,
       handler: {
@@ -521,6 +582,7 @@ export function getBuiltinActions(
   ].map(
     ({ key, label, color }): BytemdAction => ({
       title: label,
+      group: 'custom',
       icon: `<span class="bytemd-callout-dot" style="background-color:${color}"></span>`,
       cheatsheet: `>[${key}] ${label}`,
       handler: {
@@ -541,6 +603,7 @@ export function getBuiltinActions(
     ...calloutActions,
     {
       title: locale.accordion,
+      group: 'custom',
       icon: icons.ClickToFold,
       cheatsheet: '+++ 标题↵内容↵+++',
       handler: {
@@ -554,6 +617,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.pinyin,
+      group: 'custom',
       icon: icons.Translate,
       cheatsheet: '{汉字|Han Zi}',
       handler: {
@@ -585,6 +649,7 @@ export function getBuiltinActions(
     },
     {
       title: locale.timeline,
+      group: 'custom',
       icon: icons.VerticalTimeline,
       cheatsheet: '::: timeline 标题↵:: [done] 2024-01-01 事项↵:::',
       handler: {

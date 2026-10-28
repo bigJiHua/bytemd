@@ -177,153 +177,189 @@ interface Lightbox {
   next: HTMLButtonElement
 }
 
+// Each UI owns one lock. Closing one viewer must not unlock another viewer.
+const bodyLocks = new WeakMap<
+  Document,
+  { overflow: string; roots: HTMLElement[] }
+>()
+// medium-zoom has no destroy API and retains document/window listeners after
+// detach. Reuse one underlying controller per document; each effect owns only
+// its images, options, UI and listeners. The controller coordinates one open image.
+const controllers = new WeakMap<Document, M.Zoom>()
+
+function lockBody(root: HTMLElement) {
+  const doc = root.ownerDocument
+  let state = bodyLocks.get(doc)
+  if (!state) {
+    state = { overflow: doc.body.style.overflow, roots: [] }
+    bodyLocks.set(doc, state)
+  }
+  state.roots.push(root)
+  doc.body.style.overflow = 'hidden'
+  return () => {
+    const index = state!.roots.indexOf(root)
+    if (index >= 0) state!.roots.splice(index, 1)
+    if (!state!.roots.length) {
+      doc.body.style.overflow = state!.overflow
+      bodyLocks.delete(doc)
+    }
+  }
+}
+
 export default function mediumZoom(
   options?: BytemdPluginMediumZoomOptions
 ): BytemdPlugin {
-  let m: typeof M
+  let modulePromise: Promise<typeof M> | undefined
   const { filter, ...zoomOptions } = options ?? {}
-  let zoom: M.Zoom | undefined
-  let images: HTMLImageElement[] = []
-  let ui: Lightbox | undefined
-  let uiCleanup: (() => void) | undefined
-
-  const hideUi = () => {
-    uiCleanup?.()
-    uiCleanup = undefined
-    ui?.root.remove()
-    ui = undefined
-  }
-
-  const currentIndex = () => {
-    const image = zoom?.getZoomedImage() as HTMLImageElement | undefined
-    const index = image ? images.indexOf(image) : -1
-    return index >= 0 ? index : 0
-  }
-
-  const showUi = (image: HTMLImageElement) => {
-    hideUi()
-
-    const root = document.createElement('div')
-    root.className = 'bytemd-zoom-ui'
-    root.setAttribute('role', 'dialog')
-    root.setAttribute('aria-modal', 'true')
-
-    const close = makeButton(
-      'bytemd-zoom-close',
-      'Close image preview',
-      '\u00d7'
-    )
-    const prev = makeButton(
-      'bytemd-zoom-nav bytemd-zoom-prev',
-      'Previous image',
-      '\u2039'
-    )
-    const next = makeButton(
-      'bytemd-zoom-nav bytemd-zoom-next',
-      'Next image',
-      '\u203a'
-    )
-    const caption = document.createElement('div')
-    caption.className = 'bytemd-zoom-caption'
-    const counter = document.createElement('div')
-    counter.className = 'bytemd-zoom-counter'
-
-    const multiple = images.length > 1
-    const index = Math.max(images.indexOf(image), 0)
-    const text = image.getAttribute('title') || image.getAttribute('alt') || ''
-
-    prev.hidden = !multiple
-    next.hidden = !multiple
-    counter.hidden = !multiple
-    caption.hidden = !text
-    caption.textContent = text
-    if (multiple) counter.textContent = `${index + 1} / ${images.length}`
-    root.setAttribute('aria-label', text || 'Image preview')
-
-    root.append(counter, caption, prev, next, close)
-    document.body.append(root)
-
-    const go = (delta: number) => {
-      if (!zoom || images.length < 2) return
-      const target =
-        images[(currentIndex() + delta + images.length) % images.length]
-      if (!target) return
-      target.scrollIntoView({ block: 'center', inline: 'nearest' })
-      zoom
-        .close()
-        .then(() => zoom?.open({ target }))
-        .catch(() => {})
-    }
-
-    const onPrev = (event: MouseEvent) => {
-      event.stopPropagation()
-      go(-1)
-    }
-    const onNext = (event: MouseEvent) => {
-      event.stopPropagation()
-      go(1)
-    }
-    const onClose = (event: MouseEvent) => {
-      event.stopPropagation()
-      zoom?.close()
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft' && multiple) {
-        event.preventDefault()
-        go(-1)
-        return
-      }
-      if (event.key === 'ArrowRight' && multiple) {
-        event.preventDefault()
-        go(1)
-        return
-      }
-      if (event.key !== 'Tab') return
-      const focusable = [close, prev, next].filter((el) => !el.hidden)
-      if (focusable.length === 0) return
-      event.preventDefault()
-      const current = focusable.indexOf(
-        document.activeElement as HTMLButtonElement
-      )
-      const step = event.shiftKey ? -1 : 1
-      const target =
-        focusable[(current + step + focusable.length) % focusable.length]
-      target.focus()
-    }
-
-    prev.addEventListener('click', onPrev)
-    next.addEventListener('click', onNext)
-    close.addEventListener('click', onClose)
-    document.addEventListener('keydown', onKeyDown)
-
-    const previousFocus = document.activeElement as HTMLElement | null
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    close.focus()
-
-    ui = { root, caption, counter, close, prev, next }
-    uiCleanup = () => {
-      document.removeEventListener('keydown', onKeyDown)
-      prev.removeEventListener('click', onPrev)
-      next.removeEventListener('click', onNext)
-      close.removeEventListener('click', onClose)
-      document.body.style.overflow = previousOverflow
-      previousFocus?.focus?.()
-    }
-  }
-
-  const onOpen = (event: Event) => {
-    showUi(event.target as HTMLImageElement)
-  }
-  const onClose = () => {
-    ui?.root.classList.add('is-closing')
-  }
-  const onClosed = () => {
-    hideUi()
-  }
-
   return {
     viewerEffect({ markdownBody }) {
+      let active = true
+      let zoom: M.Zoom | undefined
+      let images: HTMLImageElement[] = []
+      let ui: Lightbox | undefined
+      let uiCleanup: (() => void) | undefined
+
+      const hideUi = () => {
+        uiCleanup?.()
+        uiCleanup = undefined
+        ui?.root.remove()
+        ui = undefined
+      }
+
+      const currentIndex = () => {
+        const image = zoom?.getZoomedImage() as HTMLImageElement | undefined
+        const index = image ? images.indexOf(image) : -1
+        return index >= 0 ? index : 0
+      }
+
+      const showUi = (image: HTMLImageElement) => {
+        hideUi()
+
+        const root = document.createElement('div')
+        root.className = 'bytemd-zoom-ui'
+        root.setAttribute('role', 'dialog')
+        root.setAttribute('aria-modal', 'true')
+
+        const close = makeButton(
+          'bytemd-zoom-close',
+          'Close image preview',
+          '\u00d7'
+        )
+        const prev = makeButton(
+          'bytemd-zoom-nav bytemd-zoom-prev',
+          'Previous image',
+          '\u2039'
+        )
+        const next = makeButton(
+          'bytemd-zoom-nav bytemd-zoom-next',
+          'Next image',
+          '\u203a'
+        )
+        const caption = document.createElement('div')
+        caption.className = 'bytemd-zoom-caption'
+        const counter = document.createElement('div')
+        counter.className = 'bytemd-zoom-counter'
+
+        const multiple = images.length > 1
+        const index = Math.max(images.indexOf(image), 0)
+        const text =
+          image.getAttribute('title') || image.getAttribute('alt') || ''
+
+        prev.hidden = !multiple
+        next.hidden = !multiple
+        counter.hidden = !multiple
+        caption.hidden = !text
+        caption.textContent = text
+        if (multiple) counter.textContent = `${index + 1} / ${images.length}`
+        root.setAttribute('aria-label', text || 'Image preview')
+
+        root.append(counter, caption, prev, next, close)
+        document.body.append(root)
+
+        const go = (delta: number) => {
+          if (!zoom || images.length < 2) return
+          const target =
+            images[(currentIndex() + delta + images.length) % images.length]
+          if (!target) return
+          target.scrollIntoView({ block: 'center', inline: 'nearest' })
+          zoom
+            .close()
+            .then(() =>
+              active && target.isConnected ? zoom?.open({ target }) : undefined
+            )
+            .catch(() => {})
+        }
+
+        const onPrev = (event: MouseEvent) => {
+          event.stopPropagation()
+          go(-1)
+        }
+        const onNext = (event: MouseEvent) => {
+          event.stopPropagation()
+          go(1)
+        }
+        const onClose = (event: MouseEvent) => {
+          event.stopPropagation()
+          zoom?.close()
+        }
+        const onKeyDown = (event: KeyboardEvent) => {
+          const roots = bodyLocks.get(document)?.roots
+          if (roots?.[roots.length - 1] !== root) return
+          if (event.key === 'ArrowLeft' && multiple) {
+            event.preventDefault()
+            go(-1)
+            return
+          }
+          if (event.key === 'ArrowRight' && multiple) {
+            event.preventDefault()
+            go(1)
+            return
+          }
+          if (event.key !== 'Tab') return
+          const focusable = [close, prev, next].filter((el) => !el.hidden)
+          if (focusable.length === 0) return
+          event.preventDefault()
+          const current = focusable.indexOf(
+            document.activeElement as HTMLButtonElement
+          )
+          const step = event.shiftKey ? -1 : 1
+          const target =
+            focusable[(current + step + focusable.length) % focusable.length]
+          target.focus()
+        }
+
+        prev.addEventListener('click', onPrev)
+        next.addEventListener('click', onNext)
+        close.addEventListener('click', onClose)
+        document.addEventListener('keydown', onKeyDown)
+
+        const previousFocus = document.activeElement as HTMLElement | null
+        const unlock = lockBody(root)
+        close.focus()
+
+        ui = { root, caption, counter, close, prev, next }
+        uiCleanup = () => {
+          document.removeEventListener('keydown', onKeyDown)
+          prev.removeEventListener('click', onPrev)
+          next.removeEventListener('click', onNext)
+          close.removeEventListener('click', onClose)
+          const restoreFocus = root.contains(document.activeElement)
+          unlock()
+          if (restoreFocus && previousFocus?.isConnected)
+            previousFocus.focus?.()
+        }
+      }
+
+      const onOpen = (event: Event) => {
+        showUi(event.target as HTMLImageElement)
+      }
+      const onClose = () => {
+        ui?.root.classList.add('is-closing')
+      }
+      const onClosed = () => {
+        hideUi()
+      }
+
       ensureStyles()
       const imgs = [...markdownBody.querySelectorAll('img')].filter((e) => {
         return (
@@ -336,29 +372,59 @@ export default function mediumZoom(
       if (imgs.length === 0) return
 
       images = imgs
-      let active = true
-      ;(async () => {
-        if (!m) m = await import('medium-zoom')
-        if (!active) return
-        zoom = m.default(imgs, {
+      const configure = () =>
+        zoom?.update({
           margin: 32,
           background: 'rgba(8, 10, 14, 0.92)',
           ...zoomOptions,
         })
-        zoom.on('open', onOpen)
-        zoom.on('close', onClose)
-        zoom.on('closed', onClosed)
-      })()
+      const beforeClick = (event: MouseEvent) => {
+        if (imgs.includes(event.target as HTMLImageElement)) configure()
+      }
+      markdownBody.addEventListener('click', beforeClick, true)
+      ;(async () => {
+        const m = await (modulePromise ??= import('medium-zoom'))
+        if (!active) return
+        zoom = controllers.get(markdownBody.ownerDocument)
+        if (!zoom) {
+          zoom = m.default([])
+          controllers.set(markdownBody.ownerDocument, zoom)
+        }
+        zoom.attach(...imgs)
+        imgs.forEach((img) => {
+          img.addEventListener('medium-zoom:open', onOpen)
+          img.addEventListener('medium-zoom:close', onClose)
+          img.addEventListener('medium-zoom:closed', onClosed)
+        })
+      })().catch((error) => {
+        modulePromise = undefined
+        if (active) console.error(error)
+      })
 
       return () => {
+        if (!active) return
         active = false
         hideUi()
+        markdownBody.removeEventListener('click', beforeClick, true)
         if (zoom) {
-          zoom.off('open', onOpen)
-          zoom.off('close', onClose)
-          zoom.off('closed', onClosed)
-          zoom.close().catch(() => {})
-          zoom.detach()
+          imgs.forEach((img) => {
+            img.removeEventListener('medium-zoom:open', onOpen)
+            img.removeEventListener('medium-zoom:close', onClose)
+            img.removeEventListener('medium-zoom:closed', onClosed)
+          })
+          if (imgs.includes(zoom.getZoomedImage() as HTMLImageElement)) {
+            // Unmount cannot rely on CSS transitionend (hidden/reduced-motion
+            // pages may never emit it). Complete opening, then closing, now.
+            const clone = document.querySelector('.medium-zoom-image--opened')
+            clone?.dispatchEvent(new Event('transitionend'))
+            zoom.close().catch(() => {})
+            clone?.dispatchEvent(new Event('transitionend'))
+            requestAnimationFrame(() => {
+              if (!controllers.get(document)?.getZoomedImage())
+                document.body.classList.remove('medium-zoom--opened')
+            })
+          }
+          zoom.detach(...imgs)
           zoom = undefined
         }
       }

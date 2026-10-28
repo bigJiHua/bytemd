@@ -348,8 +348,7 @@
     height: 32px;
     background: var(--md-code-header-bg);
     border-bottom: 1px solid var(--md-border);
-    border-radius: calc(var(--md-radius) - 1px)
-      calc(var(--md-radius) - 1px) 0 0;
+    border-radius: calc(var(--md-radius) - 1px) calc(var(--md-radius) - 1px) 0 0;
     pointer-events: none;
   }
 
@@ -786,10 +785,21 @@
   }
 }
 
+.markdown-body .bytemd-plugin-error {
+  padding: 8px 12px;
+  border-left: 3px solid var(--md-callout-danger-text);
+  background: var(--md-callout-danger-bg);
+  color: var(--md-callout-danger-text);
+  font-size: 14px;
+  white-space: normal;
+}
+
 // Dark theme fallbacks. Hosts that expose --text-primary / --bg-soft /
 // --bg-card / --brand-500 automatically keep their own palette; the values
 // below only apply when the theme is used standalone in a .dark container.
-.dark .markdown-body {
+.dark .markdown-body,
+[data-theme='dark'] .markdown-body,
+.markdown-body[data-theme='dark'] {
   --md-text: var(--text-primary, #e6edf3);
   --md-muted: var(--text-secondary, #9ba7b4);
   --md-border: var(--border-color, #3d444d);

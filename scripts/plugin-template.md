@@ -1,15 +1,17 @@
-# @bytemd/plugin-{{name}}
+# {{{packageName}}}
 
-[![npm](https://img.shields.io/npm/v/@bytemd/plugin-{{name}}.svg)](https://npm.im/@bytemd/plugin-{{name}})
+[![npm](https://img.shields.io/npm/v/{{{packageName}}}.svg)](https://npm.im/{{{packageName}}})
 
 {{{desc}}}
+
+<!-- bytemd:usage:start -->
 
 ## Usage
 
 ```js
 {{{header}}}
 import { Editor } from 'bytemd'
-import {{importedName}} from '@bytemd/plugin-{{name}}'
+import {{importedName}} from '{{{packageName}}}'
 
 new Editor({
   target: document.body,
@@ -21,6 +23,8 @@ new Editor({
   },
 })
 ```
+
+<!-- bytemd:usage:end -->
 
 {{#options}}### Options
 

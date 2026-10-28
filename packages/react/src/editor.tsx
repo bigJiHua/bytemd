@@ -5,7 +5,11 @@ export interface EditorProps extends bytemd.EditorProps {
   onChange?(value: string): void
 }
 
-export const Editor: React.FC<EditorProps> = ({ onChange, ...props }) => {
+export const Editor: React.FC<EditorProps> = ({
+  onChange,
+  layoutContainment = false,
+  ...props
+}) => {
   const ed = useRef<bytemd.Editor>()
   const el = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef<EditorProps['onChange']>()
@@ -15,7 +19,7 @@ export const Editor: React.FC<EditorProps> = ({ onChange, ...props }) => {
 
     const editor = new bytemd.Editor({
       target: el.current,
-      props,
+      props: { ...props, layoutContainment },
     })
     editor.$on('change', (e: CustomEvent<{ value: string }>) => {
       onChangeRef.current?.(e.detail.value)
@@ -33,8 +37,8 @@ export const Editor: React.FC<EditorProps> = ({ onChange, ...props }) => {
 
   useEffect(() => {
     // TODO: performance
-    ed.current?.$set(props)
-  }, [props])
+    ed.current?.$set({ ...props, layoutContainment })
+  }, [props, layoutContainment])
 
   return <div ref={el}></div>
 }

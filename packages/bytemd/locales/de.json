@@ -1,4 +1,7 @@
 {
+  "renderError": "Die Vorschau konnte nicht gerendert werden.",
+  "renderPending": "Vorschau wird gerendert…",
+  "pluginError": "Vorschau-Erweiterung fehlgeschlagen. Prüfen Sie Inhalt oder Plugin.",
   "bold": "Fett",
   "boldText": "Fetter Text",
   "cheatsheet": "Markdown-Spickzettel",

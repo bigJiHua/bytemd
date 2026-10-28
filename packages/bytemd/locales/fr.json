@@ -1,4 +1,7 @@
 {
+  "renderError": "Impossible de rendre l'aperçu.",
+  "renderPending": "Rendu de l'aperçu…",
+  "pluginError": "Échec de l'amélioration de l'aperçu. Vérifiez le contenu ou le plugin.",
   "bold": "Gras",
   "boldText": "texte en gras",
   "cheatsheet": "Aide-mémoire Markdown",

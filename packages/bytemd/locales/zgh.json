@@ -1,4 +1,7 @@
 {
+  "renderError": "Preview could not be rendered.",
+  "renderPending": "Rendering preview…",
+  "pluginError": "Preview enhancement failed. Check the content or plugin.",
   "bold": "ⴰⵎⵉⵔⵉⵡ",
   "boldText": "ⴰⴹⵕⵉⵚ ⵉⵔⵉⵡⵏ",
   "closeHelp": "ⵇⵇⵏ ⵜⵉⵡⵉⵙⵉ",

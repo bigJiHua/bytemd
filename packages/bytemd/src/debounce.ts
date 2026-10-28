@@ -4,10 +4,18 @@ export function debounce<Args extends unknown[]>(
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  return (...args: Args) => {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => fn(...args), wait)
+  const cancel = () => {
+    if (timer !== undefined) clearTimeout(timer)
+    timer = undefined
   }
+  const scheduled = (...args: Args) => {
+    cancel()
+    timer = setTimeout(() => {
+      timer = undefined
+      fn(...args)
+    }, Math.max(0, wait))
+  }
+  return Object.assign(scheduled, { cancel })
 }
 
 export function throttle<Args extends unknown[]>(
@@ -28,21 +36,29 @@ export function throttle<Args extends unknown[]>(
     }
   }
 
-  return (...args: Args) => {
+  const scheduled = (...args: Args) => {
     const now = Date.now()
     const remaining = wait - (now - last)
     pendingArgs = args
 
     if (remaining <= 0 || remaining > wait) {
-      if (timer) {
+      if (timer !== undefined) {
         clearTimeout(timer)
         timer = undefined
       }
       last = now
       fn(...args)
       pendingArgs = undefined
-    } else if (!timer) {
+    } else if (timer === undefined) {
       timer = setTimeout(invoke, remaining)
     }
   }
+  return Object.assign(scheduled, {
+    cancel() {
+      if (timer !== undefined) clearTimeout(timer)
+      timer = undefined
+      pendingArgs = undefined
+      last = 0
+    },
+  })
 }

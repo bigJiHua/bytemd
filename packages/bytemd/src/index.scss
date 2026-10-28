@@ -3,8 +3,6 @@
 @import 'tippy.js/themes/light-border.css';
 @import '@primer/css/support/variables/color-system.scss';
 
-$border-color: $gray-200;
-$primary: $blue;
 $sidebar-width: 280px;
 $max-width: 800px;
 
@@ -27,13 +25,32 @@ $max-width: 800px;
     box-sizing: content-box;
   }
 
+  // Design tokens: hosts may override any --bytemd-* variable.
+  --bytemd-bg: #fff;
+  --bytemd-text: #24292e;
+  --bytemd-text-muted: #586069;
+  --bytemd-text-subtle: #959da5;
+  --bytemd-icon: #444d56;
+  --bytemd-border: #e1e4e8;
+  --bytemd-toolbar-bg: #fafbfc;
+  --bytemd-bg-subtle: #f6f8fa;
+  --bytemd-hover: #e1e4e8;
+  --bytemd-active: #d1d5da;
+  --bytemd-primary: #0366d6;
+  --bytemd-primary-bg: #f1f8ff;
+  --bytemd-primary-bg-hover: #dbedff;
+  --bytemd-danger: #ea4a5a;
+  --bytemd-selection: rgba(3, 102, 214, 0.15);
+  --bytemd-line-highlight: rgba(3, 102, 214, 0.06);
+  --bytemd-shadow: rgba(27, 31, 35, 0.08);
+
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial,
     sans-serif, Apple Color Emoji, Segoe UI Emoji;
-  color: $gray-900;
-  border: 1px solid $border-color;
-  background-color: $white;
+  color: var(--bytemd-text);
+  border: 1px solid var(--bytemd-border);
+  background-color: var(--bytemd-bg);
   height: 300px;
 
   .CodeMirror,
@@ -46,108 +63,212 @@ $max-width: 800px;
     display: flex;
     flex: none;
     flex-wrap: wrap;
-    align-items: center;
-    padding: 4px 12px;
-    border-bottom: 1px solid $border-color;
-    background-color: $gray-000;
+    align-items: flex-start;
+    gap: 4px 8px;
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--bytemd-border);
+    background-color: var(--bytemd-toolbar-bg);
     user-select: none;
 
     &-left {
       display: flex;
       flex: 1 1 auto;
-      flex-wrap: wrap;
-      align-items: center;
+      align-items: flex-start;
       min-width: 0;
     }
 
     &-right {
       display: flex;
       flex: none;
-      flex-wrap: wrap;
       align-items: center;
+      align-self: flex-start;
       margin-left: auto;
+
+      // 右侧动作保持单行紧凑，不套用左侧的分组块换行。
+      .bytemd-toolbar-groups {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 2px;
+        width: auto;
+        max-width: none;
+      }
+
+      .bytemd-toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+
+        & + .bytemd-toolbar-group {
+          padding-left: 6px;
+          border-left: 1px solid var(--bytemd-border);
+        }
+      }
+    }
+
+    // 自适应网格：桌面最多 20 列（598px），宽度不足时自动降列换行。
+    &-groups {
+      display: grid;
+      flex: none;
+      grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+      grid-auto-rows: 28px;
+      gap: 4px 2px;
+      width: 100%;
+      max-width: 598px;
+    }
+
+    &-group {
+      display: contents;
+
+      & + & .bytemd-toolbar-icon:first-child {
+        box-shadow: inset 1px 0 0 var(--bytemd-border);
+      }
     }
 
     &-tabs {
-      display: flex;
+      display: inline-flex;
+      flex: none;
       align-items: center;
-      min-width: 0;
+      gap: 2px;
+      padding: 2px;
+      border-radius: 8px;
+      background-color: var(--bytemd-bg-subtle);
     }
 
     &-tab {
       display: inline-block;
-      cursor: pointer;
-      padding-left: 8px;
-      padding-right: 8px;
+      padding: 0 12px;
       line-height: 24px;
-      font-size: 14px;
-      border-radius: 4px;
-      &-active {
-        color: $primary;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--bytemd-text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.12s ease, color 0.12s ease,
+        box-shadow 0.12s ease;
+
+      @media (hover: hover) {
+        &:hover {
+          color: var(--bytemd-text);
+        }
       }
+
       &:focus-visible {
-        outline: 2px solid $primary;
+        outline: 2px solid var(--bytemd-primary);
         outline-offset: 1px;
+      }
+
+      &-active {
+        color: var(--bytemd-primary);
+        background-color: var(--bytemd-bg);
+        box-shadow: 0 1px 2px rgba(27, 31, 35, 0.08);
+
+        &:hover {
+          color: var(--bytemd-primary);
+        }
       }
     }
 
     &-icon {
-      display: inline-block;
-      vertical-align: top;
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      color: var(--bytemd-icon);
+      border-radius: 6px;
       cursor: pointer;
-      border-radius: 4px;
-      margin-left: 4px;
-      margin-right: 4px;
+      transition: background-color 0.12s ease, color 0.12s ease;
+
       svg,
       img {
         display: block;
-        padding: 4px;
-        width: 24px;
-        height: 24px;
+        width: 18px;
+        height: 18px;
+        padding: 0;
       }
+
+      img {
+        object-fit: contain;
+      }
+
       .bytemd-callout-dot {
         display: block;
-        width: 16px;
-        height: 16px;
-        margin: 4px;
+        width: 14px;
+        height: 14px;
+        margin: 0;
       }
-      &:hover {
-        background-color: $border-color;
+
+      @media (hover: hover) {
+        &:hover {
+          color: var(--bytemd-text);
+          background-color: var(--bytemd-hover);
+        }
       }
+
+      &:active {
+        background-color: var(--bytemd-active);
+      }
+
       &:focus-visible {
-        outline: 2px solid $primary;
+        outline: 2px solid var(--bytemd-primary);
         outline-offset: 1px;
       }
+
       &-active {
-        color: $blue-500;
+        color: var(--bytemd-primary);
+        background-color: var(--bytemd-primary-bg);
+      }
+
+      &-active:active {
+        background-color: var(--bytemd-primary-bg-hover);
       }
     }
 
-    // On narrow layouts the top row only has tabs; all formatting actions
-    // remain reachable in this horizontal strip.
+    // 触摸设备：最多 10 列（329px），更窄时自动降列换行，点击目标 32px。
+    @media (pointer: coarse) {
+      &-icon {
+        width: 32px;
+        height: 32px;
+
+        svg,
+        img {
+          width: 20px;
+          height: 20px;
+        }
+
+        .bytemd-callout-dot {
+          width: 16px;
+          height: 16px;
+        }
+      }
+
+      &-groups {
+        grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+        grid-auto-rows: 32px;
+        gap: 4px 1px;
+        max-width: 329px;
+      }
+
+      &-tab {
+        padding: 0 6px;
+        font-size: 12px;
+      }
+    }
+
+    // 窄屏：tabs 与右侧动作占第一行，格式动作按分组块换行。
     &-actions {
       display: flex;
       flex: 1 0 100%;
       max-width: 100%;
-      margin-top: 4px;
-      padding-top: 4px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      border-top: 1px solid $border-color;
-      scrollbar-width: thin;
-      -webkit-overflow-scrolling: touch;
+      min-width: 0;
+      margin-top: 2px;
+      padding-top: 6px;
+      border-top: 1px solid var(--bytemd-border);
 
-      .bytemd-toolbar-icon {
+      .bytemd-toolbar-groups {
         flex: none;
-      }
-
-      &::-webkit-scrollbar {
-        height: 4px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background-color: $border-color;
-        border-radius: 2px;
       }
     }
 
@@ -158,41 +279,82 @@ $max-width: 800px;
   }
 
   &-dropdown {
-    max-height: 300px;
+    // The popper is attached to <body>, so it cannot inherit .bytemd tokens.
+    --bytemd-text: #24292e;
+    --bytemd-text-muted: #586069;
+    --bytemd-border: #e1e4e8;
+    --bytemd-hover: #f6f8fa;
+    --bytemd-active: #e1e4e8;
+    --bytemd-primary: #0366d6;
+    min-width: 168px;
+    max-height: 320px;
+    padding: 4px;
     overflow: auto;
-    font-size: 14px;
+    font-size: 13px;
+
     &-title {
-      margin: 0 12px;
+      margin: 2px 4px 4px;
+      padding: 0 8px;
+      font-size: 12px;
       font-weight: 500;
-      border-bottom: 1px solid $border-color;
-      line-height: 32px;
-      color: $gray-700;
+      line-height: 28px;
+      color: var(--bytemd-text-muted);
+      border-bottom: 1px solid var(--bytemd-border);
     }
+
     &-item {
-      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       height: 32px;
+      padding: 0 8px;
+      border-radius: 4px;
       cursor: pointer;
-      &:hover {
-        background-color: $gray-100;
+
+      @media (hover: hover) {
+        &:hover {
+          background-color: var(--bytemd-hover);
+        }
       }
+
+      &:active {
+        background-color: var(--bytemd-active);
+      }
+
       &:focus-visible {
-        outline: 2px solid $primary;
+        outline: 2px solid var(--bytemd-primary);
         outline-offset: -2px;
       }
 
       &-icon {
-        display: inline-block;
+        display: flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+
         svg {
           display: block;
-          padding: 4px;
-          width: 24px;
-          height: 24px;
+          width: 18px;
+          height: 18px;
+          padding: 0;
         }
       }
+
       &-title {
-        display: inline-block;
-        line-height: 24px;
-        vertical-align: top;
+        flex: 1;
+        min-width: 0;
+        line-height: 20px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    @media (pointer: coarse) {
+      &-item {
+        height: 40px;
       }
     }
   }
@@ -203,6 +365,12 @@ $max-width: 800px;
     overflow: auto;
     // inline-block columns: kill whitespace so the sidebar never wraps
     font-size: 0;
+    &-contained {
+      // Opt-in: this flex body is sized by the fixed-height editor viewport.
+      // Size containment breaks intrinsic-size propagation without creating
+      // a containing block for positioned plugins or clipping preview content.
+      contain: size;
+    }
   }
 
   &-editor {
@@ -216,7 +384,25 @@ $max-width: 800px;
       font-size: 14px;
       line-height: 1.5;
       pre.CodeMirror-placeholder {
-        color: $gray-400;
+        color: var(--bytemd-text-subtle);
+      }
+      color: var(--bytemd-text);
+      background-color: var(--bytemd-bg);
+      .CodeMirror-gutters {
+        background-color: var(--bytemd-toolbar-bg);
+        border-right-color: var(--bytemd-border);
+      }
+      .CodeMirror-linenumber {
+        color: var(--bytemd-text-subtle);
+      }
+      .CodeMirror-cursor {
+        border-left-color: var(--bytemd-text);
+      }
+      .CodeMirror-selected {
+        background: var(--bytemd-selection);
+      }
+      .CodeMirror-activeline-background {
+        background: var(--bytemd-line-highlight);
       }
       .CodeMirror-lines {
         max-width: $max-width;
@@ -249,7 +435,7 @@ $max-width: 800px;
     height: 100%;
     overflow: auto;
     font-size: 16px;
-    border-left: 1px solid $border-color;
+    border-left: 1px solid var(--bytemd-border);
     width: $sidebar-width;
     position: relative;
     padding: 0 16px;
@@ -261,10 +447,10 @@ $max-width: 800px;
       cursor: pointer;
       border-radius: 4px;
       &:hover {
-        color: $primary;
+        color: var(--bytemd-primary);
       }
       &:focus-visible {
-        outline: 2px solid $primary;
+        outline: 2px solid var(--bytemd-primary);
         outline-offset: -2px;
       }
     }
@@ -275,7 +461,7 @@ $max-width: 800px;
     }
     ul {
       padding-left: 0;
-      color: $gray-400;
+      color: var(--bytemd-text-muted);
     }
   }
 
@@ -328,13 +514,13 @@ $max-width: 800px;
       white-space: nowrap;
       border-radius: 4px;
       &:focus-visible {
-        outline: 2px solid $primary;
+        outline: 2px solid var(--bytemd-primary);
         outline-offset: -2px;
       }
     }
     &-active {
-      color: $primary;
-      background-color: $gray-100;
+      color: var(--bytemd-primary);
+      background-color: var(--bytemd-bg-subtle);
     }
     &-first {
       font-weight: 500;
@@ -345,7 +531,7 @@ $max-width: 800px;
     flex: none;
     font-size: 12px;
     line-height: 24px;
-    border-top: 1px solid $border-color;
+    border-top: 1px solid var(--bytemd-border);
     user-select: none;
     &-left {
       float: left;
@@ -365,10 +551,10 @@ $max-width: 800px;
         border-radius: 3px;
       }
       span:hover {
-        color: $primary;
+        color: var(--bytemd-primary);
       }
       span:focus-visible {
-        outline: 2px solid $primary;
+        outline: 2px solid var(--bytemd-primary);
         outline-offset: 1px;
       }
       input {
@@ -377,7 +563,7 @@ $max-width: 800px;
       }
     }
     &-error {
-      color: $red-500;
+      color: var(--bytemd-danger);
     }
   }
 
@@ -395,7 +581,7 @@ $max-width: 800px;
 
   &-split {
     .bytemd-preview {
-      border-left: 1px solid $border-color;
+      border-left: 1px solid var(--bytemd-border);
     }
   }
 
@@ -422,13 +608,13 @@ $max-width: 800px;
     }
 
     &:hover::after {
-      background-color: $primary;
+      background-color: var(--bytemd-primary);
     }
 
     &:focus-visible {
       outline: none;
       &::after {
-        background-color: $primary;
+        background-color: var(--bytemd-primary);
       }
     }
   }
@@ -438,13 +624,115 @@ $max-width: 800px;
     cursor: col-resize;
 
     .bytemd-split-handle::after {
-      background-color: $primary;
+      background-color: var(--bytemd-primary);
     }
+  }
+}
+
+// Editor chrome dark palette. Follows a `.dark` container, data-theme,
+// or the element's own class/attribute; every token can still be overridden.
+.dark .bytemd,
+[data-theme='dark'] .bytemd,
+.bytemd.dark,
+.bytemd[data-theme='dark'] {
+  --bytemd-bg: #0d1117;
+  --bytemd-text: #e6edf3;
+  --bytemd-text-muted: #8b949e;
+  --bytemd-text-subtle: #6e7681;
+  --bytemd-icon: #c9d1d9;
+  --bytemd-border: #30363d;
+  --bytemd-toolbar-bg: #161b22;
+  --bytemd-bg-subtle: #161b22;
+  --bytemd-hover: #21262d;
+  --bytemd-active: #30363d;
+  --bytemd-primary: #79c0ff;
+  --bytemd-primary-bg: rgba(56, 139, 253, 0.15);
+  --bytemd-primary-bg-hover: rgba(56, 139, 253, 0.25);
+  --bytemd-danger: #ff7b72;
+  --bytemd-selection: rgba(56, 139, 253, 0.25);
+  --bytemd-line-highlight: rgba(110, 118, 129, 0.15);
+  --bytemd-shadow: rgba(0, 0, 0, 0.4);
+
+  // CodeMirror's default token colors assume a light background.
+  .cm-keyword {
+    color: #ff7b72;
+  }
+  .cm-atom,
+  .cm-number {
+    color: #79c0ff;
+  }
+  .cm-def,
+  .cm-variable-3 {
+    color: #d2a8ff;
+  }
+  .cm-variable,
+  .cm-variable-2,
+  .cm-property,
+  .cm-builtin {
+    color: #ffa657;
+  }
+  .cm-operator {
+    color: #ff7b72;
+  }
+  .cm-comment,
+  .cm-meta,
+  .cm-quote,
+  .cm-hr {
+    color: #8b949e;
+  }
+  .cm-string,
+  .cm-string-2,
+  .cm-link {
+    color: #a5d6ff;
+  }
+  .cm-tag {
+    color: #7ee787;
+  }
+  .cm-attribute {
+    color: #79c0ff;
+  }
+  .cm-header {
+    color: #e6edf3;
+  }
+  .cm-bracket {
+    color: #8b949e;
   }
 }
 
 .tippy-box {
   font-size: 12px;
+}
+
+// Dropdowns live on <body>; mark them explicitly from the toolbar and
+// mirror the dark tokens so items, borders and arrows stay readable.
+.tippy-box[data-theme~='light-border'][data-theme~='bytemd-dark'] {
+  --bytemd-text: #e6edf3;
+  --bytemd-text-muted: #8b949e;
+  --bytemd-border: #30363d;
+  --bytemd-hover: #21262d;
+  --bytemd-active: #30363d;
+  --bytemd-primary: #79c0ff;
+  background-color: #161b22;
+  color: #e6edf3;
+  border-color: #30363d;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.5);
+}
+
+.tippy-box[data-theme~='light-border'][data-theme~='bytemd-dark'][data-placement^='top']
+  > .tippy-arrow::before {
+  border-top-color: #161b22;
+}
+.tippy-box[data-theme~='light-border'][data-theme~='bytemd-dark'][data-placement^='bottom']
+  > .tippy-arrow::before {
+  border-bottom-color: #161b22;
+}
+.tippy-box[data-theme~='light-border'][data-theme~='bytemd-dark'][data-placement^='left']
+  > .tippy-arrow::before {
+  border-left-color: #161b22;
+}
+.tippy-box[data-theme~='light-border'][data-theme~='bytemd-dark'][data-placement^='right']
+  > .tippy-arrow::before {
+  border-right-color: #161b22;
 }
 
 // callout dropdown color dot (tippy popper is attached to body, keep it global)
@@ -462,8 +750,8 @@ $max-width: 800px;
   box-sizing: border-box;
   width: 14px;
   height: 14px;
-  margin: 5px;
+  margin: 0;
   border: 1px solid rgba(127, 127, 127, 0.35);
   border-radius: 3px;
-  vertical-align: top;
+  vertical-align: middle;
 }

@@ -87,7 +87,7 @@ import { build } from 'vite'
         alias[pkgName] = resolve.sync(pkgName)
       }
 
-      await build({
+      const buildOptions = {
         root,
         build: {
           emptyOutDir: false,
@@ -115,7 +115,65 @@ import { build } from 'vite'
           name === 'vue' && createVuePlugin(),
           name === 'vue-next' && createVue3Plugin(),
         ],
-      })
+      }
+      await build(buildOptions)
+      if (name === 'vue-next' && format !== 'umd') {
+        await build({
+          ...buildOptions,
+          build: {
+            ...buildOptions.build,
+            lib: {
+              ...buildOptions.build.lib,
+              entry: 'src/async.ts',
+              fileName: 'async',
+            },
+            rollupOptions: {
+              ...buildOptions.build.rollupOptions,
+              output: {
+                chunkFileNames: `chunks/[name]-[hash].${
+                  format === 'es' ? 'mjs' : 'js'
+                }`,
+              },
+            },
+          },
+        })
+        await build({
+          ...buildOptions,
+          build: {
+            ...buildOptions.build,
+            lib: {
+              ...buildOptions.build.lib,
+              entry: 'src/viewer.ts',
+              fileName: 'viewer',
+            },
+          },
+        })
+        for (const [file, content] of [
+          ['async.mjs', "export * from './dist/async.mjs'\n"],
+          ['async.js', "module.exports = require('./dist/async.js')\n"],
+          ['async.d.ts', "export * from './dist/async'\n"],
+          ['viewer.mjs', "export * from './dist/viewer.mjs'\n"],
+          ['viewer.js', "module.exports = require('./dist/viewer.js')\n"],
+          ['viewer.d.ts', "export * from './dist/viewer'\n"],
+        ]) {
+          await fs.writeFile(file, content)
+        }
+      }
+      if (name === 'bytemd' && format !== 'umd') {
+        for (const entry of ['processor', 'worker', 'viewer']) {
+          await build({
+            ...buildOptions,
+            build: {
+              ...buildOptions.build,
+              lib: {
+                ...buildOptions.build.lib,
+                entry: `src/${entry}.ts`,
+                fileName: entry,
+              },
+            },
+          })
+        }
+      }
     }
 
     if (name === 'bytemd') {
@@ -151,6 +209,14 @@ import { build } from 'vite'
         .filter((line) => !line.includes('index.scss'))
         .join('\n')
       await fs.writeFile('svelte/index.js', js)
+
+      for (const [file, content] of [
+        ['viewer.mjs', "export * from './dist/viewer.mjs'\n"],
+        ['viewer.js', "module.exports = require('./dist/viewer.js')\n"],
+        ['viewer.d.ts', "export * from './dist/viewer'\n"],
+      ]) {
+        await fs.writeFile(file, content)
+      }
 
       console.log('processing style files (backward compatibility)...')
       await fs.move('dist/style.css', 'dist/index.css')

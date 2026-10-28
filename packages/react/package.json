@@ -1,1 +1,41 @@
-{"name":"@bytemd/react","version":"1.22.0","description":"Hackable Markdown Editor and Viewer","repository":{"type":"git","url":"https://github.com/bytedance/bytemd.git","directory":"packages/react"},"license":"MIT","author":"Rongjian Zhang","exports":{".":{"types":"./dist/index.d.ts","import":"./dist/index.mjs","require":"./dist/index.js"},"./locales/*":"./locales/*","./lib/locales/*":"./locales/*"},"main":"./dist/index.js","jsdelivr":"./dist/index.umd.js","unpkg":"./dist/index.umd.js","module":"./dist/index.mjs","types":"./dist/index.d.ts","files":["dist","locales"],"dependencies":{"bytemd":"workspace:*"},"devDependencies":{"@types/react":"^18.0.31","react":"^18.2.0","react-dom":"18.2.0"},"peerDependencies":{"react":"*"}}
+{
+  "name": "@bytemd/react",
+  "version": "1.22.0",
+  "description": "Hackable Markdown Editor and Viewer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bigJiHua/bytemd.git",
+    "directory": "packages/react"
+  },
+  "license": "MIT",
+  "author": "Rongjian Zhang",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./locales/*": "./locales/*",
+    "./lib/locales/*": "./locales/*"
+  },
+  "main": "./dist/index.js",
+  "jsdelivr": "./dist/index.umd.js",
+  "unpkg": "./dist/index.umd.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "locales"
+  ],
+  "dependencies": {
+    "bytemd": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.31",
+    "react": "^18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "peerDependencies": {
+    "react": "*"
+  }
+}

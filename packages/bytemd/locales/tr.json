@@ -1,4 +1,7 @@
 {
+  "renderError": "Önizleme oluşturulamadı.",
+  "renderPending": "Önizleme oluşturuluyor…",
+  "pluginError": "Önizleme geliştirmesi başarısız. İçeriği veya eklentiyi kontrol edin.",
   "bold": "Kalın",
   "boldText": "kalın metin",
   "cheatsheet": "Markdown Kısayol Tuşları",

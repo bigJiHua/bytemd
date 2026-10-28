@@ -159,8 +159,36 @@ editor.$on('change', (e) => {
 | `plugins` | `BytemdPlugin[]` | ByteMD plugin list |
 | `sanitize` | `(schema: Schema) => Schema` | Sanitize strategy |
 | `remarkRehype` | [documentation](https://github.com/remarkjs/remark-rehype#options) | remark-rehype config options |
+| `locale` | `Partial<BytemdLocale>` | Viewer copy, pending and render-error feedback strings |
+| `renderer` | `BytemdRenderer` | Optional asynchronous renderer; defaults to synchronous rendering |
 
 Svelte, React, Vue 2 and Vue 3 Viewers all add a copy button and language label to code blocks after mounting and after content updates. This uses the shared `addCopyButtons` and `copyCodeFromButton` helpers exported by `bytemd`; plugins are optional. Import `bytemd/dist/markdown.css` for the button and code header styles.
+
+Viewer accepts `locale` for `copy`, `copySuccess`, `copyFailed` and `renderError` feedback. Failed renders clear the old preview and plugin effects, show an alert, and recover on the next successful render. Copy permission or fallback failures show failure feedback instead of claiming success. Vue 2/3 Editors destroy the core instance on unmount and reset removed optional props.
+
+Built-in inline style ranges are limited to 64 nested ranges and 10,000 generated nodes per inline parent. Exceeding that budget preserves the original inline Markdown nodes and literal markers. Before built-in transforms, Markdown ASTs exceeding depth 128 or 100,000 nodes degrade to literal document text. These checks protect recursive transforms; they do not bound initial parsing time, HTML parsing or trusted plugin execution. `maxLength` remains a warning; hosts accepting large/external documents must use separate input and execution budgets.
+
+`previewDebounce` updates rebuild and cancel the old scheduler; editor unmount cancels pending preview/refresh tasks and layout subscriptions. Async editor actions can check `context.isDestroyed()` before editing. The mediumZoom plugin shares one underlying controller per document and keeps each Viewer's image membership, options, UI and cleanup separate; a page has at most one open zoomed image.
+
+Editor scroll sync matches surviving preview blocks by source identity, including blocks nested inside DOM plugin wrappers. Geometry is cached until content, image load/error, accordion toggle, font loading, observed dimensions or DOM mutations invalidate it. Sync pauses while the editor leads its debounced preview; unusable geometry, duplicate/reordered identities or a preview without surviving source blocks safely disable mapping. The table of contents uses these same source identities, honors CSS scroll margins/padding, ignores plugin-inserted nested headings and clears after render failure.
+
+DOM plugins replacing an Editor preview block should copy its `data-bytemd-block` attribute to the replacement, as Mermaid does. Wrapping and removing blocks need no special handling. Do not duplicate or manufacture these identifiers; they are internal to each render. Standalone Viewers and `getProcessor()` HTML do not include this metadata. This improves mapping reliability and avoids repeated geometry reads while scrolling; whole-document parsing and long-document performance remain separate optimization work.
+
+Svelte, React, Vue 2 and Vue 3 Viewers share DOM plugin error feedback. Plugins can call `reportError(error, { plugin, element })` from their `viewerEffect` context; the Viewer inserts a local alert using `locale.pluginError` and emits a bubbling `bytemd-plugin-error` DOM event. Its detail contains `{ error, plugin, element, file }`; raw diagnostics are available to the host and are not inserted into the alert. Reports from a previous render or an unmounted Viewer are ignored, and feedback is removed on update/cleanup. Synchronous effect failures are isolated so remaining plugins still run. Custom plugins must restore their own partial changes and catch asynchronous failures before reporting them; returning a Promise from `viewerEffect` is not supported.
+
+Mermaid serializes each configuration with its awaited render across this plugin module's Viewers, preserves source on failure, uses unique diagram IDs and cleans up staging/replacement nodes. Its automatic page scan and built-in error diagram are disabled. KaTeX enables and catches parse errors internally (including unknown commands), overriding `katexOptions.throwOnError` so invalid expressions retain their source and receive feedback. KaTeX and highlight preserve source on local failure and continue processing other blocks; highlight waits for its shared asynchronous initialization before using the library. Successful math/highlight transformations restore source during cleanup so locale changes can safely restart effects. A failed library load is not retained in the plugin's loader cache, but network recovery/retry policy remains the browser's responsibility. Direct host calls to Mermaid's global `initialize`/`render` need their own coordination with plugin rendering.
+
+KaTeX and highlight yield to the browser between batches after approximately 8ms of work, using `scheduler.yield()` where available and a cancellable timer fallback elsewhere. Updates and unmounting stop pending work; a native yield may still resume, but its stale nodes are ignored. One expression or code block can exceed the soft budget. Markdown parsing and AST/HTML conversion remain synchronous, so batching alone does not remove long-document blocking. See [the measured performance baseline and Worker plan](./audit/PERFORMANCE.md).
+
+Rehype plugins run after sanitization and must be trusted, as must custom sanitizer strategies.
+
+#### Optional Worker rendering
+
+All four framework Editors and Viewers accept `renderer`. Use `createWorkerRenderer` with a host-created module Worker that calls `installWorkerRenderer` from `bytemd/worker`. The pure `bytemd/processor` entry exports `getProcessor` and `renderMarkdown` without UI/CSS imports. Default rendering stays synchronous; opt-in async SSR shows pending and starts after mounting.
+
+Parser functions cannot be transferred: unknown remark/rehype/sanitize/handlers callbacks keep the synchronous compatibility path. Register known parser configurations inside the Worker and map every callback, order and option explicitly; DOM effects stay on the main thread. New requests abort old ones, ignore late results and clear stale preview/TOC state. A shared renderer belongs to the host, which calls `destroy()` when all consumers are finished. Default queue strategy preserves an active parse; restart strategy terminates it and pays startup costs. Startup/active timeout defaults to 60 seconds.
+
+Vite 4 module Workers need `resolve.conditions: ['worker']` for the DOM-free entity decoder and `worker.format: 'es'` for code splitting. Worker URL and CSP remain host configuration. See [runnable examples, lifecycle contracts and measured results](./audit/WORKER.md). Worker reduces main-thread parsing blockage; large DOM insertion/layout and CodeMirror work can still stall input.
 
 ### Editor
 
@@ -170,10 +198,12 @@ Svelte, React, Vue 2 and Vue 3 Viewers all add a copy button and language label 
 | --- | --- | --- |
 | `mode` | `split`, `tab`, `auto` | Editor display mode, default: `auto` |
 | `previewDebounce` | `number` | Debounce time (ms) for preview, default: `300` |
+| `layoutContainment` | `boolean` | Opt-in intrinsic-size isolation for fixed-height editors, default: `false`. Reduces typing-related layout beside large previews. Keep disabled for content-sized or expanding print layouts. |
 | `placeholder` | `string` | Editor placeholder |
 | `editorConfig` | [documentation](https://codemirror.net/doc/manual.html#config) | CodeMirror editor config |
 | `locale` |  | i18n locale. Available locales could be found at `bytemd/locales`, default: use `en.json` |
 | `uploadImages` | `function` | Specify how to upload images. If set, the image icon will appear on the toolbar |
+| `overridePreview` | `(el, props) => void` | Replace built-in preview rendering; forwarded by all Editor wrappers |
 | `maxLength` | `number` | Warning threshold for `value.length` (UTF-16 code units), default: `Infinity`. Shows an over-limit indicator; input and pasted text are accepted without truncation. |
 
 The editor emits the complete Markdown through `change`. The host must update `value` to keep the editor and preview in sync, and validate the length before saving if a hard limit is required. Preview rendering is debounced by `previewDebounce` (300 ms by default).
@@ -281,18 +311,22 @@ If you have more customized needs, you could also write your own plugin to suppo
 
 ### Official Plugins
 
+<!-- bytemd:plugins:start -->
+
 | Package | Status | Description |
 | --- | --- | --- |
-| [@bytemd/plugin-breaks](https://github.com/bytedance/bytemd/tree/main/packages/plugin-breaks) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-breaks.svg?label=)](https://npm.im/@bytemd/plugin-breaks) | Support breaks |
-| [@bytemd/plugin-frontmatter](https://github.com/bytedance/bytemd/tree/main/packages/plugin-frontmatter) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-frontmatter.svg?label=)](https://npm.im/@bytemd/plugin-frontmatter) | Parse frontmatter |
-| [@bytemd/plugin-gemoji](https://github.com/bytedance/bytemd/tree/main/packages/plugin-gemoji) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-gemoji.svg?label=)](https://npm.im/@bytemd/plugin-gemoji) | Support Gemoji shortcodes |
-| [@bytemd/plugin-gfm](https://github.com/bytedance/bytemd/tree/main/packages/plugin-gfm) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-gfm.svg?label=)](https://npm.im/@bytemd/plugin-gfm) | Support GFM (autolink literals, strikethrough, tables, tasklists) |
-| [@bytemd/plugin-highlight](https://github.com/bytedance/bytemd/tree/main/packages/plugin-highlight) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-highlight.svg?label=)](https://npm.im/@bytemd/plugin-highlight) | Highlight code blocks |
-| [@bytemd/plugin-highlight-ssr](https://github.com/bytedance/bytemd/tree/main/packages/plugin-highlight-ssr) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-highlight-ssr.svg?label=)](https://npm.im/@bytemd/plugin-highlight-ssr) | Highlight code blocks (SSR compatible) |
-| [@bytemd/plugin-math](https://github.com/bytedance/bytemd/tree/main/packages/plugin-math) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-math.svg?label=)](https://npm.im/@bytemd/plugin-math) | Support math formula |
-| [@bytemd/plugin-math-ssr](https://github.com/bytedance/bytemd/tree/main/packages/plugin-math-ssr) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-math-ssr.svg?label=)](https://npm.im/@bytemd/plugin-math-ssr) | Support math formula (SSR compatible) |
-| [@bytemd/plugin-medium-zoom](https://github.com/bytedance/bytemd/tree/main/packages/plugin-medium-zoom) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-medium-zoom.svg?label=)](https://npm.im/@bytemd/plugin-medium-zoom) | Zoom images like Medium |
-| [@bytemd/plugin-mermaid](https://github.com/bytedance/bytemd/tree/main/packages/plugin-mermaid) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-mermaid.svg?label=)](https://npm.im/@bytemd/plugin-mermaid) | Support Mermaid diagram |
+| [@bytemd/plugin-breaks](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-breaks) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-breaks.svg?label=)](https://npm.im/@bytemd/plugin-breaks) | Support breaks |
+| [@bytemd/plugin-frontmatter](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-frontmatter) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-frontmatter.svg?label=)](https://npm.im/@bytemd/plugin-frontmatter) | Parse frontmatter |
+| [@bytemd/plugin-gemoji](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-gemoji) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-gemoji.svg?label=)](https://npm.im/@bytemd/plugin-gemoji) | Support Gemoji shortcodes |
+| [@bytemd/plugin-gfm](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-gfm) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-gfm.svg?label=)](https://npm.im/@bytemd/plugin-gfm) | Support GFM (autolink literals, strikethrough, tables, tasklists) |
+| [@bytemd/plugin-highlight](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-highlight) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-highlight.svg?label=)](https://npm.im/@bytemd/plugin-highlight) | Highlight code blocks |
+| [@bytemd/plugin-highlight-ssr](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-highlight-ssr) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-highlight-ssr.svg?label=)](https://npm.im/@bytemd/plugin-highlight-ssr) | Highlight code blocks (SSR compatible) |
+| [@bytemd/plugin-math](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-math) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-math.svg?label=)](https://npm.im/@bytemd/plugin-math) | Support math formula |
+| [@bytemd/plugin-math-ssr](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-math-ssr) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-math-ssr.svg?label=)](https://npm.im/@bytemd/plugin-math-ssr) | Support math formula (SSR compatible) |
+| [@bytemd/plugin-medium-zoom](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-medium-zoom) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-medium-zoom.svg?label=)](https://npm.im/@bytemd/plugin-medium-zoom) | Zoom images like Medium |
+| [@bytemd/plugin-mermaid](https://github.com/bigJiHua/bytemd/tree/main/packages/plugin-mermaid) | [![npm](https://img.shields.io/npm/v/@bytemd/plugin-mermaid.svg?label=)](https://npm.im/@bytemd/plugin-mermaid) | Support Mermaid diagram |
+
+<!-- bytemd:plugins:end -->
 
 ### Technical Overview
 
@@ -421,21 +455,26 @@ Now we have completed a minimalist version of the plugin! For more details and r
 This is a pnpm workspace with Svelte 3, TypeScript, CodeMirror 5 and the unified/remark/rehype rendering pipeline. Run these commands from the repository root:
 
 ```sh
-pnpm install --frozen-lockfile --ignore-scripts
+pnpm install --frozen-lockfile
+pnpm generate
+pnpm generate:check
+pnpm test:scripts
 pnpm exec vitest run --threads false
 pnpm build
 pnpm dev
 ```
 
-`postinstall` currently rewrites workspace `package.json` exports and repository metadata, root/package `tsconfig.json` files, plugin READMEs and the root README plugin table. It also copies licenses and formats files across the repository. Use `--ignore-scripts` to preserve local customizations during dependency installation, and inspect `git diff` if you run `pnpm postinstall` explicitly. Plugin README changes also need to be reflected in `scripts/plugin-template.md` if they should survive regeneration.
+`pnpm install` no longer runs a root `postinstall` that rewrites workspace files. Run `pnpm generate` explicitly after adding packages or changing generated entries; it fills missing package/TypeScript defaults, prepares package licenses, and updates only the `bytemd:plugins` regions in the three shared READMEs. Existing metadata, custom configuration and unmarked plugin READMEs are preserved; marked plugin READMEs update only `bytemd:usage`. `pnpm generate:check` is read-only and exits with code 1 when generation is needed. CI explicitly checks generation and Git differences; `pnpm pub` prepares and checks before building and publishing.
 
-The playground imports workspace package entries: the core JavaScript uses the generated `svelte/` entry under Svelte resolution, plugins use `dist/`, and theme styles use `dist/*.css`. Rebuild with `pnpm build` after source changes, then restart the dev server if it still shows cached output. Vitest aliases `bytemd` directly to source so the core and framework Viewer tests exercise current changes.
+Run `pnpm format` separately. The raw `playground/src/text.md` render fixture is excluded because generic Markdown formatting changes custom block syntax and intentional long code lines. Historical audit JSON is also excluded. Keep customized plugin instructions outside generation markers; see `audit/GENERATING.md` in the repository for the scope and verified results.
+
+The playground imports workspace package entries: the core JavaScript uses the generated `svelte/` entry under Svelte resolution, plugins use `dist/`, and theme styles use `dist/*.css`. Rebuild with `pnpm build` after source changes. If the running dev server still shows cached output or reports missing generated modules during build cleanup, restart it with `pnpm --filter playground dev --force` to reload optimized dependencies. Vitest aliases `bytemd` directly to source so the core and framework Viewer tests exercise current changes.
 
 `pnpm clean` uses `scripts/clean.mjs` to remove package build outputs on Windows, macOS and Linux without requiring Unix shell commands.
 
 When adding or changing a built-in syntax, keep these parts in sync:
 
-1. Parsing and sanitization in `packages/bytemd/src/utils.ts`, with rendering tests for valid, invalid and unsafe input.
+1. Parsing and sanitization in `packages/bytemd/src/processor.ts`, with rendering tests for valid, invalid and unsafe input; DOM helpers remain in `utils.ts`.
 2. Toolbar actions in `editor.ts`, icons and the Help cheatsheet generated from those actions.
 3. Styles in `markdown.scss`, including dark theme tokens where appropriate.
 4. Locale keys and types in `locales/en.json`, `locales/zh_Hans.json` and `types.ts`; other locales fall back to English.

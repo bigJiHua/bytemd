@@ -17,6 +17,21 @@ type Locale = {
   timeline: string
 }
 
+let modulePromise: Promise<typeof Mermaid> | undefined
+let renderQueue = Promise.resolve()
+let diagramId = 0
+
+function loadMermaid() {
+  if (!modulePromise)
+    modulePromise = import('mermaid')
+      .then((module) => module.default)
+      .catch((error) => {
+        modulePromise = undefined
+        throw error
+      })
+  return modulePromise
+}
+
 export interface BytemdPluginMermaidOptions extends MermaidConfig {
   locale?: Partial<Locale>
 }
@@ -26,7 +41,6 @@ export default function mermaid({
   ...mermaidConfig
 }: BytemdPluginMermaidOptions = {}): BytemdPlugin {
   const locale = { ...en, ..._locale } as Locale
-  let m: typeof Mermaid
 
   const actionItems = [
     {
@@ -137,44 +151,75 @@ another task      : 24d`,
   ]
 
   return {
-    viewerEffect({ markdownBody }) {
-      ;(async () => {
-        const els = markdownBody.querySelectorAll<HTMLElement>(
-          'pre>code.language-mermaid'
-        )
-        if (els.length === 0) return
-
-        if (!m) {
-          m = await import('mermaid').then((c) => c.default)
-          if (mermaidConfig) {
-            m.initialize(mermaidConfig)
+    viewerEffect({ markdownBody, reportError }) {
+      let active = true
+      const replacements: { pre: HTMLElement; container: HTMLElement }[] = []
+      const stages = new Set<HTMLElement>()
+      for (const el of markdownBody.querySelectorAll<HTMLElement>(
+        'pre>code.language-mermaid'
+      )) {
+        const pre = el.parentElement!
+        const source = el.textContent ?? ''
+        const task = renderQueue.then(async () => {
+          if (!active || !markdownBody.contains(pre)) return
+          const m = await loadMermaid()
+          if (!active || !markdownBody.contains(pre)) return
+          // Mermaid's public renderer also queues work. Keep initialization
+          // and the awaited render together so another Viewer cannot reset it.
+          m.initialize({
+            ...mermaidConfig,
+            startOnLoad: false,
+            suppressErrorRendering: true,
+          })
+          const stage = markdownBody.ownerDocument.createElement('div')
+          stage.style.cssText =
+            'position:absolute;left:-10000px;visibility:hidden;pointer-events:none'
+          const container = markdownBody.ownerDocument.createElement('div')
+          container.className = 'bytemd-mermaid'
+          container.style.lineHeight = 'initial'
+          stage.appendChild(container)
+          markdownBody.appendChild(stage)
+          stages.add(stage)
+          try {
+            const result = await m.render(
+              `bytemd-mermaid-${++diagramId}`,
+              source,
+              container
+            )
+            if (!active || !markdownBody.contains(pre)) return
+            container.innerHTML = result.svg
+            if (pre.dataset.bytemdBlock)
+              container.dataset.bytemdBlock = pre.dataset.bytemdBlock
+            pre.replaceWith(container)
+            try {
+              result.bindFunctions?.(container)
+            } catch (error) {
+              container.replaceWith(pre)
+              throw error
+            }
+            replacements.push({ pre, container })
+          } finally {
+            stage.remove()
+            stages.delete(stage)
           }
-        }
-
-        els.forEach((el, i) => {
-          const pre = el.parentElement!
-          const source = el.innerText
-
-          const container = document.createElement('div')
-          container.classList.add('bytemd-mermaid')
-          container.style.lineHeight = 'initial' // reset line-height
-          pre.replaceWith(container)
-
-          m.render(
-            `bytemd-mermaid-${Date.now()}-${i}`,
-            source,
-            // @ts-ignore
-            container
-          )
-            .then((svgCode) => {
-              // @ts-ignore
-              container.innerHTML = svgCode.svg
-            })
-            .catch((err) => {
-              // console.error(err);
-            })
         })
-      })()
+        // A rejected diagram must not poison the shared queue.
+        renderQueue = task.catch(() => {})
+        task.catch((error) => {
+          if (!active || !markdownBody.contains(pre)) return
+          if (reportError)
+            reportError(error, { plugin: 'Mermaid', element: pre })
+          else console.error(error)
+        })
+      }
+      return () => {
+        active = false
+        stages.forEach((stage) => stage.remove())
+        stages.clear()
+        // Svelte tracks the original {@html} nodes. Restore replaced nodes
+        // before its next DOM update so the old diagram is actually removed.
+        replacements.forEach(({ pre, container }) => container.replaceWith(pre))
+      }
     },
     actions: [
       {

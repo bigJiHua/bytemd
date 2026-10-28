@@ -45,6 +45,12 @@
   let value = markdownText
   let mode = 'auto'
   let localeKey = 'en'
+  let dark = false
+
+  function toggleTheme() {
+    dark = !dark
+    document.documentElement.classList.toggle('dark', dark)
+  }
   let maxLength: number
 
   let enabled = {
@@ -98,6 +104,9 @@
     </select>
     , Max length:
     <input bind:value={maxLength} type="number" />
+  </div>
+  <div class="line">
+    <button on:click={toggleTheme}>Theme: {dark ? 'dark' : 'light'}</button>
   </div>
   <div class="line">
     Plugins:
@@ -177,6 +186,23 @@
     font-size: 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
       sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  }
+  :global(html.dark body) {
+    background: #0d1117;
+    color: #e6edf3;
+  }
+  :global(html.dark select),
+  :global(html.dark input[type='number']) {
+    background: #161b22;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+  }
+  :global(html.dark .badges) {
+    color: #8b949e;
+    background: rgba(22, 27, 34, 0.82);
+  }
+  :global(html.dark .badge) {
+    background: rgba(121, 192, 255, 0.14);
   }
   :global(.bytemd) {
     height: calc(100vh - 100px);

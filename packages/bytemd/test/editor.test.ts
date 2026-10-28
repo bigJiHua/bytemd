@@ -23,9 +23,7 @@ function stripComment(str: string) {
 }
 
 const heading = '# title'
-const headingHtml = '<h1>title</h1>'
 const paragraph = 'abc'
-const paragraphHtml = '<p>abc</p>'
 
 beforeEach(() => {
   cleanup()
@@ -59,9 +57,9 @@ test('preview debounce', async () => {
     stripComment($.container.querySelector('.markdown-body').innerHTML)
   ).toEqual('')
   await sleep(400)
-  expect(
-    stripComment($.container.querySelector('.markdown-body').innerHTML)
-  ).toEqual(paragraphHtml)
+  const body = $.container.querySelector('.markdown-body')!
+  expect(body.querySelectorAll('p')).toHaveLength(1)
+  expect(body.querySelector('p')).toHaveTextContent(paragraph)
 })
 
 describe('mode', () => {

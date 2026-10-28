@@ -1,4 +1,5 @@
 import type { EditorUtils } from './editor'
+import type { BytemdRenderer } from './render-types'
 import type { Editor, EditorConfiguration } from 'codemirror'
 import type CodeMirror from 'codemirror'
 import type { Schema } from 'hast-util-sanitize'
@@ -8,6 +9,12 @@ import type { Processor } from 'unified'
 import type { VFile } from 'vfile'
 
 export interface BytemdLocale {
+  copy?: string
+  copySuccess?: string
+  copyFailed?: string
+  renderError?: string
+  renderPending?: string
+  pluginError?: string
   accordion: string
   calloutDefault: string
   calloutSuccess: string
@@ -82,11 +89,15 @@ export interface BytemdEditorContext extends EditorUtils {
    * The root element
    */
   root: HTMLElement
+  /** Whether the owning editor has been destroyed; async actions must stop. */
+  isDestroyed?(): boolean
 }
 
 export interface BytemdViewerContext {
   /**
    * The root element of the viewer
+   * Editor preview blocks carry data-bytemd-block metadata for scroll mapping.
+   * Preserve it on replacements; wrapping/removing blocks is supported.
    */
   markdownBody: HTMLElement
   /**
@@ -94,6 +105,19 @@ export interface BytemdViewerContext {
    *
    * Get the HTML output by calling `vfile.toString()`
    */
+  file: VFile
+  /** Report a failed DOM enhancement; reports after cleanup are ignored. */
+  reportError?(
+    error: unknown,
+    details?: { plugin?: string; element?: HTMLElement }
+  ): void
+}
+
+/** Detail of the bubbling bytemd-plugin-error DOM event. */
+export interface BytemdPluginError {
+  error: unknown
+  plugin?: string
+  element?: HTMLElement
   file: VFile
 }
 
@@ -141,6 +165,14 @@ export interface BytemdAction {
    * Action icon (16x16), usually inline svg
    */
   icon?: string
+  /**
+   * Toolbar visual group
+   *
+   * Consecutive actions with the same group are rendered together, and
+   * groups are separated by a divider. Purely presentational: it does not
+   * affect the cheatsheet or the action order.
+   */
+  group?: string
   /**
    * Markdown syntax cheatsheet
    *
@@ -198,6 +230,14 @@ export interface EditorProps extends ViewerProps {
    */
   previewDebounce?: number
   /**
+   * Isolate the body's intrinsic size in a fixed-height editor viewport.
+   * Reduces layout work during typing next to large previews. Leave disabled
+   * when the editor must expand with its content, including print layouts.
+   * Does not virtualize content or change preview completion work.
+   * @defaultValue false
+   */
+  layoutContainment?: boolean
+  /**
    * Editor placeholder
    */
   placeholder?: string
@@ -235,6 +275,10 @@ export interface EditorProps extends ViewerProps {
 }
 
 export interface ViewerProps {
+  /** Optional asynchronous rendering. Omit to preserve synchronous rendering/SSR. */
+  renderer?: BytemdRenderer
+  /** Viewer feedback strings; unspecified strings use the existing defaults. */
+  locale?: Partial<BytemdLocale>
   /**
    * Markdown text
    */
@@ -257,4 +301,10 @@ export interface ViewerProps {
    * https://github.com/remarkjs/remark-rehype
    */
   remarkRehype?: Options
+  /**
+   * Add GitHub-style `id` attributes to Markdown headings so in-page bracketed
+   * links (`[Jump](#标题)`) resolve. Defaults to enabled; pass `false` to keep
+   * the historical HTML output, or set a prefix such as `user-content-`.
+   */
+  headingIds?: boolean | { prefix?: string }
 }

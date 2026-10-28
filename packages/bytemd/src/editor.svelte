@@ -5,13 +5,15 @@
   import { debounce, throttle } from './debounce'
   import {
     createCodeMirror,
+    cancelEditorInteractions,
     createEditorUtils,
-    findStartIndex,
     getBuiltinActions,
     handleImageUpload,
   } from './editor'
   import Help from './help.svelte'
   import { icons } from './icons'
+  import { measureScrollMap, mapScrollRatio, scrollInterval } from './scroll'
+  import type { SourceBlock, ScrollMap } from './scroll'
   import Status from './status.svelte'
   import Toc from './toc.svelte'
   import Toolbar from './toolbar.svelte'
@@ -22,21 +24,31 @@
   } from './types'
   import Viewer from './viewer.svelte'
   import type { Editor, KeyMap } from 'codemirror'
-  import type { Root, Element } from 'hast'
-  import { onMount, createEventDispatcher, onDestroy, tick } from 'svelte'
+  import type { Root } from 'hast'
+  import {
+    onMount,
+    createEventDispatcher,
+    onDestroy,
+    tick,
+    afterUpdate,
+    beforeUpdate,
+  } from 'svelte'
 
   export let value: Props['value'] = ''
   export let plugins: NonNullable<Props['plugins']> = []
   export let sanitize: Props['sanitize'] = undefined
   export let remarkRehype: Props['remarkRehype'] = undefined
+  export let headingIds: Props['headingIds'] = undefined
   export let mode: NonNullable<Props['mode']> = 'auto'
   export let previewDebounce: NonNullable<Props['previewDebounce']> = 300
+  export let layoutContainment: NonNullable<Props['layoutContainment']> = false
   export let placeholder: Props['placeholder'] = undefined
   export let editorConfig: Props['editorConfig'] = undefined
   export let locale: Props['locale'] = undefined
   export let uploadImages: Props['uploadImages'] = undefined
   export let overridePreview: Props['overridePreview'] = undefined
   export let maxLength: NonNullable<Props['maxLength']> = Infinity
+  export let renderer: Props['renderer'] = undefined
 
   $: mergedLocale = { ...en, ...locale }
   const dispatch = createEventDispatcher<{ change: { value: string } }>()
@@ -65,6 +77,8 @@
   let dragging = false
   let stopDrag: (() => void) | undefined
   let resizeObserver: ResizeObserver | undefined
+  let destroyed = false
+  let appliedPlugins: BytemdPlugin[] | undefined
   const refreshEditor = throttle(() => {
     editor?.refresh()
   }, 100)
@@ -127,6 +141,7 @@
       codemirror,
       editor,
       root,
+      isDestroyed: () => destroyed,
       // @ts-ignore
       ...createEditorUtils(codemirror, editor),
     }
@@ -138,7 +153,14 @@
 
   function on() {
     // console.log('on', plugins);
-    cbs = plugins.map((p) => p.editorEffect?.(context))
+    const effectContext: BytemdEditorContext = {
+      codemirror,
+      editor,
+      root,
+      ...createEditorUtils(codemirror, editor),
+      isDestroyed: () => destroyed,
+    }
+    cbs = plugins.map((p) => p.editorEffect?.(effectContext))
 
     keyMap = {}
     // TODO: nested shortcuts
@@ -153,43 +175,66 @@
   }
   function off() {
     // console.log('off', plugins);
-    cbs.forEach((cb) => cb && cb())
+    const cleanups = cbs
+    cbs = []
+    cleanups.forEach((cb) => cb && cb())
 
     editor?.removeKeyMap(keyMap) // onDestroy runs at SSR, optional chaining here
   }
 
   let debouncedValue = value
-  const setDebouncedValue = debounce((value: string) => {
-    debouncedValue = value
-
-    overridePreview?.(previewEl, {
-      value: debouncedValue,
-      plugins,
-      sanitize,
-      remarkRehype,
-    })
-  }, previewDebounce)
+  let setDebouncedValue: ReturnType<typeof debounce<[string]>>
+  $: {
+    setDebouncedValue?.cancel()
+    if (!destroyed) {
+      setDebouncedValue = debounce((nextValue: string) => {
+        if (destroyed) return
+        debouncedValue = nextValue
+        overridePreview?.(previewEl, {
+          value: nextValue,
+          plugins,
+          sanitize,
+          remarkRehype,
+          renderer,
+        })
+      }, previewDebounce)
+    }
+  }
   $: setDebouncedValue(value)
 
   $: if (editor && value !== editor.getValue()) {
     editor.setValue(value)
   }
 
-  $: if (editor && plugins) {
-    off()
-    tick().then(() => {
+  beforeUpdate(() => {
+    if (editor && appliedPlugins !== plugins) off()
+  })
+  afterUpdate(() => {
+    if (editor && !destroyed && appliedPlugins !== plugins) {
       on()
-    })
-  }
+      appliedPlugins = plugins
+    }
+  })
 
   // Scroll sync vars
   let syncEnabled = true
-  let editCalled = false
-  let previewCalled = false
-  let editPs: number[]
-  let previewPs: number[]
+  let sourceBlocks: SourceBlock[] = []
+  let renderedValue: string | undefined
+  let previewMatchesEditor = false
+  let invalidateScrollMap = () => {}
+  let updateObservedLayout = () => {}
   let hast: Root = { type: 'root', children: [] }
   let currentBlockIndex = 0
+
+  function scrollToBlock(id: string | undefined) {
+    const blocks = previewEl.querySelectorAll<HTMLElement>(
+      '[data-bytemd-block]'
+    )
+    const targets = [...blocks].filter(
+      (node) => node.dataset.bytemdBlock === id
+    )
+    if (targets.length === 1) targets[0].scrollIntoView()
+  }
 
   onMount(() => {
     codemirror = createCodeMirror()
@@ -214,124 +259,125 @@
       'Shift-Tab': 'indentLess',
     })
 
-    editor.on('change', () => {
-      dispatch('change', { value: editor.getValue() })
-    })
+    const changeHandler = () => {
+      const nextValue = editor.getValue()
+      previewMatchesEditor = nextValue === renderedValue
+      invalidateScrollMap()
+      dispatch('change', { value: nextValue })
+    }
+    editor.on('change', changeHandler)
 
-    const updateBlockPositions = throttle(() => {
-      editPs = []
-      previewPs = []
-
-      const scrollInfo = editor.getScrollInfo()
-      const body = previewEl.childNodes[0]
-      if (!(body instanceof HTMLElement)) return
-
-      const leftNodes = hast.children.filter(
-        (v): v is Element => v.type === 'element'
-      )
-      const rightNodes = [...body.childNodes].filter(
-        (v): v is HTMLElement => v instanceof HTMLElement
-      )
-
-      for (let i = 0; i < leftNodes.length; i++) {
-        const leftNode = leftNodes[i]
-        const rightNode = rightNodes[i]
-
-        // if there is no position info, move to the next node
-        if (!leftNode.position) {
-          continue
-        }
-
-        const left =
-          editor.heightAtLine(leftNode.position.start.line - 1, 'local') /
-          (scrollInfo.height - scrollInfo.clientHeight)
-        const right =
-          (rightNode.offsetTop - body.offsetTop) /
-          (previewEl.scrollHeight - previewEl.clientHeight)
-
-        if (left >= 1 || right >= 1) {
-          break
-        }
-
-        editPs.push(left)
-        previewPs.push(right)
-      }
-
-      editPs.push(1)
-      previewPs.push(1)
-      // console.log(editPs, previewPs);
-    }, 1000)
-    const editorScrollHandler = () => {
-      if (overridePreview) return
-
-      if (!syncEnabled) return
-
-      if (previewCalled) {
-        previewCalled = false
-        return
-      }
-
-      updateBlockPositions()
-
+    let map: ScrollMap | undefined
+    let dirty = true
+    let dimensions = ''
+    let expectedEditorTop: number | undefined
+    let expectedPreviewTop: number | undefined
+    invalidateScrollMap = () => {
+      dirty = true
+      // Layout can change while CodeMirror renders a programmatic jump.
+      // Keep its pending feedback marker; the next scroll consumes it only
+      // when the actual position matches, so manual movement still proceeds.
+    }
+    const getScrollMap = () => {
+      if (overridePreview || !previewMatchesEditor) return
       const info = editor.getScrollInfo()
+      const nextDimensions = [
+        info.height,
+        info.clientHeight,
+        info.clientWidth,
+        previewEl.scrollHeight,
+        previewEl.clientHeight,
+        previewEl.clientWidth,
+      ].join(',')
+      if (dirty || dimensions !== nextDimensions) {
+        dirty = false
+        dimensions = nextDimensions
+        map = measureScrollMap(
+          previewEl,
+          sourceBlocks,
+          info.height - info.clientHeight,
+          (line) => editor.heightAtLine(line, 'local')
+        )
+      }
+      return map
+    }
+    const editorScrollHandler = () => {
+      if (!syncEnabled) return
+      const info = editor.getScrollInfo()
+      if (expectedEditorTop !== undefined) {
+        const expected = expectedEditorTop
+        expectedEditorTop = undefined
+        if (Math.abs(info.top - expected) <= 1) return
+      }
+      const map = getScrollMap()
+      if (!map) return
       const leftRatio = info.top / (info.height - info.clientHeight)
-
-      const startIndex = findStartIndex(leftRatio, editPs)
-
-      const rightRatio =
-        ((leftRatio - editPs[startIndex]) *
-          (previewPs[startIndex + 1] - previewPs[startIndex])) /
-          (editPs[startIndex + 1] - editPs[startIndex]) +
-        previewPs[startIndex]
-      // const rightRatio = rightPs[startIndex]; // for testing
-
-      previewEl.scrollTo(
-        0,
-        rightRatio * (previewEl.scrollHeight - previewEl.clientHeight)
-      )
-      editCalled = true
+      const rightRatio = mapScrollRatio(leftRatio, map.edit, map.preview)
+      if (rightRatio === undefined) return
+      const top = rightRatio * (previewEl.scrollHeight - previewEl.clientHeight)
+      if (Math.abs(previewEl.scrollTop - top) <= 1) return
+      expectedPreviewTop = top
+      previewEl.scrollTo(0, top)
     }
     const previewScrollHandler = () => {
-      if (overridePreview) return
-
-      // find the current block in the view
-      updateBlockPositions()
-      currentBlockIndex = findStartIndex(
-        previewEl.scrollTop / (previewEl.scrollHeight - previewEl.offsetHeight),
-        previewPs
-      )
-
-      if (!syncEnabled) return
-
-      if (editCalled) {
-        editCalled = false
-        return
-      }
-
+      const map = getScrollMap()
+      if (!map) return
       const rightRatio =
         previewEl.scrollTop / (previewEl.scrollHeight - previewEl.clientHeight)
-
-      const startIndex = findStartIndex(rightRatio, previewPs)
-
-      const leftRatio =
-        ((rightRatio - previewPs[startIndex]) *
-          (editPs[startIndex + 1] - editPs[startIndex])) /
-          (previewPs[startIndex + 1] - previewPs[startIndex]) +
-        editPs[startIndex]
-
-      if (isNaN(leftRatio)) {
-        return
+      if (!Number.isFinite(rightRatio)) return
+      currentBlockIndex =
+        rightRatio >= 1
+          ? map.tocBlocks[map.tocBlocks.length - 1]
+          : map.tocBlocks[scrollInterval(rightRatio, map.toc)]
+      if (!syncEnabled) return
+      if (expectedPreviewTop !== undefined) {
+        const expected = expectedPreviewTop
+        expectedPreviewTop = undefined
+        if (Math.abs(previewEl.scrollTop - expected) <= 1) return
       }
-
+      const leftRatio = mapScrollRatio(rightRatio, map.preview, map.edit)
+      if (leftRatio === undefined) return
       const info = editor.getScrollInfo()
-      editor.scrollTo(0, leftRatio * (info.height - info.clientHeight))
-      previewCalled = true
+      const top = leftRatio * (info.height - info.clientHeight)
+      if (Math.abs(info.top - top) <= 1) return
+      expectedEditorTop = top
+      editor.scrollTo(0, top)
     }
 
     editor.on('scroll', editorScrollHandler)
     previewEl.addEventListener('scroll', previewScrollHandler, {
       passive: true,
     })
+
+    const layoutObserver = new ResizeObserver(invalidateScrollMap)
+    layoutObserver.observe(previewEl)
+    layoutObserver.observe(editor.getScrollerElement())
+    const sizer = editorEl.querySelector<HTMLElement>('.CodeMirror-sizer')
+    if (sizer) layoutObserver.observe(sizer)
+    let observedBody: HTMLElement | undefined
+    updateObservedLayout = () => {
+      const body = previewEl.querySelector<HTMLElement>('.markdown-body')
+      if (body === observedBody) return
+      if (observedBody) layoutObserver.unobserve(observedBody)
+      observedBody = body ?? undefined
+      if (observedBody) layoutObserver.observe(observedBody)
+    }
+    updateObservedLayout()
+    const mutations = new MutationObserver(() => {
+      invalidateScrollMap()
+      updateObservedLayout()
+    })
+    mutations.observe(previewEl, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'open', 'data-bytemd-block'],
+    })
+    previewEl.addEventListener('load', invalidateScrollMap, true)
+    previewEl.addEventListener('error', invalidateScrollMap, true)
+    previewEl.addEventListener('toggle', invalidateScrollMap, true)
+    const fonts = document.fonts
+    fonts?.addEventListener('loadingdone', invalidateScrollMap)
 
     // handle image drop and paste
     const handleImages = async (
@@ -354,21 +400,47 @@
       }
     }
 
-    editor.on('drop', async (_, e) => {
+    const dropHandler: Parameters<Editor['on']>[1] = (_, e) => {
       handleImages(e, e.dataTransfer?.items)
-    })
-    editor.on('paste', async (_, e) => {
+    }
+    const pasteHandler: Parameters<Editor['on']>[1] = (_, e) => {
       handleImages(e, e.clipboardData?.items)
-    })
+    }
+    editor.on('drop', dropHandler)
+    editor.on('paste', pasteHandler)
 
     resizeObserver = new ResizeObserver((entries) => {
       containerWidth = entries[0].contentRect.width
+      invalidateScrollMap()
     })
     resizeObserver.observe(root, { box: 'border-box' })
 
     // No need to call `on` because cm instance would change once after init
+    return () => {
+      layoutObserver.disconnect()
+      mutations.disconnect()
+      previewEl.removeEventListener('load', invalidateScrollMap, true)
+      previewEl.removeEventListener('error', invalidateScrollMap, true)
+      previewEl.removeEventListener('toggle', invalidateScrollMap, true)
+      fonts?.removeEventListener('loadingdone', invalidateScrollMap)
+      invalidateScrollMap = updateObservedLayout = () => {}
+      editor.off('change', changeHandler)
+      editor.off('scroll', editorScrollHandler)
+      editor.off('drop', dropHandler)
+      editor.off('paste', pasteHandler)
+      previewEl.removeEventListener('scroll', previewScrollHandler)
+    }
   })
   onDestroy(() => {
+    destroyed = true
+    if (editor) cancelEditorInteractions(editor)
+    // A focused, detached CodeMirror otherwise keeps its document/DOM alive
+    // until the cursor interval notices the lost focus. Stop it immediately
+    // through the public option and let the input stop its focus polling.
+    editor?.setOption('cursorBlinkRate', 0)
+    editor?.getInputField().blur()
+    setDebouncedValue?.cancel()
+    refreshEditor.cancel()
     off()
     stopDrag?.()
     resizeObserver?.disconnect()
@@ -401,7 +473,7 @@
 
       if (activeTab === 'write') {
         tick().then(() => {
-          editor && editor.focus()
+          !destroyed && editor && editor.focus()
         })
       }
 
@@ -409,7 +481,7 @@
         tick().then(() => {
           // https://github.com/bytedance/bytemd/issues/232
           // https://github.com/codemirror/codemirror5/issues/3270
-          editor && editor.setSize(null, null)
+          !destroyed && editor && editor.setSize(null, null)
         })
       }
     }}
@@ -427,7 +499,11 @@
       }
     }}
   />
-  <div class="bytemd-body" bind:this={bodyEl}>
+  <div
+    class="bytemd-body"
+    class:bytemd-body-contained={layoutContainment}
+    bind:this={bodyEl}
+  >
     <div class="bytemd-editor" style={styles.edit} bind:this={editorEl} />
     {#if split && activeTab === false}
       <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
@@ -468,8 +544,18 @@
           {plugins}
           {sanitize}
           {remarkRehype}
+          {headingIds}
+          {renderer}
+          locale={mergedLocale}
+          sourceMap={true}
           on:hast={(e) => {
             hast = e.detail.hast
+            sourceBlocks = e.detail.blocks
+            renderedValue = e.detail.file ? e.detail.value : undefined
+            previewMatchesEditor = renderedValue === editor?.getValue()
+            currentBlockIndex = 0
+            invalidateScrollMap()
+            updateObservedLayout()
           }}
         />
       {/if}
@@ -502,10 +588,7 @@
         {hast}
         locale={mergedLocale}
         {currentBlockIndex}
-        on:click={(e) => {
-          const headings = previewEl.querySelectorAll('h1,h2,h3,h4,h5,h6')
-          headings[e.detail].scrollIntoView()
-        }}
+        on:click={(e) => scrollToBlock(e.detail.blockId)}
         visible={sidebar === 'toc'}
       />
     </div>

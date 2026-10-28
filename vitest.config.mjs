@@ -3,6 +3,7 @@ import { createVue3Plugin } from './packages/vue-next/plugin.mjs'
 import { createVuePlugin } from './packages/vue/plugin.mjs'
 import { sveltePreprocessor } from './scripts/utils.mjs'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'url'
 import { defineConfig } from 'vitest/config'
 
@@ -31,6 +32,15 @@ export default defineConfig({
   resolve: {
     conditions: ['browser', 'module', 'import'],
     alias: {
+      mermaid: fileURLToPath(
+        new URL(
+          './packages/plugin-mermaid/node_modules/mermaid/dist/mermaid.core.mjs',
+          import.meta.url
+        )
+      ),
+      'bytemd/viewer': fileURLToPath(
+        new URL('./packages/bytemd/src/viewer.ts', import.meta.url)
+      ),
       bytemd: fileURLToPath(
         new URL('./packages/bytemd/src/index.ts', import.meta.url)
       ),
@@ -61,7 +71,10 @@ export default defineConfig({
           : source.includes('/packages/vue/')
           ? './packages/vue/node_modules/vue/dist/vue.runtime.esm.js'
           : undefined
-        if (runtime) return fileURLToPath(new URL(runtime, import.meta.url))
+        // Resolve pnpm's symlink so nested @vue imports use that Vue runtime's
+        // dependency directory, including under Vite 4.5's resolver.
+        if (runtime)
+          return realpathSync(fileURLToPath(new URL(runtime, import.meta.url)))
       },
     },
   ],

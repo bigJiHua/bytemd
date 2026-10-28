@@ -145,9 +145,7 @@ test('text divider action inserts the template and selects the label', () => {
   const ctx = makeContext()
   item.handler.click(ctx.context as any)
 
-  expect(ctx.appendBlock).toHaveBeenCalledWith(
-    `---${en.hrTextSample}---`
-  )
+  expect(ctx.appendBlock).toHaveBeenCalledWith(`---${en.hrTextSample}---`)
   expect(ctx.selections[0]).toEqual([
     { line: 0, ch: 3 },
     { line: 0, ch: 3 + en.hrTextSample.length },

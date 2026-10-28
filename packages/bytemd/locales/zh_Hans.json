@@ -1,4 +1,10 @@
 {
+  "copy": "复制",
+  "copySuccess": "已复制",
+  "copyFailed": "复制失败，请手动选择代码",
+  "renderError": "预览渲染失败，请检查内容或插件。",
+  "renderPending": "正在渲染预览…",
+  "pluginError": "预览扩展渲染失败，请检查内容或插件。",
   "accordion": "手风琴",
   "bgColor": "背景颜色",
   "bold": "粗体",

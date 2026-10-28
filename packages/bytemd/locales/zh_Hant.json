@@ -1,4 +1,7 @@
 {
+  "renderError": "預覽渲染失敗，請檢查內容或外掛。",
+  "renderPending": "正在渲染預覽…",
+  "pluginError": "預覽擴充渲染失敗，請檢查內容或外掛。",
   "bold": "粗體",
   "boldText": "粗體字",
   "cheatsheet": "Markdown 語法",

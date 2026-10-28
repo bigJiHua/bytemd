@@ -1,4 +1,7 @@
 {
+  "renderError": "Pratinjau tidak dapat dirender.",
+  "renderPending": "Merender pratinjau…",
+  "pluginError": "Gagal meningkatkan pratinjau. Periksa konten atau plugin.",
   "bold": "Tebal",
   "boldText": "teks tebal",
   "cheatsheet": "Contekan Markdown",
