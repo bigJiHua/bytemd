@@ -43,7 +43,7 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 | 第七批 生产大文档交互与内存验收 | 桌面自动化验收完成；人工 OS IME、真实移动设备 incomplete |
 | 第八批 大 DOM 与 CodeMirror 定向优化 | 桌面自动化验收完成；layoutContainment 默认关闭，同上两项 incomplete |
 | 第九批 依赖范围与发布工具链 | 工具整理与同大版本补修完成；剩余安全工具链迁移待续 |
-| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 + Svelte 5 完成（2026-10-28）；vite 6+/CM6 独立评估待续 |
+| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 + Svelte 5 完成（2026-10-28）；CM6 迁移 P0-P4 已在 `feat/cm6` 实验分支完成（2026-10-29，待拍板合入/发版）；vite 6+ 评估待续 |
 
 本轮全量验收通过：核心 24 文件 221/221、脚本 20/20、四个关键脚本覆盖率门槛、完整构建、generate:check、style、纯入口/SSR 检查及普通 playground 冒烟。证据在 `audit/prod-perf-reassessment-20261026/`，本地不入库；此前完整桌面矩阵复验保留在 `audit/prod-perf-audit-verify/`。
 
@@ -75,7 +75,7 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 - [x] unified 11 及对应 remark/rehype 插件分步升级（2026-10-28 完成：unified 11 / remark-parse 11 / remark-rehype 11 / rehype-raw 7 / rehype-sanitize 6 / rehype-stringify 10 / remark-gfm 4 / remark-math 6 / rehype-katex 7 / remark-frontmatter 5 / remark-breaks 4 / remark-gemoji 8 / rehype-highlight 7；KaTeX low 修复路径仍需 0.18 大版本）。
 - [x] Svelte 5 迁移（2026-10-28 完成：svelte 5.57 + vite-plugin-svelte 4 + RTL 5 + svelte2tsx 0.7 + prettier 3；`legacy-compat` 桥保留 `new/$set/$on/$destroy` 供 react/vue 包装；导出 `EditorComponent/ViewerComponent` 供 Svelte 宿主模板渲染；playground 改 `mount()` 入口并加 `verbatimModuleSyntax`）。
 - [ ] Vite 6+ 评估（vps 4 的 peer 仍为 vite ^5）。
-- [ ] CodeMirror 6 评估：规划、破坏面清单与分阶段计划见 [audit/CM6_PLAN.md](./audit/CM6_PLAN.md)；建议先做 P0 spike 实测。
+- [x] CodeMirror 6（B 方案适配器，`feat/cm6` 实验分支，2026-10-28/29）：规划、P0 spike、P1 内核替换 + 生产实测、P1-P4 收尾批次与浏览器复验完成，见 [audit/CM6_PLAN.md](./audit/CM6_PLAN.md) 与 `audit/CM6_PROD_RESULT.md`；真实 OS IME/移动设备、外部消费验证与版本策略待续
 
 ### P3 人工验收项（需人工/设备）
 

@@ -194,15 +194,30 @@ Vite 4 module Workers need `resolve.conditions: ['worker']` for the DOM-free ent
 | --- | --- | --- |
 | `mode` | `split`, `tab`, `auto` | Editor display mode, default: `auto` |
 | `previewDebounce` | `number` | Debounce time (ms) for preview, default: `300` |
-| `layoutContainment` | `boolean` | Opt-in intrinsic-size isolation for fixed-height editors, default: `false`. Reduces typing-related layout beside large previews. Keep disabled for content-sized or expanding print layouts. |
+| `layoutContainment` | `boolean` | Opt-in intrinsic-size isolation for fixed-height editors, default: `false`. Reduces typing-related layout beside large previews; hosts editing large documents (≈100 KiB and above) should enable it — typing latency beside a large preview drops substantially. Keep disabled for content-sized or expanding print layouts. |
 | `placeholder` | `string` | Editor placeholder |
-| `editorConfig` | [documentation](https://codemirror.net/doc/manual.html#config) | CodeMirror editor config |
+| `editorConfig` | `object` | CodeMirror options applied to the editor. Mapped: `lineNumbers`, `lineWrapping`, `tabSize`, `indentUnit`, `readOnly`, `extraKeys`, `autofocus`, `undoDepth`. CM5-only options (`mode`, `theme`, `keyMap`, `cursorBlinkRate`, …) are ignored; use `editorExtensions` for anything else. |
+| `editorExtensions` | `CodeMirror 6 Extension[]` | Native CodeMirror 6 extensions applied after ByteMD's defaults (markdown language, history, keymap, frontmatter highlighting). |
 | `locale` |  | i18n locale. Available locales could be found at `bytemd/locales`, default: use `en.json` |
 | `uploadImages` | `function` | Specify how to upload images. If set, the image icon will appear on the toolbar |
 | `overridePreview` | `(el, props) => void` | Replace built-in preview rendering; forwarded by all Editor wrappers |
 | `maxLength` | `number` | Warning threshold for `value.length` (UTF-16 code units), default: `Infinity`. Shows an over-limit indicator; input and pasted text are accepted without truncation. |
 
 The editor emits the complete Markdown through `change`. The host must update `value` to keep the editor and preview in sync, and validate the length before saving if a hard limit is required. Preview rendering is debounced by `previewDebounce` (300 ms by default).
+
+#### The editor instance (CodeMirror 6)
+
+The editor runs on CodeMirror 6 behind a CM5-shaped adapter, so plugin
+`editorEffect` contexts keep working with `getValue`/`setValue`, `Pos`, range
+helpers, `on/off` events and `addKeyMap`/`removeKeyMap` (CM5 string shortcuts
+such as `'newlineAndIndentContinueMarkdownList'` and command functions are
+both accepted). `codemirror.Pos(line, ch)` keeps its CM5 signature. The
+adapter is a documented subset, not a full CM5 `Editor` type: access to the
+native instance is available as `editor.view` (`CodeMirror 6 EditorView`) for
+anything beyond it. Migrating a CM5 plugin or host integration: replace CM5
+`setOption` calls other than `readOnly` with `editorExtensions`, CM5 keymap
+preset names with CM6 `keymap.of([...])`, and `.cm-*` CSS token overrides with
+the `--bytemd-syntax-*` variables.
 
 ### Style customization
 
@@ -448,7 +463,7 @@ Now we have completed a minimalist version of the plugin! For more details and r
 
 ## Local development
 
-This is a pnpm workspace with Svelte 3, TypeScript, CodeMirror 5 and the unified/remark/rehype rendering pipeline. Run these commands from the repository root:
+This is a pnpm workspace with Svelte 5, TypeScript, CodeMirror 6 and the unified/remark/rehype rendering pipeline. Run these commands from the repository root:
 
 ```sh
 pnpm install --frozen-lockfile

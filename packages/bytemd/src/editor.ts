@@ -1,3 +1,5 @@
+import type { CM6CompatEditor, CM6Factory, CM6Pos } from './cm6-editor'
+import { createCM6Factory } from './cm6-editor'
 import { icons } from './icons'
 import type {
   BytemdPlugin,
@@ -6,59 +8,29 @@ import type {
   BytemdLocale,
   BytemdEditorContext,
 } from './types'
-import type { Editor, Position } from 'codemirror'
-import type CodeMirror from 'codemirror'
-import factory from 'codemirror-ssr'
-import usePlaceholder from 'codemirror-ssr/addon/display/placeholder.js'
-import useContinuelist from 'codemirror-ssr/addon/edit/continuelist.js'
-import useOverlay from 'codemirror-ssr/addon/mode/overlay.js'
-import useGfm from 'codemirror-ssr/mode/gfm/gfm.js'
-import useMarkdown from 'codemirror-ssr/mode/markdown/markdown.js'
-import useXml from 'codemirror-ssr/mode/xml/xml.js'
-import useYamlFrontmatter from 'codemirror-ssr/mode/yaml-frontmatter/yaml-frontmatter.js'
-import useYaml from 'codemirror-ssr/mode/yaml/yaml.js'
 import selectFiles from 'select-files'
 
-// CodeMirror's factory installs window listeners and owns measuring DOM.
-// Reuse the initialized runtime in a document; editor instances keep their
-// own documents, history, selection and options.
-const codeMirrorRuntimes = new WeakMap<Document, typeof CodeMirror>()
+const codeMirrorFactory = createCM6Factory()
 
 export function createCodeMirror() {
-  const existing = codeMirrorRuntimes.get(document)
-  if (existing) return existing
-  const codemirror = factory()
-  usePlaceholder(codemirror)
-  useOverlay(codemirror)
-  useXml(codemirror) // inline html highlight
-  useMarkdown(codemirror)
-  useGfm(codemirror)
-  useYaml(codemirror)
-  useYamlFrontmatter(codemirror)
-  useContinuelist(codemirror)
-  codeMirrorRuntimes.set(document, codemirror)
-  return codemirror
+  return codeMirrorFactory
 }
 
-/** CM5 has no destroy API; its active mouse callbacks own document listeners. */
-export function cancelEditorInteractions(editor: Editor) {
-  const { selectingText, draggingText } = editor.state
-  if (typeof selectingText === 'function') selectingText()
-  if (typeof draggingText === 'function') {
-    // Complete only this editor's drag. Disable focus before the callback (and
-    // its delayed focus workaround), without dispatching events to peers.
-    editor.state.delayingBlurEvent = false
-    editor.setOption('readOnly', 'nocursor')
-    draggingText(new Event('mouseup', { cancelable: true }))
-  }
+/** CM6 owns the view lifecycle; destroy releases DOM and listeners. */
+export function cancelEditorInteractions(editor: CM6CompatEditor) {
+  editor.destroy()
 }
 
 export type EditorUtils = ReturnType<typeof createEditorUtils>
 
 export function createEditorUtils(
-  codemirror: typeof CodeMirror,
-  editor: Editor,
+  codemirror: CM6Factory,
+  editor: CM6CompatEditor,
 ) {
+  // The component spreads these helpers before the editor mounts, so every
+  // method resolves the view lazily. Each helper applies one dispatch so
+  // wrap/replace/append undo in a single step with the selection restored,
+  // matching the CM5 net effect.
   return {
     /**
      * Wrap text with decorators, for example:
@@ -66,39 +38,50 @@ export function createEditorUtils(
      * `text -> *text*`
      */
     wrapText(before: string, after = before) {
-      const range = editor.somethingSelected()
-        ? editor.listSelections()[0] // only handle the first selection
-        : editor.findWordAt(editor.getCursor())
-
-      const from = range.from() // use from/to instead of anchor/head for reverse select
-      const to = range.to()
-      const text = editor.getRange(from, to)
-      const start = editor.indexFromPos(from)
-      const end = editor.indexFromPos(to)
-      const fromBefore = editor.posFromIndex(Math.max(0, start - before.length))
-      const toAfter = editor.posFromIndex(end + after.length)
-      const reversed =
-        editor.indexFromPos(range.anchor) > editor.indexFromPos(range.head)
-      let selectionStart: number
-
-      if (
-        start >= before.length &&
-        editor.getRange(fromBefore, from) === before &&
-        editor.getRange(to, toAfter) === after
-      ) {
-        editor.replaceRange(text, fromBefore, toAfter)
-        selectionStart = start - before.length
+      const view = editor.view
+      const { state } = view
+      const main = state.selection.main
+      let from: number
+      let to: number
+      let reversed: boolean
+      if (!main.empty) {
+        from = main.from // use from/to instead of anchor/head for reverse select
+        to = main.to
+        reversed = main.anchor > main.head
       } else {
-        editor.replaceRange(before + text + after, from, to)
-
-        selectionStart = start + before.length
+        // CM5 findWordAt collapses to the cursor when no word is under it.
+        const word = state.wordAt(main.head)
+        from = word?.from ?? main.head
+        to = word?.to ?? main.head
+        reversed = false
       }
-      const selectionFrom = editor.posFromIndex(selectionStart)
-      const selectionTo = editor.posFromIndex(selectionStart + text.length)
-      editor.setSelection(
-        reversed ? selectionTo : selectionFrom,
-        reversed ? selectionFrom : selectionTo,
-      )
+      const text = state.sliceDoc(from, to)
+      const fromBefore = Math.max(0, from - before.length)
+      const toAfter = to + after.length
+      let selectionStart: number
+      let changes: { from: number; to?: number; insert?: string }[]
+      if (
+        from >= before.length &&
+        state.sliceDoc(fromBefore, from) === before &&
+        state.sliceDoc(to, toAfter) === after
+      ) {
+        // already wrapped: remove the surrounding decorators
+        changes = [
+          { from: fromBefore, to: from },
+          { from: to, to: toAfter },
+        ]
+        selectionStart = from - before.length
+      } else {
+        changes = [{ from, to, insert: before + text + after }]
+        selectionStart = from + before.length
+      }
+      view.dispatch({
+        changes,
+        selection: {
+          anchor: reversed ? selectionStart + text.length : selectionStart,
+          head: reversed ? selectionStart : selectionStart + text.length,
+        },
+      })
     },
     /**
      * replace multiple lines
@@ -106,37 +89,48 @@ export function createEditorUtils(
      * `line -> # line`
      */
     replaceLines(replace: Parameters<Array<string>['map']>[0]) {
-      const [selection] = editor.listSelections()
-
-      const range = [
-        codemirror.Pos(selection.from().line, 0),
-        codemirror.Pos(selection.to().line),
-      ] as const
-      const lines = editor.getRange(...range).split('\n')
-      editor.replaceRange(lines.map(replace).join('\n'), ...range)
-      editor.setSelection(...range)
+      const view = editor.view
+      const { state } = view
+      const main = state.selection.main
+      const from = state.doc.lineAt(main.from).from
+      // Anchoring the end at the start of the last line keeps the trailing
+      // partial line (it only gets the prefix prepended), like CM5's
+      // `Pos(selection.to().line)` anchor.
+      const to = state.doc.lineAt(main.to).from
+      const lines = state.sliceDoc(from, to).split('\n')
+      const insert = lines.map(replace).join('\n')
+      view.dispatch({
+        changes: { from, to, insert },
+        selection: { anchor: from, head: to + (insert.length - (to - from)) },
+      })
     },
     /**
      * Append a block based on the cursor position
      */
-    appendBlock(content: string): Position {
-      const cursor = editor.getCursor()
+    appendBlock(content: string): CM6Pos {
+      const view = editor.view
+      const { state } = view
+      const doc = state.doc
+      const cursorLine = doc.lineAt(state.selection.main.head).number - 1
       // find the first blank line
 
       let emptyLine = -1
-      for (let i = cursor.line; i < editor.lineCount(); i++) {
-        if (!editor.getLine(i).trim()) {
+      for (let i = cursorLine; i < doc.lines; i++) {
+        if (!doc.line(i + 1).text.trim()) {
           emptyLine = i
           break
         }
       }
       if (emptyLine === -1) {
-        // insert a new line to the bottom
-        editor.replaceRange('\n', codemirror.Pos(editor.lineCount()))
-        emptyLine = editor.lineCount()
+        // CM5 appended a separator line plus the content at the document end.
+        const contentLine = doc.lines + 1
+        view.dispatch({
+          changes: { from: doc.length, insert: `\n\n${content}` },
+        })
+        return codemirror.Pos(contentLine, 0)
       }
-
-      editor.replaceRange('\n' + content, codemirror.Pos(emptyLine))
+      const line = doc.line(emptyLine + 1)
+      view.dispatch({ changes: { from: line.from, insert: `\n${content}` } })
       return codemirror.Pos(emptyLine + 1, 0)
     },
     /**

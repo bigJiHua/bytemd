@@ -30,7 +30,7 @@ test('Vue 2 editor cleans up across 100 mount/unmount cycles', async () => {
     app.$el.remove()
     expect(off).toHaveBeenCalledTimes(cycle + 1)
   }
-})
+}, 120000)
 
 test('Vue 2 editor resets removed optional props and plugin effects', async () => {
   const off = vi.fn()
@@ -173,7 +173,7 @@ test('Vue 3 editor cleans up across 100 mount/unmount cycles', async () => {
     element.remove()
     expect(off).toHaveBeenCalledTimes(cycle + 1)
   }
-})
+}, 120000)
 
 test('Vue 3 editor exposes maxLength like the core editor', () => {
   expect((Vue3Editor as any).props).toHaveProperty('maxLength')

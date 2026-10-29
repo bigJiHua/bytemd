@@ -5,7 +5,7 @@
     Editor,
     createWorkerRenderer,
     renderMarkdown,
-  } from '../packages/bytemd/svelte/index.js'
+  } from '../packages/bytemd/src'
   import gfm from '../packages/plugin-gfm/dist/index.mjs'
   import highlight from '../packages/plugin-highlight/dist/index.mjs'
   import math from '../packages/plugin-math/dist/index.mjs'

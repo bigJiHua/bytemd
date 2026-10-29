@@ -1,7 +1,7 @@
+import type { CM6CompatEditor, CM6Factory } from './cm6-editor'
 import type { EditorUtils } from './editor'
 import type { BytemdRenderer } from './render-types'
-import type { Editor, EditorConfiguration } from 'codemirror'
-import type CodeMirror from 'codemirror'
+import type { Extension } from '@codemirror/state'
 import type { Schema } from 'hast-util-sanitize'
 import type { Image } from 'mdast'
 import type { Options } from 'remark-rehype'
@@ -82,11 +82,11 @@ export interface BytemdLocale {
 }
 
 export interface BytemdEditorContext extends EditorUtils {
-  codemirror: typeof CodeMirror
+  codemirror: CM6Factory
   /**
    * CodeMirror editor instance
    */
-  editor: Editor
+  editor: CM6CompatEditor
   /**
    * The root element
    */
@@ -252,7 +252,9 @@ export interface EditorProps extends ViewerProps {
    *
    * https://codemirror.net/doc/manual.html#config
    */
-  editorConfig?: Omit<EditorConfiguration, 'value' | 'placeholder'>
+  editorConfig?: Record<string, any>
+  /** Native CM6 extensions applied after ByteMD's defaults. */
+  editorExtensions?: Extension[]
   /**
    * i18n locale
    *

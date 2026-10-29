@@ -1,11 +1,14 @@
 <script lang="ts">
   import '../packages/bytemd/dist/index.css'
   import '../packages/bytemd/dist/markdown.css'
+  // Source entry shares the page's Svelte runtime; `bytemd/dist` bundles its
+  // own copy and the built `svelte/` dir is not type-checkable under the
+  // package tsconfig (rootDir=src) since the Svelte 5 migration.
   import {
     Editor,
     createWorkerRenderer,
     renderMarkdown,
-  } from '../packages/bytemd/svelte/index.js'
+  } from '../packages/bytemd/src'
   import gfm from '../packages/plugin-gfm/dist/index.mjs'
   import highlight from '../packages/plugin-highlight/dist/index.mjs'
   import math from '../packages/plugin-math/dist/index.mjs'

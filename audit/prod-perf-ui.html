@@ -7,9 +7,11 @@
   </head>
   <body>
     <script type="module">
+      import { mount } from 'svelte'
       import App from './prod-perf-ui.svelte'
 
-      new App({ target: document.body })
+      // Svelte 5: `new App()` skips init_operations; use mount().
+      mount(App, { target: document.body })
     </script>
   </body>
 </html>

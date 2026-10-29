@@ -27,7 +27,7 @@
 | --- | --- |
 | 价值 | **中等偏高，且高度依赖场景**：收益集中在 ≥100 KiB 大文档编辑、移动端/IME、销毁内存；常规 <50 KiB 文档几乎无感 |
 | 风险 | **高（破坏性）**：公开插件 API `BytemdEditorContext.editor / codemirror` 与 `EditorProps.editorConfig` 都是 CM5 类型，迁移必然破坏第三方插件 |
-| 建议路径 | **P0 spike 已完成（2026-10-28，两轮）**：完整 500 KiB 场景 CM6 Layout 峰值低于 CM5，但均 >75 ms；CM6 侧缺滚动同步，Task 总时长未全面下降。结论**暂缓 P1**，重判需 CM6 滚动同步原型；详见 `audit/CM6_SPIKE_RESULT.md` |
+| 建议路径 | **B 方案适配器原型已实施（2026-10-28/29）**：P0 spike 两轮 + P1 生产实测 + P1-P4 收尾批次完成，数据见 `CM6_SPIKE_RESULT.md` / `CM6_PROD_RESULT.md`；`feat/cm6` 实验分支待拍板合入策略 |
 | 前置条件 | 先提交当前工作区基线（约 92 项改动，含 Svelte 5、工具栏、锚点、异步入口、主题），建立可回滚点；P0 spike 本身不改主干，可先做 |
 
 ## 2. 价值证据（来自本仓库既有审计）
@@ -52,7 +52,7 @@
 | `packages/bytemd/src/scroll.ts` | 解耦 | 仅注入 `heightAtLine(line) => number`，**无需改** |
 | 测试 | 5 个文件 | `actions / core-regressions / editor-runtime / editor / scroll` 直接读 `.CodeMirror` 实例与 `createCodeMirror()` |
 
-CM5 提供的编辑器能力清单（迁移必须逐项补回）：markdown / gfm / xml(内联 HTML) / yaml / yaml-frontmatter 高亮、`overlay`（自定义内联语法如 `[size=20]`、`[color=red]`）、placeholder、`continuelist`（列表续行）、行高查询与滚动同步、光标闪烁与焦点处理、upload 的 drop/paste 处理。
+CM5 提供的编辑器能力清单（迁移必须逐项补回）：markdown / gfm / xml(内联 HTML) / yaml / yaml-frontmatter 高亮、placeholder、`continuelist`（列表续行）、行高查询与滚动同步、光标闪烁与焦点处理、upload 的 drop/paste 处理。（`overlay` addon 在 CM5 中只注册未使用，自定义内联语法 `[size=20]`/`[color=red]` 本无编辑器高亮，不构成迁移项。）
 
 ## 4. 公开 API 破坏清单
 
@@ -79,36 +79,54 @@ CM5 提供的编辑器能力清单（迁移必须逐项补回）：markdown / gf
 
 ### P1 — 内核替换（`editor.ts` + `editor.svelte`）
 
-- [ ] 依赖：`@codemirror/state`、`@codemirror/view`、`@codemirror/commands`、`@codemirror/language`、`@codemirror/lang-markdown`、`@codemirror/lang-yaml`、`@codemirror/lang-html`、`@lezer/highlight`（frontmatter 需自建扩展或评估社区包）
-- [ ] 能力映射：markdown/gfm → `lang-markdown`；内联 HTML → `lang-html`（嵌套）；yaml-frontmatter → 自定义 state field；overlay 自定义语法 → `MatchDecorator` + `ViewPlugin` 装饰器；placeholder → `view` 的 `placeholder`；列表续行 → `lang-markdown` 的 `insertNewlineContinueMarkup`
-- [ ] 保留能力：`maxLength` 提示、`layoutContainment`、`previewDebounce`、`mode`(auto/split/tab)、全屏、TOC、滚动同步（继续复用 `scroll.ts`，只需重写 `heightAtLine` 来源）
-- [ ] 删除：`codemirror-ssr` 依赖、`cancelEditorInteractions` 私有回调补丁（改由 `EditorView.destroy()` 覆盖，需用测试证明监听器释放）
-- [ ] 验收：`pnpm build` 通过；`packages/bytemd/test/editor*.test.ts` 改造后全绿
+- [x] 生产实测（2026-10-28）：playground 生产构建通过；500 KiB 加载/输入/滚动/粗体/暗色/移动/IME CDP 合成通过；大文档输入需开启 `layoutContainment`（169→14ms），详见 `CM6_PROD_RESULT.md`。
+
+- [x] 2026-10-28 原型：`editor.ts` 改用 `CM6CompatEditor` 适配器；`editor.svelte` 仅改类型，保留现有调用面；构建与 231 项测试通过。
+
+- [x] 依赖：`@codemirror/state`、`@codemirror/view`、`@codemirror/commands`、`@codemirror/language`、`@codemirror/lang-markdown`、`@codemirror/lang-yaml`、`@lezer/highlight`；`codemirror-ssr` 与 `@types/codemirror` 已移除
+- [x] 能力映射（2026-10-29 收尾）：markdown/gfm → `lang-markdown`（已）；inline HTML → lang-markdown 内嵌 html 解析器 + HighlightStyle，生产页 token 色实测（已）；yaml-frontmatter → `buildFrontmatterDecorations` 装饰 + `.bytemd-yaml-*` CSS，亮/暗实测（已）；overlay 自定义语法 → **核对结论：CM5 仅注册了 overlay addon、从未调用 `overlayMode`**，`[size]`/`[color]` 在 CM5 本无高亮，无需迁移；placeholder、列表续行（已，extraKeys 经 `stopImmediatePropagation` 生效）；`editorConfig` 的 lineNumbers/lineWrapping/tabSize/indentUnit/readOnly/extraKeys/autofocus/undoDepth（已映射，其余 CM5 项忽略并文档化）
+- [x] 保留能力：`maxLength` 提示、`layoutContainment`、`previewDebounce`、`mode`(auto/split/tab)、全屏、TOC、滚动同步（500 KiB 双向同步、粗体、暗色、390 移动端已在生产构建实测）
+- [x] 删除 `codemirror-ssr`/`@types/codemirror`；`cancelEditorInteractions` 改为 `EditorView.destroy()`；测试已改为 CM6 语义并验证销毁
+- [x] 验收：`pnpm build`、231/231 测试通过（适配器路线 B，不是完整 CM5 API 等价）
 
 ### P2 — 编辑工具与动作（`createEditorUtils` + `getBuiltinActions`）
 
-- [ ] `wrapText` / `replaceLines` / `appendBlock` 改用 CM6 `state.selection` + `changes` 事务；保持多行包裹、反向选区、撤销后选区行为
-- [ ] 内置 action（标题、粗斜体、引用、列表、任务、表格、分割线、代码块、图片上传落点、颜色/字号）逐条迁移并保留快捷键
-- [ ] 验收：`actions.test.ts` + `core-regressions.test.ts` 全绿（含上传失败/卸载后落点等边界）
+- [x] 2026-10-28：生产页粗体动作验证通过；actions/core 测试全绿。
+
+- [x] 2026-10-28：`createEditorUtils` 通过适配器复用；`actions/core-regressions` 测试全绿。
+
+- [x] 2026-10-29 收尾：`wrapText` / `replaceLines` / `appendBlock` 改为 CM6 单事务（`view.dispatch({changes, selection})`），单步撤销且选区随撤销恢复；顺带修正适配器 `appendBlock` 无空行路径的落点钳位错误（图片上传/代码块落点）；多行包裹、反向选区、toggle 行为回归全绿（`cm6-capabilities` + `core-regressions`）
+- [x] 内置 action：B 方案下动作经适配器 API 执行，`actions.test.ts` + `core-regressions.test.ts` 全绿 + 生产页粗体实测；原生逐条迁移仅在 A 方案下需要
+- [x] 验收：`actions.test.ts` + `core-regressions.test.ts` 全绿（适配器路径）
 
 ### P3 — 样式与主题
 
-- [ ] 21 条 `.cm-*` 迁为 CM6 `HighlightStyle`（`tags.heading1/2/3…`、`tags.keyword`、`tags.string`、`tags.quote`…）+ `EditorView.theme`（`--bytemd-*` token 与暗色选择器已于 2026-10-28 落地，迁移时逐 token 对照，不保留 CM5 规则）
-- [ ] 保留 `--bytemd-*` 变量与 `.dark` 暗色自动适配；`index.css` 体积纳入 bundlewatch
-- [ ] 验收：无头 Chrome 对比亮/暗两种主题的 token 颜色与行高、gutter、选区
+- [x] 2026-10-28：生产暗色背景/文字验证通过；语法 token 使用 `--bytemd-syntax-*`。
+
+- [x] 2026-10-28：CM6 `HighlightStyle` 使用 `--bytemd-syntax-*` token；亮/暗背景、gutter、光标、选区已验证。
+
+- [x] 2026-10-29 收尾：token 映射以 CM5 类名对位完成——`processingInstruction`/`contentSeparator`（CM5 meta/hr）→ comment 色、`atom`（TaskMarker）→ number 色；暗色区残留的 21 条死 CM5 `.cm-*` token 规则已删除
+- [x] 保留 `--bytemd-*` 变量与 `.dark` 暗色自动适配；`index.css` 体积纳入 bundlewatch（4.02KB gzip < 30KB PASS）
+- [x] 验收：无头 Chrome `getComputedStyle` 对亮/暗两套逐 token 断言（frontmatter 5 类 + inline HTML 3 类 + 标记 + 标题字号/字重），数据见 `CM6_PROD_RESULT.md` §5
 
 ### P4 — 测试与契约
 
-- [ ] 测试助手改为 CM6：`createCodeMirror()` → 构造 `EditorView`；`.CodeMirror` 选择器 → CM6 容器；`getDoc()/listSelections()` 语义映射
-- [ ] `framework-lifecycle.test.ts` 的 100 次挂载/卸载循环、`editor-runtime` 的销毁监听器断言必须在 CM6 下重测
-- [ ] 保持用例语义等价，不降低断言强度（`AGENTS.md` 纪律 2）
+- [x] 2026-10-28：231/231 通过；100 次挂载/卸载用例超时调整到 120s（CM6 jsdom 初始化更重，断言未降低）。
+
+- [x] 2026-10-28：测试通过 `.CodeMirror` 兼容 shim 与 CM6 语义改写通过；`editor-runtime` 的 CM5 私有断言改为 `EditorView.destroy` 语义。
+
+- [x] 测试助手改为 CM6：`createCodeMirror()` 返回适配器工厂；保留 `.CodeMirror` 兼容 shim；`getDoc()/listSelections()` 已映射
+- [x] 2026-10-29 收尾：100 次挂载/销毁在生产消费页 CDP 实测（jsdom 之外）：prepare/destroy ×100 后强制 GC，DOM nodes/listeners 增量 **0/0**；`editor-runtime` 的销毁监听器断言在 CM6 语义下通过
+- [x] 保持用例语义等价，不降低断言强度（`AGENTS.md` 纪律 2）；新增 `cm6-capabilities.test.ts` 9 例（frontmatter 装饰、extraKeys 续行、readOnly、单步撤销、appendBlock 落点）
 
 ### P5 — 文档、发布与消费验证
 
-- [ ] README / `packages/bytemd/README.md` / 插件模板补 CM5→CM6 迁移说明（`editorConfig`、`editor` 实例、keymap）
-- [ ] `scripts/generate.mjs` 模板同步；`pnpm generate && pnpm generate:check`
-- [ ] 版本策略：选 A 方案发 major，选 B 方案发 minor；`bundlewatch` 预算按实测重设
-- [ ] 外部消费验证：干净安装（不继承根 overrides）分别验证 Svelte / React / Vue2 / Vue3 与 SSR 入口；复用 2026-10-28 的 tarball + `audit/nuxt-ssr-review` 流程，并覆盖 `viewer`/`async` 子入口
+- [ ] 未开始：版本策略、独立消费验证（tarball + Nuxt SSR 覆盖 `viewer`/`async` 子入口）。
+
+- [x] README / `docs/index.md` / `packages/bytemd/README.md`（2026-10-29）：Editor props 表补 `editorConfig` 映射子集与 `editorExtensions`、新增 "The editor instance (CodeMirror 6)" 迁移说明（适配器覆盖面、`editor.view`、CM5 setOption/keymap/CSS 迁移路径）、`layoutContainment` 大文档指引强化；三份同步
+- [x] `scripts/generate.mjs` 无需改动（新增内容均在手工维护区，`pnpm generate:check` 通过）
+- [ ] 版本策略：选 A 方案发 major，选 B 方案发 minor；`bundlewatch` 预算按实测重设（当前 index.mjs 67.79KB gzip < 210KB PASS）
+- [ ] 外部消费验证：干净安装（不继承根 overrides）分别验证 Svelte / React / Vue2 / Vue3 与 SSR 入口；复用 tarball + `audit/nuxt-ssr-review` 流程，并覆盖 `viewer`/`async` 子入口
 
 ## 6. 每阶段统一回归门槛（缺一不可）
 
@@ -149,6 +167,6 @@ pnpm exec bundlewatch              # ESM+CSS 体积预算
 
 | 决策 | 选项 | 影响 |
 | --- | --- | --- |
-| 是否启动 | ① P0 已完成并建议暂缓 ② 直接 P1 ③ 关闭本项 | 当前数据不支持 P1；若要重判，先补完整 ByteMD 场景基线复现 |
-| 插件 API | A) 暴露 CM6 `EditorView` B) CM5 风格适配器 | A 干净但 major；B 兼容但要长期维护 |
-| 发布版本 | major / minor | 取决于上一项 |
+| 是否启动 | **P0-P4 已执行完毕（B 方案适配器路线）** | 技术可行性已由生产实测关闭；剩余为合入与发布决策 |
+| 插件 API | **B) CM5 风格适配器（已实施）** | 兼容面保留；适配器长期维护成本由本仓库承担，逃生口为 `editor.view` |
+| 发布版本 | major / minor | 适配器路线未破坏公开 API 类型，倾向 minor + README 迁移说明；发布前需完成外部消费验证 |

@@ -11,6 +11,7 @@
 
 <script lang="ts">
   import en from '../locales/en.json'
+  import type { CM6CompatEditor } from './cm6-editor'
   import { debounce, throttle } from './debounce'
   import {
     createCodeMirror,
@@ -32,7 +33,6 @@
     EditorProps as Props,
   } from './types'
   import Viewer from './viewer.svelte'
-  import type { Editor, KeyMap } from 'codemirror'
   import type { Root } from 'hast'
   import {
     onMount,
@@ -42,6 +42,8 @@
     afterUpdate,
     beforeUpdate,
   } from 'svelte'
+
+  type KeyMap = Record<string, string | (() => void)>
 
   export let value: Props['value'] = ''
   export let plugins: NonNullable<Props['plugins']> = []
@@ -53,6 +55,7 @@
   export let layoutContainment: NonNullable<Props['layoutContainment']> = false
   export let placeholder: Props['placeholder'] = undefined
   export let editorConfig: Props['editorConfig'] = undefined
+  export let editorExtensions: Props['editorExtensions'] = undefined
   export let locale: Props['locale'] = undefined
   export let uploadImages: Props['uploadImages'] = undefined
   export let overridePreview: Props['overridePreview'] = undefined
@@ -262,7 +265,6 @@
 
     editor = codemirror(editorEl, {
       value,
-      mode: 'yaml-frontmatter',
       lineWrapping: true,
       tabSize: 8, // keep consistent with preview: https://developer.mozilla.org/en-US/docs/Web/CSS/tab-size#formal_definition
       indentUnit: 4, // nested ordered list does not work with 2 spaces
@@ -270,6 +272,7 @@
         Enter: 'newlineAndIndentContinueMarkdownList',
       }, // https://github.com/codemirror/CodeMirror/blob/c955a0fb02d9a09cf98b775cb94589e4980303c1/mode/markdown/index.html#L359
       ...editorConfig,
+      editorExtensions,
       placeholder,
     })
 
