@@ -125,7 +125,7 @@ CM5 提供的编辑器能力清单（迁移必须逐项补回）：markdown / gf
 
 - [x] README / `docs/index.md` / `packages/bytemd/README.md`（2026-10-29）：Editor props 表补 `editorConfig` 映射子集与 `editorExtensions`、新增 "The editor instance (CodeMirror 6)" 迁移说明（适配器覆盖面、`editor.view`、CM5 setOption/keymap/CSS 迁移路径）、`layoutContainment` 大文档指引强化；三份同步
 - [x] `scripts/generate.mjs` 无需改动（新增内容均在手工维护区，`pnpm generate:check` 通过）
-- [ ] 版本策略：选 A 方案发 major，选 B 方案发 minor；`bundlewatch` 预算按实测重设（当前 index.mjs 67.79KB gzip < 210KB PASS）
+- [x] 版本策略（2026-10-29 拍板）：**13 包统一 major 2.0.0**——内核世代更替 + `.cm-*` CSS 契约变更 + wrapper `workspace:*` 精确锁定核心必须随发；插件 peer 放宽 `^1.5.0 || ^2.0.0`（同 dist 服务两代内核）。bundlewatch PASS（index.mjs 67.95KB gzip < 210KB）。发布验证与模拟输入实测见 `audit/CM6_V2_RELEASE.md`；**未推送/未发布，`pnpm pub` 待维护者执行**
 - [ ] 外部消费验证：干净安装（不继承根 overrides）分别验证 Svelte / React / Vue2 / Vue3 与 SSR 入口；复用 tarball + `audit/nuxt-ssr-review` 流程，并覆盖 `viewer`/`async` 子入口
 
 ## 6. 每阶段统一回归门槛（缺一不可）

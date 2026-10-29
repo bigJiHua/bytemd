@@ -303,12 +303,18 @@ export class CM6CompatEditor {
     for (const map of this.keyMaps) {
       for (const [combo, action] of Object.entries(map)) {
         if (!this.matches(combo, event)) continue
+        if (typeof action === 'string') {
+          // CM5 commands decline with Pass (e.g. list continuation on plain
+          // text); a declined command must fall through to CM6's own keymap,
+          // so only consume the event when the command reports handling it.
+          if (!this.runCommand(action)) continue
+        } else {
+          action()
+        }
         // CM6's own keymap listens on the same element; it also honors
         // defaultPrevented, but stop immediately so nothing else re-runs it.
         event.preventDefault()
         event.stopImmediatePropagation()
-        if (typeof action === 'string') this.runCommand(action)
-        else action()
         return
       }
     }
@@ -326,18 +332,19 @@ export class CM6CompatEditor {
     return event.key.toLowerCase() === key
   }
 
-  private runCommand(name: string) {
+  private runCommand(name: string): boolean {
     switch (name) {
       case 'indentMore':
         indentMore(this.view)
-        break
+        return true
       case 'indentLess':
         indentLess(this.view)
-        break
+        return true
       case 'newlineAndIndentContinueMarkdownList':
       case 'newlineAndIndent':
-        insertNewlineContinueMarkup(this.view)
-        break
+        return insertNewlineContinueMarkup(this.view)
+      default:
+        return false
     }
   }
 
