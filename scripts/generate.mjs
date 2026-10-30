@@ -153,7 +153,12 @@ export async function planGeneration(root = rootDir) {
       const exports = {
         '.': {
           ...(pkg.name === 'bytemd'
-            ? { types: './dist/index.d.ts', svelte: './svelte/index.js' }
+            ? {
+                svelte: {
+                  types: './svelte/index.d.ts',
+                  default: './svelte/index.js',
+                },
+              }
             : {}),
           ...entry('index'),
         },
@@ -186,7 +191,10 @@ export async function planGeneration(root = rootDir) {
         exports,
         files: [],
       })
-      // TypeScript's conditional resolution needs types before runtime conditions.
+      // TypeScript's conditional resolution needs types before runtime
+      // conditions. The `svelte` condition must stay first for Svelte-aware
+      // resolvers (`customConditions: ["svelte"]`), otherwise `types` wins and
+      // they receive the dist class declarations instead of the components.
       for (const name of Object.keys(exports)) {
         const current = pkg.exports[name]
         if (
@@ -196,7 +204,12 @@ export async function planGeneration(root = rootDir) {
           Object.hasOwn(current, 'types')
         ) {
           const { types, ...conditions } = current
-          pkg.exports[name] = { types, ...conditions }
+          if (name === '.' && conditions.svelte !== undefined) {
+            const { svelte, ...rest } = conditions
+            pkg.exports[name] = { svelte, types, ...rest }
+          } else {
+            pkg.exports[name] = { types, ...conditions }
+          }
         }
       }
       if (!Array.isArray(pkg.files))

@@ -4,6 +4,11 @@ import {
   CDPConnectionError,
   CDPSession,
 } from '../../audit/prod-perf-cdp-client.mjs'
+import {
+  CompositionInjector,
+  CompositionNotSupportedError,
+} from '../../audit/prod-perf-composition-injector.mjs'
+import { KeyboardInjector } from '../../audit/prod-perf-keyboard-injector.mjs'
 import { cliOptions } from '../../audit/prod-perf-reproduce.mjs'
 import {
   evalInPage,
@@ -304,4 +309,243 @@ test('comparison summaries retain custom sizes and only report measured groups',
     )
     rmSync(dir, { recursive: true, force: true })
   }
+})
+function fakeCompositionSession({ failOn } = {}) {
+  const listeners = new Map()
+  const session = {
+    sent: [],
+    listens: 0,
+    unlistens: 0,
+    on(name, fn) {
+      session.listens++
+      listeners.set(name, fn)
+      return () => {
+        session.unlistens++
+        if (listeners.get(name) === fn) listeners.delete(name)
+      }
+    },
+    async send(method, params) {
+      session.sent.push({ method, params })
+      if (failOn === method) throw new Error(`${method} rejected`)
+      return {}
+    },
+    emit(event) {
+      listeners.get('Input.compositionEvent')?.(event)
+    },
+    get listenerCount() {
+      return listeners.size
+    },
+  }
+  return session
+}
+
+test('composition sends the CDP IME protocol shape in order', async () => {
+  const session = fakeCompositionSession()
+  const result = await new CompositionInjector().compose(session, '中文输入')
+  assert.deepEqual(
+    session.sent.map(({ method }) => method),
+    ['Input.imeSetComposition', 'Input.insertText'],
+  )
+  assert.deepEqual(session.sent[0].params, {
+    selectionStart: 0,
+    selectionEnd: 0,
+    insertReplaceStart: 0,
+    insertReplaceEnd: 0,
+    text: '中文输入',
+  })
+  assert.deepEqual(session.sent[1].params, { text: '中文输入' })
+  assert.equal(result.source, 'automated-cdp')
+  assert.equal(result.inCompositionAsyncResult, false)
+  assert.deepEqual(result.events, [])
+})
+
+test('composition records IME events forwarded inside the injection window', async () => {
+  const session = fakeCompositionSession()
+  const dispatch = session.send
+  session.send = async (method, params) => {
+    if (method === 'Input.imeSetComposition') {
+      session.emit({ type: 'compositionstart', data: '' })
+      session.emit({ type: 'compositionupdate', data: 'zhong' })
+    }
+    if (method === 'Input.insertText') {
+      session.emit({ type: 'compositionend', data: '中文输入' })
+    }
+    return dispatch(method, params)
+  }
+  const result = await new CompositionInjector().compose(session, '中文输入')
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ['compositionstart', 'compositionupdate', 'compositionend'],
+  )
+  assert.deepEqual(
+    result.events.map((event) => event.data),
+    ['', 'zhong', '中文输入'],
+  )
+  for (const event of result.events) {
+    assert.equal(typeof event.timestamp, 'number')
+    assert.ok(Number.isFinite(event.timestamp))
+  }
+})
+
+test('composition unsubscribes after injection so late IME events are dropped', async () => {
+  const session = fakeCompositionSession()
+  const result = await new CompositionInjector().compose(session, 'x')
+  assert.equal(session.listens, 1)
+  assert.equal(session.unlistens, 1)
+  assert.equal(session.listenerCount, 0)
+  session.emit({ type: 'compositionupdate', data: 'late' })
+  assert.equal(result.events.length, 0)
+})
+
+test('composition wraps send failures and still unsubscribes', async () => {
+  const session = fakeCompositionSession({ failOn: 'Input.imeSetComposition' })
+  await assert.rejects(
+    new CompositionInjector().compose(session, '中文'),
+    (error) =>
+      error instanceof CompositionNotSupportedError &&
+      error.name === 'CompositionNotSupportedError' &&
+      error.message ===
+        'CDP composition failed: Input.imeSetComposition rejected',
+  )
+  assert.deepEqual(
+    session.sent.map(({ method }) => method),
+    ['Input.imeSetComposition'],
+  )
+  assert.equal(session.unlistens, 1)
+  assert.equal(session.listenerCount, 0)
+})
+
+test('composition reports failures from the text insertion step', async () => {
+  const session = fakeCompositionSession({ failOn: 'Input.insertText' })
+  await assert.rejects(
+    new CompositionInjector().compose(session, 'x'),
+    /CDP composition failed: Input\.insertText rejected/,
+  )
+  assert.equal(session.sent.length, 2)
+  assert.equal(session.unlistens, 1)
+})
+
+test('composition cancel clears the candidate and flags its reason', async () => {
+  const session = fakeCompositionSession()
+  const dispatch = session.send
+  session.send = async (method, params) => {
+    session.emit({ type: 'compositionupdate', data: '' })
+    return dispatch(method, params)
+  }
+  const result = await new CompositionInjector().cancel(session)
+  assert.deepEqual(session.sent, [
+    {
+      method: 'Input.imeSetComposition',
+      params: {
+        selectionStart: 0,
+        selectionEnd: 0,
+        insertReplaceStart: 0,
+        insertReplaceEnd: 0,
+        text: '',
+      },
+    },
+  ])
+  assert.equal(result.source, 'automated-cdp')
+  assert.equal(result.cancelReason, 'composition-cancelled')
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ['compositionupdate'],
+  )
+  assert.equal(typeof result.events[0].timestamp, 'number')
+  assert.equal(session.unlistens, 1)
+  assert.equal(session.listenerCount, 0)
+})
+
+test('composition cancel wraps failures with its own message', async () => {
+  const session = fakeCompositionSession({ failOn: 'Input.imeSetComposition' })
+  await assert.rejects(
+    new CompositionInjector().cancel(session),
+    (error) =>
+      error instanceof CompositionNotSupportedError &&
+      error.message ===
+        'CDP composition cancel failed: Input.imeSetComposition rejected',
+  )
+  assert.equal(session.unlistens, 1)
+})
+
+function fakeKeySession() {
+  return {
+    sent: [],
+    async send(method, params) {
+      this.sent.push({ method, params })
+      return {}
+    },
+  }
+}
+
+test('keyboard typing dispatches keyDown then keyUp for every character', async () => {
+  const session = fakeKeySession()
+  await new KeyboardInjector().typeText(session, 'a ')
+  assert.deepEqual(
+    session.sent.map(({ method }) => method),
+    [
+      'Input.dispatchKeyEvent',
+      'Input.dispatchKeyEvent',
+      'Input.dispatchKeyEvent',
+      'Input.dispatchKeyEvent',
+    ],
+  )
+  assert.deepEqual(
+    session.sent.map(({ params }) => params.type),
+    ['keyDown', 'keyUp', 'keyDown', 'keyUp'],
+  )
+  assert.deepEqual(
+    session.sent.map(({ params }) => params.key),
+    ['a', 'a', ' ', ' '],
+  )
+  assert.deepEqual(session.sent[0].params, {
+    type: 'keyDown',
+    text: 'a',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 97,
+  })
+  assert.deepEqual(session.sent[1].params, {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 97,
+  })
+  assert.deepEqual(session.sent[2].params, {
+    type: 'keyDown',
+    text: ' ',
+    key: ' ',
+    code: 'Space',
+    windowsVirtualKeyCode: 32,
+  })
+})
+
+test('keyboard special keys map to their DOM code and virtual key code', async () => {
+  const session = fakeKeySession()
+  const injector = new KeyboardInjector()
+  await injector.pressKey(session, 'Enter')
+  await injector.pressKey(session, 'Backspace')
+  assert.deepEqual(session.sent[0].params, {
+    type: 'keyDown',
+    text: undefined,
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+  })
+  assert.deepEqual(session.sent[2].params, {
+    type: 'keyDown',
+    text: undefined,
+    key: 'Backspace',
+    code: 'Backspace',
+    windowsVirtualKeyCode: 8,
+  })
+  assert.equal(session.sent.length, 4)
+})
+
+test('keyboard falls back to Key<upper> and first char code for other keys', async () => {
+  const injector = new KeyboardInjector()
+  assert.equal(injector._keyCode('Shift'), 'KeySHIFT')
+  assert.equal(injector._winKeyCode('Shift'), 'S'.charCodeAt(0))
+  assert.equal(injector._keyCode('1'), 'Key1')
+  assert.equal(injector._winKeyCode('1'), 49)
 })

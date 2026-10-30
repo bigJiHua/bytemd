@@ -147,6 +147,20 @@ async function main() {
     )
     check('keyboard preview render', typedRendered)
 
+    // Playground enables layoutContainment; both panes must stay measurable.
+    const layout = await evaluate(`
+      return {
+        contained: !!document.querySelector('.bytemd-body-contained'),
+        editorHeight: document.querySelector('.cm-editor')?.clientHeight ?? 0,
+        previewHeight: document.querySelector('.bytemd-preview')?.clientHeight ?? 0,
+      }
+    `)
+    check(
+      'layout containment keeps editor and preview sized',
+      layout.contained && layout.editorHeight > 0 && layout.previewHeight > 0,
+      JSON.stringify(layout),
+    )
+
     // 2. Enter creates a new line through CM6 input handling.
     await keyboard.pressKey(session, 'Enter')
     await keyboard.typeText(session, 'second line')
@@ -367,6 +381,88 @@ async function main() {
     )
     check('composition preview render', compRendered)
 
+    // 9b. Character-by-character composition: every intermediate update must
+    // land in the document before the final commit, matching real IME
+    // behaviour instead of a single fully-formed candidate.
+    await evaluate(`(() => {
+      const cm = document.querySelector('.CodeMirror').CodeMirror
+      cm.setValue('before ')
+      cm.focus()
+      cm.setCursor({ line: 0, ch: 7 })
+      return true
+    })()`)
+    await sleep(200)
+    const compositionStep = async (text) => {
+      await session.send('Input.imeSetComposition', {
+        selectionStart: text.length,
+        selectionEnd: text.length,
+        insertReplaceStart: 0,
+        insertReplaceEnd: 0,
+        text,
+      })
+      await sleep(80)
+      return evaluate(
+        `return document.querySelector('.CodeMirror').CodeMirror.getValue()`,
+      )
+    }
+    const step1 = await compositionStep('z')
+    const step2 = await compositionStep('zh')
+    const step3 = await compositionStep('zhong')
+    check(
+      'progressive composition updates',
+      step1 === 'before z' && step2 === 'before zh' && step3 === 'before zhong',
+      JSON.stringify({ step1, step2, step3 }),
+    )
+    await session.send('Input.insertText', { text: '中文' })
+    await sleep(200)
+    const committed = await evaluate(
+      `return document.querySelector('.CodeMirror').CodeMirror.getValue()`,
+    )
+    check(
+      'composition commit replaces the candidate',
+      committed === 'before 中文',
+      JSON.stringify(committed),
+    )
+
+    // 9c. A cancelled composition must roll back without leaving the
+    // candidate text behind.
+    await evaluate(`(() => {
+      const cm = document.querySelector('.CodeMirror').CodeMirror
+      cm.setValue('before ')
+      cm.focus()
+      cm.setCursor({ line: 0, ch: 7 })
+      return true
+    })()`)
+    await sleep(200)
+    await session.send('Input.imeSetComposition', {
+      selectionStart: 5,
+      selectionEnd: 5,
+      insertReplaceStart: 0,
+      insertReplaceEnd: 5,
+      text: 'zhong',
+    })
+    await sleep(150)
+    const beforeCancel = await evaluate(
+      `return document.querySelector('.CodeMirror').CodeMirror.getValue()`,
+    )
+    let cancelError = null
+    try {
+      await composition.cancel(session)
+    } catch (error) {
+      cancelError = String(error.message || error)
+    }
+    await sleep(250)
+    const afterCancel = await evaluate(
+      `return document.querySelector('.CodeMirror').CodeMirror.getValue()`,
+    )
+    check(
+      'composition cancel rolls back the candidate',
+      cancelError === null &&
+        beforeCancel === 'before zhong' &&
+        afterCancel === 'before ',
+      JSON.stringify({ beforeCancel, afterCancel, cancelError }),
+    )
+
     // 10. Output integrity: total document round-trips without loss.
     const integrity = JSON.parse(
       await readString(`return (() => {
@@ -380,6 +476,61 @@ async function main() {
       'round-trip integrity',
       integrity.out === integrity.expect,
       JSON.stringify(integrity).slice(0, 120),
+    )
+
+    // 11. Phone-sized viewport: panes stay measurable and the page must not
+    // overflow horizontally. This simulates layout, it does not emulate a
+    // physical device or its software keyboard.
+    await evaluate(`(() => {
+      const cm = document.querySelector('.CodeMirror').CodeMirror
+      cm.setValue('# mobile\\n\\n' + 'word '.repeat(120))
+      cm.focus()
+      return true
+    })()`)
+    await session.send('Emulation.setDeviceMetricsOverride', {
+      width: 375,
+      height: 667,
+      deviceScaleFactor: 2,
+      mobile: true,
+    })
+    await sleep(600)
+    const mobileLayout = await evaluate(`return (() => {
+      const preview = document.querySelector('.bytemd-preview')
+      const body = document.querySelector('.bytemd-body')
+      return {
+        editorHeight: document.querySelector('.cm-editor')?.clientHeight ?? 0,
+        previewHeight: preview?.clientHeight ?? 0,
+        previewDisplay: preview ? getComputedStyle(preview).display : 'missing',
+        previewWidth: preview ? Math.round(preview.getBoundingClientRect().width) : 0,
+        previewOffsetWidth: preview?.offsetWidth ?? 0,
+        previewInlineWidth: preview ? preview.style.width : '',
+        bodyHeight: body ? Math.round(body.getBoundingClientRect().height) : 0,
+        bodyWidth: body ? Math.round(body.getBoundingClientRect().width) : 0,
+        innerWidth: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }
+    })()`)
+    check(
+      'mobile viewport collapses to editor-only at the auto breakpoint',
+      mobileLayout.editorHeight > 0 &&
+        mobileLayout.previewDisplay === 'none' &&
+        mobileLayout.scrollWidth <= mobileLayout.innerWidth + 1,
+      JSON.stringify(mobileLayout),
+    )
+    await session.send('Emulation.clearDeviceMetricsOverride')
+    await sleep(600)
+    const restoredLayout = await evaluate(`return {
+      editorHeight: document.querySelector('.cm-editor')?.clientHeight ?? 0,
+      previewHeight: document.querySelector('.bytemd-preview')?.clientHeight ?? 0,
+      previewDisplay: getComputedStyle(document.querySelector('.bytemd-preview')).display,
+      innerWidth: window.innerWidth,
+    }`)
+    check(
+      'desktop viewport restores the split preview',
+      restoredLayout.editorHeight > 0 &&
+        restoredLayout.previewHeight > 0 &&
+        restoredLayout.previewDisplay !== 'none',
+      JSON.stringify(restoredLayout),
     )
 
     results.checks = checks

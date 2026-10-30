@@ -53,6 +53,11 @@
   export let mode: NonNullable<Props['mode']> = 'auto'
   export let previewDebounce: NonNullable<Props['previewDebounce']> = 300
   export let layoutContainment: NonNullable<Props['layoutContainment']> = false
+  export let largeDocumentThreshold: NonNullable<
+    Props['largeDocumentThreshold']
+  > = 102400
+  export let largeDocumentWarning: NonNullable<Props['largeDocumentWarning']> =
+    true
   export let placeholder: Props['placeholder'] = undefined
   export let editorConfig: Props['editorConfig'] = undefined
   export let editorExtensions: Props['editorExtensions'] = undefined
@@ -229,6 +234,28 @@
   $: if (editor && value !== editor.getValue()) {
     editor.setValue(value)
   }
+
+  let largeDocumentWarned = false
+
+  function warnLargeDocument() {
+    if (
+      largeDocumentWarned ||
+      !largeDocumentWarning ||
+      layoutContainment ||
+      largeDocumentThreshold <= 0 ||
+      value.length < largeDocumentThreshold
+    )
+      return
+    largeDocumentWarned = true
+    console.warn(
+      `[bytemd] Document has ${value.length} characters while layoutContainment is disabled. ` +
+        'Typing beside a large preview can be an order of magnitude slower. ' +
+        'Enable layoutContainment for fixed-height editors (not for content-sized or print layouts), ' +
+        'or pass largeDocumentWarning={false} to silence this warning.',
+    )
+  }
+
+  $: if (editor && value.length >= largeDocumentThreshold) warnLargeDocument()
 
   beforeUpdate(() => {
     if (editor && appliedPlugins !== plugins) off()

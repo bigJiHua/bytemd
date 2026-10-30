@@ -194,7 +194,9 @@ Vite 4 module Workers need `resolve.conditions: ['worker']` for the DOM-free ent
 | --- | --- | --- |
 | `mode` | `split`, `tab`, `auto` | Editor display mode, default: `auto` |
 | `previewDebounce` | `number` | Debounce time (ms) for preview, default: `300` |
-| `layoutContainment` | `boolean` | Opt-in intrinsic-size isolation for fixed-height editors, default: `false`. Reduces typing-related layout beside large previews; hosts editing large documents (≈100 KiB and above) should enable it — typing latency beside a large preview drops substantially. Keep disabled for content-sized or expanding print layouts. |
+| `layoutContainment` | `boolean` | Opt-in intrinsic-size isolation for fixed-height editors, default: `false`. In a 500 KiB production sample, typing latency beside the full preview dropped from **169 ms to 14 ms** with this enabled. Enable it for fixed-height editors with large documents (≈100 KiB and above); keep it disabled for content-sized or expanding print layouts. |
+| `largeDocumentThreshold` | `number` | Character threshold (UTF-16 code units, same unit as `maxLength`) for the one-time large-document warning, default: `102400`. Set to `0` to disable the check. |
+| `largeDocumentWarning` | `boolean` | Show the one-time console warning when `value` exceeds `largeDocumentThreshold` while `layoutContainment` is disabled, default: `true`. |
 | `placeholder` | `string` | Editor placeholder |
 | `editorConfig` | `object` | CodeMirror options applied to the editor. Mapped: `lineNumbers`, `lineWrapping`, `tabSize`, `indentUnit`, `readOnly`, `extraKeys`, `autofocus`, `undoDepth`. CM5-only options (`mode`, `theme`, `keyMap`, `cursorBlinkRate`, …) are ignored; use `editorExtensions` for anything else. |
 | `editorExtensions` | `CodeMirror 6 Extension[]` | Native CodeMirror 6 extensions applied after ByteMD's defaults (markdown language, history, keymap, frontmatter highlighting). |
@@ -218,6 +220,9 @@ anything beyond it. Migrating a CM5 plugin or host integration: replace CM5
 `setOption` calls other than `readOnly` with `editorExtensions`, CM5 keymap
 preset names with CM6 `keymap.of([...])`, and `.cm-*` CSS token overrides with
 the `--bytemd-syntax-*` variables.
+
+See [Migrating from CodeMirror 5 to CodeMirror 6](https://github.com/bigJiHua/bytemd/blob/main/docs/migration-cm5-to-cm6.md)
+for the compatibility matrix, the `getDoc()` difference and migration recipes.
 
 ### Style customization
 

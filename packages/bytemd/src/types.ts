@@ -244,6 +244,21 @@ export interface EditorProps extends ViewerProps {
    */
   layoutContainment?: boolean
   /**
+   * Character threshold (UTF-16 code units, same unit as `maxLength`) above
+   * which a one-time console warning recommends enabling `layoutContainment`.
+   * Set to `0` to disable the check.
+   *
+   * @defaultValue 102400
+   */
+  largeDocumentThreshold?: number
+  /**
+   * Show the one-time large-document warning when `value` exceeds
+   * `largeDocumentThreshold` while `layoutContainment` is disabled.
+   *
+   * @defaultValue true
+   */
+  largeDocumentWarning?: boolean
+  /**
    * Editor placeholder
    */
   placeholder?: string

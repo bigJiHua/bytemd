@@ -15,6 +15,8 @@ export default {
     mode: { type: String, default: 'auto' },
     previewDebounce: { type: Number, default: 300 },
     layoutContainment: { type: Boolean, default: false },
+    largeDocumentThreshold: { type: Number, default: 102400 },
+    largeDocumentWarning: { type: Boolean, default: true },
     placeholder: String,
     editorConfig: Object,
     locale: Object,

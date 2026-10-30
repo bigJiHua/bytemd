@@ -35,7 +35,7 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 6. **批处理纪律**：一次一个批次，每批完成即跑全量回归（`pnpm test` + `pnpm run test:scripts` + `pnpm build` + `pnpm generate:check`）并更新 `PLAN.md` 进度日志。
 7. **本地化/工具镜像目录**：仓库不再使用 git 符号链接（Windows `core.symlinks=false` 下不可用）。各插件包保留双份目录：`packages/*/src/locales/`（构建消费）与 `packages/*/locales/`（npm 发布，唯一内容源），以及 `packages/plugin-math-ssr/{locales,src/utils}/` 镜像 `packages/plugin-math/{locales,src/utils}/`。修改文案/共享 utils 时只改源侧（顶层 `locales/`、`plugin-math/src/utils/`），并把镜像侧同步为字节一致；`scripts/test/hygiene.test.mjs` 会校验两侧一致，`packages/bytemd/src/locales` 已删除且不得重建。
 
-## 当前状态（2026-10-26）
+## 当前状态（2026-10-30）
 
 | 批次 | 状态 |
 | --- | --- |
@@ -43,15 +43,16 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 | 第七批 生产大文档交互与内存验收 | 桌面自动化验收完成；人工 OS IME、真实移动设备 incomplete |
 | 第八批 大 DOM 与 CodeMirror 定向优化 | 桌面自动化验收完成；layoutContainment 默认关闭，同上两项 incomplete |
 | 第九批 依赖范围与发布工具链 | 工具整理与同大版本补修完成；剩余安全工具链迁移待续 |
-| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 + Svelte 5 完成（2026-10-28）；CM6 迁移 P0-P4 已在 `feat/cm6` 实验分支完成（2026-10-29，待拍板合入/发版）；vite 6+ 评估待续 |
+| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 + Svelte 5 完成（2026-10-28）；CM6 迁移完成并以 2.0.0 走完本地四条验收线（2026-10-30，未推送 npm）；发布前硬化见 `PLAN.md` 第十一批；vite 6+ 评估待续 |
+| 第十一批 2.0.0 发布前硬化 | P0-1 大文档分级安全化、P0-3 插件兼容面声明、P1-4 浏览器验收进 CI 完成（2026-10-30）；人工 IME/真机与 P1 首屏/soak/sourceMap 待续 |
 
-本轮全量验收通过：核心 24 文件 221/221、脚本 20/20、四个关键脚本覆盖率门槛、完整构建、generate:check、style、纯入口/SSR 检查及普通 playground 冒烟。证据在 `audit/prod-perf-reassessment-20261026/`，本地不入库；此前完整桌面矩阵复验保留在 `audit/prod-perf-audit-verify/`。
+2026-10-26 复盘批次全量验收通过：核心 24 文件 221/221、脚本 20/20、四个关键脚本覆盖率门槛、完整构建、generate:check、style、纯入口/SSR 检查及普通 playground 冒烟。证据在 `audit/prod-perf-reassessment-20261026/`，本地不入库；此前完整桌面矩阵复验保留在 `audit/prod-perf-audit-verify/`。最新 2.0.0 硬化验收为核心 28 文件 243/243、脚本 36/36（含覆盖率门槛）、完整构建、generate:check、bundlewatch，详见 [audit/CM6_V2_RELEASE.md](./audit/CM6_V2_RELEASE.md)；2.0.0 未推送 npm。
 
 本轮浏览器定向复验覆盖 12 个 CDP composition 场景、10 KiB/core 两种尺寸隔离方案各 1 次及交互检查，不是完整性能矩阵重测。1 轮内存检查等待销毁 1 秒并强制 GC 后，nodes/listeners 增量为 0/0，JS heap 增量为 +709,296 bytes；该结果不证明无泄漏或整体性能提升。浏览器流程自身的 build/regression 标为 skipped，独立全量验收日志另存。
 
 ## 安全审计结论（2026-10-28，pnpm audit 官方 registry）
 
-- `--prod` 工作区图（含私有 playground，不等同已发布包运行时）：**18 条（0 critical / 1 high / 14 moderate / 3 low）**，较 2026-10-26 的 22 条（3 high/5 low）下降。残留 1 high 为 vite（修补需 ≥6.4.4，受 Svelte 3 插件限制无法升 vite 6）；katex low 需 0.18.2（大版本）；deepmerge low 无修补版本。
+- `--prod` 工作区图（含私有 playground，不等同已发布包运行时）：**18 条（0 critical / 1 high / 14 moderate / 3 low）**，较 2026-10-26 的 22 条（3 high/5 low）下降。残留 1 high 为 vite（修补需 ≥6.4.4，受 vite-plugin-svelte 4 的 peer `vite ^5` 限制无法升 vite 6）；katex low 需 0.18.2（大版本）；deepmerge low 无修补版本。
 - 完整开发依赖图：**34 条（0 critical / 5 high / 25 moderate / 4 low）**，critical 已清零（Vitest 3.2.7 + tinypool 2.1.2 override）。残留 high：svgo（修补需 4.x，dev-only 图标工具）、lodash（无修补发布）等；axios/cross-spawn/vue-next 测试工具已通过 override 或升级收敛。
 - 根 overrides 不随 npm 包发布或继承，外部消费者仍需独立验收；原始结果与复现命令见安全段历史记录。
 
@@ -75,7 +76,15 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 - [x] unified 11 及对应 remark/rehype 插件分步升级（2026-10-28 完成：unified 11 / remark-parse 11 / remark-rehype 11 / rehype-raw 7 / rehype-sanitize 6 / rehype-stringify 10 / remark-gfm 4 / remark-math 6 / rehype-katex 7 / remark-frontmatter 5 / remark-breaks 4 / remark-gemoji 8 / rehype-highlight 7；KaTeX low 修复路径仍需 0.18 大版本）。
 - [x] Svelte 5 迁移（2026-10-28 完成：svelte 5.57 + vite-plugin-svelte 4 + RTL 5 + svelte2tsx 0.7 + prettier 3；`legacy-compat` 桥保留 `new/$set/$on/$destroy` 供 react/vue 包装；导出 `EditorComponent/ViewerComponent` 供 Svelte 宿主模板渲染；playground 改 `mount()` 入口并加 `verbatimModuleSyntax`）。
 - [ ] Vite 6+ 评估（vps 4 的 peer 仍为 vite ^5）。
-- [x] CodeMirror 6（B 方案适配器，`feat/cm6` 实验分支，2026-10-28/29）：规划、P0 spike、P1 内核替换 + 生产实测、P1-P4 收尾批次与浏览器复验完成，见 [audit/CM6_PLAN.md](./audit/CM6_PLAN.md) 与 `audit/CM6_PROD_RESULT.md`；真实 OS IME/移动设备、外部消费验证与版本策略待续
+- [x] CodeMirror 6（B 方案适配器，`feat/cm6`，2026-10-28/30）：规划、spike、内核替换、生产实测与 P1-P5 收尾完成；本地 2.0.0 已通过核心 240/240、脚本 26/26、构建、Nuxt tarball 消费与稳定性循环（见 [audit/CM6_V2_RELEASE.md](./audit/CM6_V2_RELEASE.md)、`audit/CM6_PROD_RESULT.md`）。未推送 npm；真实 OS IME、真实移动设备与仓库外插件兼容面仍未闭环（见 PLAN 第十一批）
+
+### P4 2.0.0 发布前硬化（规划见 `PLAN.md` 第十一批）
+
+- [x] 大文档分级安全化（2026-10-30）：`largeDocumentThreshold`/`largeDocumentWarning` 一次性告警，playground 默认开启 containment，文档写入 169→14ms；`contain: size` 的默认值未翻转。
+- [ ] 人工 OS IME 与真实移动设备验收单（Windows/macOS/Android/iOS）。可自动化的 composition 中间态、cancel 回滚与 375px 断点已补；剩余边界为 OS 输入法引擎与真机环境，可选用真机云 + Appium 替代人工点按。
+- [x] 插件兼容面声明（2026-10-30）：`docs/migration-cm5-to-cm6.md` 兼容矩阵 + `packages/bytemd/test/cm6-plugin-contract.test.ts` 第三方形状契约测试。
+- [x] 浏览器验收脚本接入 CI（2026-10-30）：`.github/workflows/browser-e2e.yml` 跑两条 CDP 脚本；GitHub 托管 runner 首次运行待观察。
+- [ ] 30 分钟 soak 与堆/节点/监听器门槛。
 
 ### P3 人工验收项（需人工/设备）
 

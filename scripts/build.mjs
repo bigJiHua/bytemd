@@ -223,6 +223,31 @@ import { build } from 'vite'
       )
       await fs.writeFile('svelte/index.js', js)
 
+      // Declarations for the same entry: the runtime exports components, so the
+      // published types must describe components too. `*.svelte` has no
+      // declaration file, so declare the values with Svelte's component type;
+      // the compat class re-exports stay in dist and are dropped here.
+      const dtsPath = 'svelte/index.d.ts'
+      let dts = await fs.readFile(dtsPath, 'utf8')
+      if (!dts.includes(classExport))
+        throw new Error('svelte entry: class export line not found in d.ts')
+      dts = dts
+        .split('\n')
+        .filter(
+          (line) =>
+            !line.includes('index.scss') &&
+            !line.includes("from './legacy-compat'"),
+        )
+        .join('\n')
+      dts +=
+        "\nimport type { Component } from 'svelte';\n" +
+        "import type { EditorProps, ViewerProps } from './types';\n" +
+        'export declare const Editor: Component<EditorProps>;\n' +
+        'export declare const Viewer: Component<ViewerProps>;\n' +
+        'export declare const EditorComponent: Component<EditorProps>;\n' +
+        'export declare const ViewerComponent: Component<ViewerProps>;\n'
+      await fs.writeFile(dtsPath, dts)
+
       for (const [file, content] of [
         ['processor.mjs', "export * from './dist/processor.mjs'\n"],
         ['processor.js', "module.exports = require('./dist/processor.js')\n"],

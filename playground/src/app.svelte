@@ -143,6 +143,7 @@
     {mode}
     {plugins}
     {maxLength}
+    layoutContainment
     placeholder={'Start writing with ByteMD'}
     locale={locales[localeKey]}
     uploadImages={(files) => {

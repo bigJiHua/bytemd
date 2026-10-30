@@ -72,6 +72,17 @@ test('plugin mirror directories stay byte-identical to their source side', () =>
   }
 })
 
+test('bytemd declares its Svelte 5 peer and typed svelte entry', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(root, 'packages/bytemd/package.json'), 'utf8'),
+  )
+  const entry = pkg.exports['.']
+  assert.equal(entry.svelte.types, './svelte/index.d.ts')
+  assert.equal(entry.svelte.default, './svelte/index.js')
+  assert.equal(pkg.peerDependencies.svelte, '>=5')
+  assert.equal(pkg.peerDependenciesMeta.svelte.optional, true)
+})
+
 test('bytemd has no shadow src/locales directory', () => {
   assert.equal(
     fs.existsSync(path.join(root, 'packages/bytemd/src/locales')),

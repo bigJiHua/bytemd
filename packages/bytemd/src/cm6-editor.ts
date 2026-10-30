@@ -362,7 +362,8 @@ export class CM6CompatEditor {
 
   getOption(name: string) {
     if (name === 'value') return this.getValue()
-    if (name === 'lineNumbers') return !!this.options.lineNumbers
+    if (name === 'lineNumbers') return this.options.lineNumbers !== false
+    if (name === 'lineWrapping') return this.options.lineWrapping !== false
     return this.options[name]
   }
 

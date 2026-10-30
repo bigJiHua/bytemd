@@ -30,6 +30,53 @@ test('layout containment is opt-in and toggles without replacing the document or
   ).toEqual(selection)
 })
 
+test('large documents warn once unless containment or the warning is disabled', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const large = 'x'.repeat(200)
+  try {
+    render(Editor, {
+      value: large,
+      previewDebounce: 0,
+      largeDocumentThreshold: 100,
+    })
+    await act()
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0][0]).toContain('layoutContainment')
+
+    cleanup()
+    render(Editor, {
+      value: large,
+      previewDebounce: 0,
+      largeDocumentThreshold: 100,
+      layoutContainment: true,
+    })
+    await act()
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    render(Editor, {
+      value: large,
+      previewDebounce: 0,
+      largeDocumentThreshold: 100,
+      largeDocumentWarning: false,
+    })
+    await act()
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    render(Editor, {
+      value: 'short',
+      previewDebounce: 0,
+      largeDocumentThreshold: 100,
+    })
+    await act()
+    expect(warn).toHaveBeenCalledTimes(1)
+  } finally {
+    warn.mockRestore()
+    cleanup()
+  }
+})
+
 test('one initialized CodeMirror runtime serves independent editor documents', async () => {
   const firstRuntime = createCodeMirror()
   const first = render(Editor, {

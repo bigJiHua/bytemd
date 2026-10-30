@@ -16,8 +16,11 @@
   "author": "Rongjian Zhang",
   "exports": {
     ".": {
+      "svelte": {
+        "types": "./svelte/index.d.ts",
+        "default": "./svelte/index.js"
+      },
       "types": "./dist/index.d.ts",
-      "svelte": "./svelte/index.js",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
@@ -86,5 +89,13 @@
   },
   "devDependencies": {
     "@primer/css": "^15.2.0"
+  },
+  "peerDependencies": {
+    "svelte": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "svelte": {
+      "optional": true
+    }
   }
 }
