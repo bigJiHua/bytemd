@@ -92,6 +92,20 @@ test('renderAllThemesCss scopes every theme behind data-bytemd-theme', () => {
   )
 })
 
+test('dark themes paint their own canvas for light hosts', () => {
+  const dark = officialThemes.filter((t) => t.dark)
+  for (const t of dark) {
+    const css = renderThemeCss(t)
+    assert.ok(css.includes('background-color: var(--md-surface);'))
+    assert.ok(css.includes('color-scheme: dark;'))
+    const all = renderAllThemesCss([t])
+    assert.ok(all.includes('background-color: var(--md-surface);'))
+  }
+  for (const t of officialThemes.filter((x) => !x.dark)) {
+    assert.ok(!renderThemeCss(t).includes('background-color:'))
+  }
+})
+
 test('renderManifest lists id/label/dark for every theme', () => {
   const manifest = JSON.parse(renderManifest(officialThemes))
   assert.equal(manifest.version, 1)

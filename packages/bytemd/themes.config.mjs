@@ -217,6 +217,19 @@ export const officialThemes = [
 ]
 
 /**
+ * 暗色主题的画布声明:亮色宿主页面上,暗色预设必须自绘底色,否则白字落白底不可读。
+ * canvas 是结构性最小集(底色/圆角/color-scheme),仍不是完整主题样式。
+ */
+function canvasLines(theme, indent) {
+  if (!theme.dark) return []
+  return [
+    `${indent}background-color: var(--md-surface);`,
+    `${indent}color-scheme: dark;`,
+    `${indent}border-radius: var(--md-radius);`,
+  ]
+}
+
+/**
  * 生成单主题 CSS(仅变量预设,作用于 .markdown-body)。
  * 输出形态与 markdown.css 的 token 契约一一对应,便于 diff 与审查。
  */
@@ -229,6 +242,7 @@ export function renderThemeCss(theme) {
   for (const [name, value] of Object.entries(theme.tokens)) {
     lines.push(`  ${name}: ${value};`)
   }
+  lines.push(...canvasLines(theme, '  '))
   lines.push('}', '')
   return lines.join('\n')
 }
@@ -242,7 +256,9 @@ export function renderAllThemesCss(themes) {
     const body = Object.entries(theme.tokens)
       .map(([name, value]) => `  ${name}: ${value};`)
       .join('\n')
-    return `.markdown-body[data-bytemd-theme='${theme.id}'] {\n${body}\n}`
+    const canvas = canvasLines(theme, '  ').join('\n')
+    const inner = canvas ? body + '\n' + canvas : body
+    return `.markdown-body[data-bytemd-theme='${theme.id}'] {\n${inner}\n}`
   })
   const head = `/* ByteMD official themes (${themes.map((t) => t.id).join(', ')}) */\n/* Switch via .markdown-body[data-bytemd-theme='<id>'] — no <link> swap needed. */\n`
   return head + blocks.join('\n\n') + '\n'
