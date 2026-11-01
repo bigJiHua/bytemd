@@ -40,6 +40,8 @@ Before using the component, remember to import CSS file to make styles correct:
 import 'bytemd/dist/index.css'
 // Optional standard Markdown theme (typography, tables, code, callouts, etc.)
 import 'bytemd/dist/markdown.css'
+// …or, when base typography comes from your own Markdown theme, import only
+// the fork-proprietary blocks instead: import 'bytemd/dist/custom-blocks.css'
 ```
 
 ### Svelte
@@ -227,7 +229,9 @@ import 'bytemd/dist/index.css'
 import 'bytemd/dist/markdown.css'
 ```
 
-You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css).
+Only need the fork-proprietary blocks (callout, accordion, pinyin, timeline, text divider, code tools, plugin-error notice) while base typography comes from a third-party theme? Import `bytemd/dist/custom-blocks.css` instead of `markdown.css` — those classes are fork-specific, so the layer cannot conflict with any base typography theme. `bytemd/dist/index.bundle.css` (index.css + markdown.css) is the one-import convenience for hosts that want the default look.
+
+You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) — pair them with `custom-blocks.css` for the fork-proprietary blocks.
 
 ## Extended Markdown syntax
 

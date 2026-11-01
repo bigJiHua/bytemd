@@ -250,6 +250,36 @@ import { build } from 'vite'
       await fs.writeFile(path.resolve(root, 'dist/markdown.css'), themeCss)
       await fs.writeFile(path.resolve(root, 'dist/markdown.min.css'), themeMin)
 
+      console.log('building custom-blocks layer...')
+      // Fork-proprietary blocks only (callout/timeline/accordion/pinyin/divider/
+      // code tools): the conflict-free companion for hosts that style base
+      // typography with their own Markdown theme.
+      const customSource = path.resolve(root, 'src/custom-blocks.scss')
+      const customCss = sass.compile(customSource, { style: 'expanded' }).css
+      const customMin = sass.compile(customSource, { style: 'compressed' }).css
+      await fs.writeFile(
+        path.resolve(root, 'dist/custom-blocks.css'),
+        customCss,
+      )
+      await fs.writeFile(
+        path.resolve(root, 'dist/custom-blocks.min.css'),
+        customMin,
+      )
+
+      console.log('building index.bundle.css (index.css + markdown.css)...')
+      const indexCss = await fs.readFile(
+        path.resolve(root, 'dist/index.css'),
+        'utf8',
+      )
+      await fs.writeFile(
+        path.resolve(root, 'dist/index.bundle.css'),
+        indexCss + '\n' + themeCss,
+      )
+      await fs.writeFile(
+        path.resolve(root, 'dist/index.bundle.min.css'),
+        indexCss + '\n' + themeMin,
+      )
+
       for (const selector of [
         '.markdown-body h1',
         '.markdown-body table',
@@ -260,6 +290,20 @@ import { build } from 'vite'
       ]) {
         if (!themeCss.includes(selector)) {
           throw new Error(`markdown theme is missing ${selector}`)
+        }
+      }
+      for (const selector of [
+        '--md-text',
+        '.bytemd-callout',
+        '.bytemd-accordion',
+        '.bytemd-pinyin',
+        '.bytemd-timeline',
+        '.bytemd-hr-text',
+        '.bytemd-copy-btn',
+        '.bytemd-plugin-error',
+      ]) {
+        if (!customCss.includes(selector)) {
+          throw new Error(`custom-blocks layer is missing ${selector}`)
         }
       }
     }

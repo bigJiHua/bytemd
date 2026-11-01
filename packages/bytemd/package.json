@@ -1,6 +1,6 @@
 {
   "name": "bytemd",
-  "version": "1.22.0",
+  "version": "1.22.1",
   "description": "Hackable Markdown Editor and Viewer",
   "keywords": [
     "markdown",
@@ -37,6 +37,10 @@
     "./dist/index.min.css": "./dist/index.min.css",
     "./dist/markdown.css": "./dist/markdown.css",
     "./dist/markdown.min.css": "./dist/markdown.min.css",
+    "./dist/custom-blocks.css": "./dist/custom-blocks.css",
+    "./dist/custom-blocks.min.css": "./dist/custom-blocks.min.css",
+    "./dist/index.bundle.css": "./dist/index.bundle.css",
+    "./dist/index.bundle.min.css": "./dist/index.bundle.min.css",
     "./viewer": {
       "types": "./dist/viewer.d.ts",
       "import": "./dist/viewer.mjs",

@@ -172,6 +172,10 @@ export async function planGeneration(root = rootDir) {
           'index.min.css',
           'markdown.css',
           'markdown.min.css',
+          'custom-blocks.css',
+          'custom-blocks.min.css',
+          'index.bundle.css',
+          'index.bundle.min.css',
         ])
           exports[`./dist/${name}`] = `./dist/${name}`
       }

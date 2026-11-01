@@ -1,0 +1,41 @@
+// ByteMD fork-proprietary block styles (standalone layer).
+//
+// Companion to markdown.css for hosts that style base typography with their
+// own Markdown theme (e.g. juejin-markdown-themes) and only need the blocks
+// no third-party theme can style: callout, timeline, accordion, pinyin,
+// text divider, code tools and the plugin-error notice.
+//
+//   import 'bytemd/dist/index.css'
+//   import 'bytemd/dist/custom-blocks.css' // instead of markdown.css
+//
+// Tokens are included so this layer works without markdown.css; hosts that
+// define --text-primary / --bg-soft / --brand-500 keep their own palette.
+
+@use 'markdown-tokens' as *;
+@use 'markdown-parts' as *;
+
+.markdown-body {
+  @include md-tokens-light;
+
+  @include md-divider;
+
+  @include md-code-block;
+
+  @include md-copy-btn;
+
+  @include md-mermaid;
+
+  @include md-callout;
+
+  @include md-accordion;
+
+  @include md-pinyin;
+
+  @include md-timeline;
+}
+
+@include md-plugin-error;
+
+@include md-tokens-dark;
+
+@include md-frames;
