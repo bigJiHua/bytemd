@@ -178,6 +178,8 @@ export async function planGeneration(root = rootDir) {
           'index.bundle.min.css',
         ])
           exports[`./dist/${name}`] = `./dist/${name}`
+        // 官方主题(token 预设 + all.css 属性切换 + manifest)
+        exports['./themes/*'] = './dist/themes/*'
       }
       // The fork ships ESM/CJS only: UMD and its CDN entry fields are retired
       // with the publish-format trim (PLAN Phase 3).

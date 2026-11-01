@@ -233,6 +233,17 @@ Only need the fork-proprietary blocks (callout, accordion, pinyin, timeline, tex
 
 You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) — pair them with `custom-blocks.css` for the fork-proprietary blocks.
 
+### Official themes
+
+A standardized theme family ships as token presets in `bytemd/dist/themes/`: `daylight` (日光), `verdant` (苍翠), `azure` (湛蓝), `sunset` (暮橙), `violet` (雾紫), `rose` (蔷薇) and the standalone dark `ink` (玄墨). Unlike per-theme hardcoded stylesheets, each file only overrides the chromatic identity (neutrals + accent, ~17 tokens) — structure, typography and the callout/timeline/accordion styles all come from `markdown.css`, so semantic colors stay constant across the family and every theme inherits future structure upgrades automatically. Light themes fall back to the dark token block automatically inside `.dark` / `[data-theme=dark]` containers.
+
+```js
+import 'bytemd/dist/markdown.css'
+import 'bytemd/dist/themes/verdant.min.css' // any manifest id; load after markdown.css
+```
+
+For instant switching without swapping `<link>` elements, import `bytemd/dist/themes/all.css` once and toggle `data-bytemd-theme='<id>'` on the `.markdown-body` element. `bytemd/themes/manifest.json` lists every id with its label for switcher UIs; hosts may still override any `--md-*` token on top of a preset.
+
 ## Extended Markdown syntax
 
 In addition to standard Markdown and the optional plugins, this fork includes eight built-in syntaxes. All of them are also exposed as toolbar actions and Help cheatsheets.

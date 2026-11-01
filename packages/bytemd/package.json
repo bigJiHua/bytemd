@@ -2,11 +2,7 @@
   "name": "bytemd",
   "version": "1.22.1",
   "description": "Hackable Markdown Editor and Viewer",
-  "keywords": [
-    "markdown",
-    "editor",
-    "viewer"
-  ],
+  "keywords": ["markdown", "editor", "viewer"],
   "repository": {
     "type": "git",
     "url": "https://github.com/bigJiHua/bytemd.git",
@@ -45,7 +41,8 @@
       "types": "./dist/viewer.d.ts",
       "import": "./dist/viewer.mjs",
       "require": "./dist/viewer.js"
-    }
+    },
+    "./themes/*": "./dist/themes/*"
   },
   "main": "./dist/index.js",
   "svelte": "./svelte/index.js",
@@ -84,7 +81,5 @@
     "vfile": "^6.0.0",
     "word-count": "^0.2.2"
   },
-  "devDependencies": {
-    "@primer/css": "^15.2.0"
-  }
+  "devDependencies": { "@primer/css": "^15.2.0" }
 }

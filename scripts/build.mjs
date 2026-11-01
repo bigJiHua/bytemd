@@ -1,4 +1,10 @@
 // @ts-check
+import {
+  officialThemes,
+  renderAllThemesCss,
+  renderManifest,
+  renderThemeCss,
+} from '../packages/bytemd/themes.config.mjs'
 import { createVue3Plugin } from '../packages/vue-next/plugin.mjs'
 import { createVuePlugin } from '../packages/vue/plugin.mjs'
 import { packages, packagesDir, sveltePreprocessor } from './utils.mjs'
@@ -304,6 +310,41 @@ import { build } from 'vite'
       ]) {
         if (!customCss.includes(selector)) {
           throw new Error(`custom-blocks layer is missing ${selector}`)
+        }
+      }
+
+      console.log('building official themes...')
+      // 官方主题 = token 预设(单源 themes.config.mjs):逐主题 <id>(.min).css +
+      // all.css(data-bytemd-theme 属性切换)+ manifest.json。语义色跨主题恒定,
+      // 主题只声明中性色 + 强调色;亮色主题在 .dark 容器自动落 markdown.css 暗色块。
+      const themesDir = path.resolve(root, 'dist/themes')
+      await fs.ensureDir(themesDir)
+      for (const theme of officialThemes) {
+        const css = renderThemeCss(theme)
+        await fs.writeFile(path.join(themesDir, `${theme.id}.css`), css)
+        await fs.writeFile(
+          path.join(themesDir, `${theme.id}.min.css`),
+          css.replace(/\n\s*/g, ''),
+        )
+      }
+      await fs.writeFile(
+        path.join(themesDir, 'all.css'),
+        renderAllThemesCss(officialThemes),
+      )
+      await fs.writeFile(
+        path.join(themesDir, 'all.min.css'),
+        renderAllThemesCss(officialThemes).replace(/\n\s*/g, ''),
+      )
+      await fs.writeFile(
+        path.join(themesDir, 'manifest.json'),
+        renderManifest(officialThemes),
+      )
+      for (const theme of officialThemes) {
+        if (!/^[a-z0-9-]+$/.test(theme.id)) {
+          throw new Error(`official theme id is not kebab-case: ${theme.id}`)
+        }
+        if (!theme.tokens['--md-accent'] || !theme.tokens['--md-text']) {
+          throw new Error(`official theme ${theme.id} is missing core tokens`)
         }
       }
     }
