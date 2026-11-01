@@ -45,3 +45,11 @@ packages/vue-next/viewer.d.ts
 
 # CM6 P0 spike (local experiment)
 audit/cm6-spike/
+
+# Build & pack artifacts
+packages/*/dist/
+playground/dist/
+packages/bytemd/svelte/
+audit/local-release-*/
+*.tar.gz
+*.zip

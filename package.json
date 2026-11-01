@@ -12,10 +12,10 @@
     "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,svelte}\" && sort-package-json package.json \"packages/*/package.json\"",
     "generate": "node scripts/generate.mjs",
     "generate:check": "node scripts/generate.mjs --check",
-    "pub": "pnpm generate && pnpm generate:check && pnpm build && pnpm -r publish --no-git-checks",
+    "pub": "pnpm generate && pnpm generate:check && pnpm build && node scripts/publish-jihua.mjs",
     "style": "prettier --check \"**/*.{ts,tsx,mjs,json,md,svelte}\"",
     "test": "vitest",
-    "test:scripts": "node --test scripts/test/generate.test.mjs scripts/test/prod-perf.test.mjs scripts/test/hygiene.test.mjs",
+    "test:scripts": "node --test scripts/test/generate.test.mjs scripts/test/prod-perf.test.mjs scripts/test/hygiene.test.mjs scripts/test/publish-jihua.test.mjs",
     "test:scripts:coverage": "c8 --all --include=\"scripts/generate.mjs\" --include=\"audit/prod-perf-cdp-client.mjs\" --include=\"audit/prod-perf-archiver.mjs\" --include=\"audit/prod-perf-summarize.mjs\" --reports-dir=audit/prod-perf-script-coverage --reporter=text --reporter=json-summary --check-coverage --lines=80 --statements=80 --branches=80 --functions=75 node --test scripts/test/generate.test.mjs scripts/test/prod-perf.test.mjs scripts/test/hygiene.test.mjs"
   },
   "prettier": {

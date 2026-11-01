@@ -20,7 +20,10 @@ pnpm run test:scripts:coverage # 四个关键脚本的覆盖率门槛，CI 执�
 pnpm generate       # 生成 README.md / docs/index.md / packages/bytemd/README.md
 pnpm generate:check # 校验生成产物与源一致（防漂移）
 pnpm format         # prettier + sort-package-json
-pnpm pub            # generate → check → build → pnpm -r publish --no-git-checks
+pnpm pub            # generate → check → build → node scripts/publish-jihua.mjs(见纪律 3)
+node scripts/publish-jihua.mjs --dry-run   # 发布演练:改名+workspace 协议重写+打包,不联网
+node scripts/publish-jihua.mjs @bytemd/vue @bytemd/vue-next @bytemd/react  # 定向发布
+node scripts/publish-jihua.mjs --restore   # 发布中断后从备份还原 manifests
 ```
 
 安全审计需绕过华为云镜像（不支持 audit POST 端点）： `pnpm audit --prod --registry=https://registry.npmjs.org`
@@ -29,7 +32,7 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 
 1. **generate 与 prettier 冲突**：`README.md`、`docs/index.md`、`packages/bytemd/README.md` 是 `scripts/generate.mjs` 的生成产物，已列入 `.prettierignore`。若被误格式化导致 `generate:check` 失败，运行 `pnpm generate` 恢复，不要手工编辑这三个文件。
 2. **验收不虚报**：每批任务以实测证据闭环（采样目录、测试输出、构建日志），`--skip-*` 运行如实记为 skipped；人工/设备未验证的项标 incomplete，不勾选完成。
-3. **fork 版权**：不修改包的 `author`/`name`/LICENSE；`repository.url` 已统一指向 fork（bigJiHua/bytemd）。
+3. **fork 版权**：不修改包的 `author`/`name`/LICENSE；`repository.url` 已统一指向 fork（bigJiHua/bytemd）。npm 上以 `@jihua/*` 作用域发布：树内 name 保持上游原名，改名与 `workspace:` 协议重写由 `scripts/publish-jihua.mjs` 在发布时临时进行并在结束后字节级还原（1.22.0 首发手工改名 + `npm publish` 曾泄漏 `workspace:*`，导致 @jihua/bytemd-{vue,vue-next,react}@1.22.0 消费者安装报错，1.22.1 起用本脚本）。
 4. **测试数据不入库**：`.gitignore` 已忽略 `audit/prod-perf-*-*/`（采样运行目录）、`audit/cm6-spike/`（CM6 spike 本地实验）、`*.heapsnapshot`、`*.cpuprofile`、`audit/**/*.{json,ts,png,test.mjs}`（递归，任意 audit 子目录）。入库的只有验收文档（.md）和复现脚本/页面（.mjs/.html/.svelte）。
 5. **测量先订阅后执行**：CDP 事件等待必须在触发动作之前订阅；页面求值包在函数中并检查 `exceptionDetails`。
 6. **批处理纪律**：一次一个批次，每批完成即跑全量回归（`pnpm test` + `pnpm run test:scripts` + `pnpm build` + `pnpm generate:check`）并更新 `PLAN.md` 进度日志。
