@@ -46,8 +46,15 @@ $max-width: 800px;
 
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial,
-    sans-serif, Apple Color Emoji, Segoe UI Emoji;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Helvetica,
+    Arial,
+    sans-serif,
+    Apple Color Emoji,
+    Segoe UI Emoji;
   color: var(--bytemd-text);
   border: 1px solid var(--bytemd-border);
   background-color: var(--bytemd-bg);
@@ -56,7 +63,12 @@ $max-width: 800px;
   .CodeMirror,
   code,
   kbd {
-    font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+    font-family:
+      SFMono-Regular,
+      Consolas,
+      Liberation Mono,
+      Menlo,
+      monospace;
   }
 
   &-toolbar {
@@ -110,11 +122,14 @@ $max-width: 800px;
     &-groups {
       display: grid;
       flex: none;
-      grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+      // 图标定宽 28px：空间足够时单行铺开（桌面），不足自动换行（移动端）。
+      // 不用 1fr 拉伸——超宽编辑器下图标会被拉散；定宽列 + start 对齐保持紧凑。
+      grid-template-columns: repeat(auto-fill, 28px);
       grid-auto-rows: 28px;
       gap: 4px 2px;
       width: 100%;
-      max-width: 598px;
+      max-width: none;
+      justify-content: start;
     }
 
     &-group {
@@ -144,7 +159,9 @@ $max-width: 800px;
       color: var(--bytemd-text-muted);
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.12s ease, color 0.12s ease,
+      transition:
+        background-color 0.12s ease,
+        color 0.12s ease,
         box-shadow 0.12s ease;
 
       @media (hover: hover) {
@@ -179,7 +196,9 @@ $max-width: 800px;
       color: var(--bytemd-icon);
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.12s ease, color 0.12s ease;
+      transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
 
       svg,
       img {

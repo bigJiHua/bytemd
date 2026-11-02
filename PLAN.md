@@ -308,3 +308,5 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - 2026-11-02：工具栏瘦身（main）。按用户反馈：①删除 H/H1/H2/H3 四个标题动作（含 H4-6 下拉与 headingAction 工厂），标题改由行内 # 语法书写；②五个彩色提示块按钮（默认/成功/警告/信息/重要）收进一个下拉（父级蓝点图标，locale 新增 callout 键——en/zh_Hans，其余语言走 en 回退；types.ts BytemdLocale +callout）。移动端 390px 工具栏由 4+ 行降到 3 行。测试更新：actions.test 断言标题动作为「不存在」、callout 下拉子项五色齐全且 zh locale 跟随；回归 26 文件 231/231、build、generate:check ✓。playground 实拍桌面下拉展开与移动端排布 ✓。站点吃到此变更需发布 1.22.2。
 
 - 2026-11-03：工具栏继续瘦身（main）。无序/有序两个列表按钮收进一个下拉（父级 ListTwo 图标，locale 新增 list 泛化键——en/zh_Hans，types.ts +list）。**顺手修掉 editor.svelte 的 `TODO: nested shortcuts`**：快捷键收集改为递归（含下拉子项），否则 ul/ol 收进下拉后 Ctrl+U/O 会静默丢失——该修复对所有下拉子项快捷键通用。actions.test 新增 List 下拉断言（子项=无序/有序）；回归 26 文件 231/231、build、generate:check ✓；playground(5199) 实拍下拉展开 ✓。
+
+- 2026-11-03：工具栏单行化（main）。用户反馈桌面端仍折两行——根因是 groups 网格 `max-width: 598px`（20 列硬上限，30 图标时代的设计）。改为 `repeat(auto-fill, 28px)` 定宽列 + `justify-content: start` + 去上限：空间足够即单行铺开、不足自动换行（移动端保持换行）、超宽编辑器下图标不拉伸。实测 1280 分屏 h=28 单行、390px h=156 多行换行。
