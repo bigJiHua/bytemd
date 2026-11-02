@@ -75,6 +75,7 @@ export interface BytemdLocale {
   codeText: string
   codeBlock: string
   codeLang: string
+  list: string
   ul: string
   ulItem: string
   ol: string

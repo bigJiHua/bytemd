@@ -463,31 +463,42 @@ export function getBuiltinActions(
       },
     },
     {
-      title: locale.ul,
+      // 无序/有序两个列表按钮收进一个下拉，节省工具栏横向空间
+      title: locale.list,
       group: 'block',
       icon: icons.ListTwo,
-      cheatsheet: `- ${locale.ulItem}`,
       handler: {
-        type: 'action',
-        shortcut: getShortcutWithPrefix('U', true),
-        click({ replaceLines, editor }) {
-          replaceLines((line) => '- ' + line)
-          editor.focus()
-        },
-      },
-    },
-    {
-      title: locale.ol,
-      group: 'block',
-      icon: icons.OrderedList,
-      cheatsheet: `1. ${locale.olItem}`,
-      handler: {
-        type: 'action',
-        shortcut: getShortcutWithPrefix('O', true),
-        click({ replaceLines, editor }) {
-          replaceLines((line, i) => `${i + 1}. ${line}`)
-          editor.focus()
-        },
+        type: 'dropdown',
+        actions: [
+          {
+            title: locale.ul,
+            group: 'block',
+            icon: icons.ListTwo,
+            cheatsheet: `- ${locale.ulItem}`,
+            handler: {
+              type: 'action',
+              shortcut: getShortcutWithPrefix('U', true),
+              click({ replaceLines, editor }) {
+                replaceLines((line) => '- ' + line)
+                editor.focus()
+              },
+            },
+          },
+          {
+            title: locale.ol,
+            group: 'block',
+            icon: icons.OrderedList,
+            cheatsheet: `1. ${locale.olItem}`,
+            handler: {
+              type: 'action',
+              shortcut: getShortcutWithPrefix('O', true),
+              click({ replaceLines, editor }) {
+                replaceLines((line, i) => `${i + 1}. ${line}`)
+                editor.focus()
+              },
+            },
+          },
+        ],
       },
     },
     {

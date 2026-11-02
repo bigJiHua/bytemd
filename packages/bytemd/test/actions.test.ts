@@ -60,6 +60,14 @@ test('custom toolbar actions carry icons and cheatsheets', () => {
     expect(item?.cheatsheet).toBeTruthy()
   }
 
+  const listMenu = action(en.list)
+  expect(listMenu?.handler?.type).toBe('dropdown')
+  if (listMenu?.handler?.type !== 'dropdown') throw new Error('not a dropdown')
+  expect(listMenu.handler.actions.map((item) => item.title)).toEqual([
+    en.ul,
+    en.ol,
+  ])
+
   const calloutMenu = action(en.callout)
   expect(calloutMenu?.handler?.type).toBe('dropdown')
   if (calloutMenu?.handler?.type !== 'dropdown')

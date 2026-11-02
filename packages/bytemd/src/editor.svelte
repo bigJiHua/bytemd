@@ -179,14 +179,19 @@
     host()!.cbs = plugins.map((p) => p.editorEffect?.(effectContext))
 
     keyMap = {}
-    // TODO: nested shortcuts
-    actions.leftActions.forEach(({ handler }) => {
-      if (handler?.type === 'action' && handler.shortcut) {
-        keyMap[handler.shortcut] = () => {
-          handler.click(context)
+    // 递归收集快捷键（含下拉子项），否则动作收进下拉后其快捷键会丢失
+    const collectShortcuts = (items: typeof actions.leftActions): void => {
+      items.forEach(({ handler }) => {
+        if (!handler) return
+        if (handler.type === 'action' && handler.shortcut) {
+          keyMap[handler.shortcut] = () => {
+            handler.click(context)
+          }
         }
-      }
-    })
+        if (handler.type === 'dropdown') collectShortcuts(handler.actions)
+      })
+    }
+    collectShortcuts(actions.leftActions)
     editor.addKeyMap(keyMap)
   }
   function off() {
