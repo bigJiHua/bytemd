@@ -60,6 +60,10 @@ test('custom toolbar actions carry icons and cheatsheets', () => {
     expect(item?.cheatsheet).toBeTruthy()
   }
 
+  const calloutMenu = action(en.callout)
+  expect(calloutMenu?.handler?.type).toBe('dropdown')
+  if (calloutMenu?.handler?.type !== 'dropdown')
+    throw new Error('not a dropdown')
   for (const title of [
     en.calloutDefault,
     en.calloutSuccess,
@@ -67,7 +71,7 @@ test('custom toolbar actions carry icons and cheatsheets', () => {
     en.calloutInfo,
     en.calloutDanger,
   ]) {
-    const item = action(title)
+    const item = calloutMenu.handler.actions.find((a) => a.title === title)
     expect(item?.icon).toContain('bytemd-callout-dot')
     expect(item?.cheatsheet).toBeTruthy()
     expect(item?.handler?.type).toBe('action')
@@ -86,11 +90,19 @@ test('custom action labels follow the locale', () => {
     zhHans.fontColor,
     zhHans.bgColor,
     zhHans.hrText,
-    zhHans.calloutDefault,
-    zhHans.calloutDanger,
+    zhHans.callout,
   ]) {
     expect(titles).toContain(title)
   }
+  const zhCallout = zhActions.find((item) => item.title === zhHans.callout)
+  if (zhCallout?.handler?.type !== 'dropdown') throw new Error('not a dropdown')
+  expect(zhCallout.handler.actions.map((item) => item.title)).toEqual([
+    zhHans.calloutDefault,
+    zhHans.calloutSuccess,
+    zhHans.calloutWarning,
+    zhHans.calloutInfo,
+    zhHans.calloutDanger,
+  ])
 })
 
 test('font size action wraps the selection or the current line', () => {
@@ -152,21 +164,18 @@ test('text divider action inserts the template and selects the label', () => {
   ])
 })
 
-test('heading levels 1-3 are direct and 4-6 stay in a dropdown', () => {
-  for (const title of [en.h1, en.h2, en.h3]) {
-    const item = action(title)
-    expect(item?.handler?.type).toBe('action')
-    expect(item?.cheatsheet).toBeTruthy()
-  }
-
-  const more = leftActions.find((item) => item.title === en.headingText)
-  expect(more?.handler?.type).toBe('dropdown')
-  if (more?.handler?.type !== 'dropdown') throw new Error('no heading menu')
-  expect(more.handler.actions.map((item) => item.title)).toEqual([
+test('heading toolbar actions are removed (headings are written inline)', () => {
+  for (const title of [
+    en.headingText,
+    en.h1,
+    en.h2,
+    en.h3,
     en.h4,
     en.h5,
     en.h6,
-  ])
+  ]) {
+    expect(action(title)).toBeUndefined()
+  }
 })
 
 test('every cheatsheet in Help has a toolbar handler and icon', () => {

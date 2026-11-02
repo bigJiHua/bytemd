@@ -211,33 +211,6 @@ export function getBuiltinActions(
   plugins: BytemdPlugin[],
   uploadImages: EditorProps['uploadImages'],
 ): { leftActions: BytemdAction[]; rightActions: BytemdAction[] } {
-  const headingAction = (level: number): BytemdAction => ({
-    title: locale[`h${level}` as keyof BytemdLocale],
-    group: 'heading',
-
-    icon: [
-      icons.H1,
-      icons.H2,
-      icons.H3,
-      icons.LevelFourTitle,
-      icons.LevelFiveTitle,
-      icons.LevelSixTitle,
-    ][level - 1],
-    cheatsheet:
-      level <= 3 ? `${'#'.repeat(level)} ${locale.headingText}` : undefined,
-    handler: {
-      type: 'action',
-      click({ replaceLines, editor }) {
-        replaceLines((line) => {
-          line = line.trim().replace(/^#*/, '').trim()
-          line = '#'.repeat(level) + ' ' + line
-          return line
-        })
-        editor.focus()
-      },
-    },
-  })
-
   const rangeStyleAction = (
     kind: 'size' | 'color' | 'bg',
     value: string,
@@ -327,18 +300,6 @@ export function getBuiltinActions(
   ]
 
   const leftActions: BytemdAction[] = [
-    {
-      title: locale.headingText,
-      group: 'heading',
-      icon: icons.H,
-      handler: {
-        type: 'dropdown',
-        actions: [4, 5, 6].map(headingAction),
-      },
-    },
-    headingAction(1),
-    headingAction(2),
-    headingAction(3),
     {
       title: locale.fontSize,
       group: 'style',
@@ -598,7 +559,16 @@ export function getBuiltinActions(
   }))
 
   leftActions.push(
-    ...calloutActions,
+    {
+      // 五个彩色提示块收进一个下拉，节省工具栏横向空间（移动端尤其明显）
+      title: locale.callout,
+      group: 'custom',
+      icon: `<span class="bytemd-callout-dot" style="background-color:#409eff"></span>`,
+      handler: {
+        type: 'dropdown',
+        actions: calloutActions,
+      },
+    },
     {
       title: locale.accordion,
       group: 'custom',
