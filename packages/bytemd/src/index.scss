@@ -518,21 +518,21 @@ $max-width: 800px;
   }
 
   /* Tool 面板条目：icon + 介绍 + 【使用】钮一行，语法另起一行 */
-  &-tool-list {
+  ul.bytemd-tool-list {
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  &-tool-item {
+  ul.bytemd-tool-list li.bytemd-tool-item {
     list-style: none;
     margin-bottom: 14px;
   }
-  &-tool-row {
+  ul.bytemd-tool-list .bytemd-tool-row {
     display: flex;
     align-items: center;
     gap: 8px;
 
-    .bytemd-help-icon {
+    ul.bytemd-tool-list .bytemd-help-icon {
       flex: none;
       display: flex;
       align-items: center;
@@ -544,7 +544,7 @@ $max-width: 800px;
         display: block;
       }
     }
-    .bytemd-help-title {
+    ul.bytemd-tool-list .bytemd-help-title {
       flex: 1 1 auto;
       min-width: 0;
       padding-left: 0;
@@ -573,7 +573,7 @@ $max-width: 800px;
       outline-offset: 1px;
     }
   }
-  &-tool-syntax {
+  ul.bytemd-tool-list .bytemd-tool-syntax {
     clear: both;
     margin-top: 4px;
     padding-left: 24px;
