@@ -17,6 +17,7 @@
     cancelEditorInteractions,
     createEditorUtils,
     getBuiltinActions,
+    getHeadingToolActions,
     handleImageUpload,
   } from './editor'
   import Help from './help.svelte'
@@ -63,7 +64,11 @@
   const dispatch = createEventDispatcher<{ change: { value: string } }>()
 
   $: actions = getBuiltinActions(mergedLocale, plugins, uploadImages)
+  // Tool 面板专属条目：标题动作已从工具栏移除，只在面板里出现
+  $: toolExtraActions = getHeadingToolActions(mergedLocale)
   $: split = mode === 'split' || (mode === 'auto' && containerWidth >= 800)
+  // 窄屏（tab 模式）：不渲染动作工具栏、隐藏状态栏，工具全部收进 Tool 面板
+  $: narrow = !split
   $: ((_) => {
     // reset active tab
     if (split) activeTab = false
@@ -125,17 +130,17 @@
 
     if (split && activeTab === false) {
       if (sidebar) {
-        edit = `width:calc(${splitRatio}% - ${sidebar ? 140 : 0}px)`
-        preview = `width:calc(${100 - splitRatio}% - ${sidebar ? 140 : 0}px)`
+        edit = `width:calc(${splitRatio}% - ${sidebar && !narrow ? 140 : 0}px)`
+        preview = `width:calc(${100 - splitRatio}% - ${sidebar && !narrow ? 140 : 0}px)`
       } else {
         edit = `width:${splitRatio}%`
         preview = `width:${100 - splitRatio}%`
       }
     } else if (activeTab === 'preview') {
       edit = 'display:none'
-      preview = `width:calc(100% - ${sidebar ? 280 : 0}px)`
+      preview = `width:calc(100% - ${sidebar && !narrow ? 280 : 0}px)`
     } else {
-      edit = `width:calc(100% - ${sidebar ? 280 : 0}px)`
+      edit = `width:calc(100% - ${sidebar && !narrow ? 280 : 0}px)`
       preview = 'display:none'
       // TODO: use width:0 to make scroll sync work until
       // the position calculation improved (causes white screen after switching to editor only)
@@ -484,6 +489,7 @@
   class:bytemd-split={split && activeTab === false}
   class:bytemd-fullscreen={fullscreen}
   class:bytemd-dragging={dragging}
+  class:bytemd-narrow={narrow}
   bind:this={root}
 >
   <Toolbar
@@ -614,6 +620,9 @@
       <Help
         locale={mergedLocale}
         actions={actions.leftActions}
+        extraActions={toolExtraActions}
+        {context}
+        {narrow}
         visible={sidebar === 'help'}
       />
       <Toc
@@ -625,18 +634,20 @@
       />
     </div>
   </div>
-  <Status
-    locale={mergedLocale}
-    showSync={!overridePreview && split}
-    value={debouncedValue}
-    {syncEnabled}
-    islimited={value.length > maxLength}
-    on:sync={(e) => {
-      syncEnabled = e.detail
-    }}
-    on:top={() => {
-      editor.scrollTo(null, 0)
-      previewEl.scrollTo({ top: 0 })
-    }}
-  />
+  {#if !narrow}
+    <Status
+      locale={mergedLocale}
+      showSync={!overridePreview && split}
+      value={debouncedValue}
+      {syncEnabled}
+      islimited={value.length > maxLength}
+      on:sync={(e) => {
+        syncEnabled = e.detail
+      }}
+      on:top={() => {
+        editor.scrollTo(null, 0)
+        previewEl.scrollTo({ top: 0 })
+      }}
+    />
+  {/if}
 </div>

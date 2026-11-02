@@ -42,7 +42,7 @@
       group: 'sidebar',
     },
     {
-      title: helpActive ? locale.closeHelp : locale.help,
+      title: locale.tool,
       icon: icons.Helpcenter,
       handler: {
         type: 'action',

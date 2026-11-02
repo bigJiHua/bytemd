@@ -118,18 +118,21 @@ $max-width: 800px;
       }
     }
 
-    // 自适应网格：桌面最多 20 列（598px），宽度不足时自动降列换行。
+    // 弹性工具栏：图标 26px 起步、每行自动填满行宽（桌面一行为主，移动端每行铺满），
+    // 放不下自动换行。max-width 44px 防止超宽编辑器下图标过度拉伸。
     &-groups {
-      display: grid;
+      display: flex;
       flex: none;
-      // 图标定宽 28px：空间足够时单行铺开（桌面），不足自动换行（移动端）。
-      // 不用 1fr 拉伸——超宽编辑器下图标会被拉散；定宽列 + start 对齐保持紧凑。
-      grid-template-columns: repeat(auto-fill, 28px);
-      grid-auto-rows: 28px;
-      gap: 4px 2px;
+      flex-wrap: wrap;
+      gap: 4px 0;
       width: 100%;
       max-width: none;
-      justify-content: start;
+
+      .bytemd-toolbar-icon {
+        flex: 1 1 26px;
+        min-width: 26px;
+        max-width: 44px;
+      }
     }
 
     &-group {
@@ -511,6 +514,94 @@ $max-width: 800px;
     &-content {
       float: right;
       font-size: 12px;
+    }
+  }
+
+  /* Tool 面板条目：icon + 介绍 + 【使用】钮一行，语法另起一行 */
+  &-tool-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  &-tool-item {
+    list-style: none;
+    margin-bottom: 14px;
+  }
+  &-tool-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .bytemd-help-icon {
+      flex: none;
+      display: flex;
+      align-items: center;
+      padding: 0;
+
+      svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+    }
+    .bytemd-help-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding-left: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  &-tool-use {
+    flex: none;
+    font-size: 12px;
+    line-height: 1;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--bytemd-border);
+    background: var(--bytemd-bg-subtle, transparent);
+    color: var(--bytemd-icon);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--bytemd-primary);
+      border-color: var(--bytemd-primary);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--bytemd-primary);
+      outline-offset: 1px;
+    }
+  }
+  &-tool-syntax {
+    clear: both;
+    margin-top: 4px;
+    padding-left: 24px;
+    font-size: 12px;
+
+    code {
+      font-family: var(
+        --bytemd-font-mono,
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        monospace
+      );
+      color: var(--bytemd-muted, inherit);
+    }
+  }
+
+  /* 窄屏（tab 模式）：侧栏改为浮层，不再挤压编辑/预览宽度 */
+  &.bytemd-narrow {
+    .bytemd-sidebar {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(320px, 88%);
+      max-width: none;
+      z-index: 30;
+      background-color: var(--bytemd-bg-card, #fff);
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
     }
   }
 

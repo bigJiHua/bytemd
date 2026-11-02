@@ -40,6 +40,8 @@ export interface BytemdLocale {
   previewOnly: string
   exitPreviewOnly: string
   help: string
+  tool: string
+  use: string
   closeHelp: string
   toc: string
   closeToc: string

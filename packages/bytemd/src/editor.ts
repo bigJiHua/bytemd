@@ -206,6 +206,37 @@ export async function handleImageUpload(
   editor.focus()
 }
 
+/**
+ * 标题工具（H1-H6）：不进工具栏（已按移动端反馈移除），仅供 Tool 面板条目使用。
+ */
+export function getHeadingToolActions(locale: BytemdLocale): BytemdAction[] {
+  return [1, 2, 3, 4, 5, 6].map((level) => ({
+    title: locale[`h${level}` as keyof BytemdLocale],
+    group: 'heading',
+    icon: [
+      icons.H1,
+      icons.H2,
+      icons.H3,
+      icons.LevelFourTitle,
+      icons.LevelFiveTitle,
+      icons.LevelSixTitle,
+    ][level - 1],
+    cheatsheet:
+      level <= 3 ? `${'#'.repeat(level)} ${locale.headingText}` : undefined,
+    handler: {
+      type: 'action',
+      click({ replaceLines, editor }) {
+        replaceLines((line) => {
+          line = line.trim().replace(/^#*/, '').trim()
+          line = '#'.repeat(level) + ' ' + line
+          return line
+        })
+        editor.focus()
+      },
+    },
+  }))
+}
+
 export function getBuiltinActions(
   locale: BytemdLocale,
   plugins: BytemdPlugin[],
