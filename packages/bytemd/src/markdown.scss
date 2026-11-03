@@ -174,7 +174,6 @@
     border-top: 1px solid var(--md-border);
   }
 
-
   @include md-divider;
 
   // ===== Tables =====
@@ -275,7 +274,6 @@
     border-radius: 4px;
   }
 
-
   // ===== Details (not the accordion component) =====
   details:not(.bytemd-accordion-item) {
     margin: 1em 0;
@@ -322,7 +320,6 @@
     overflow-x: auto;
     overflow-y: hidden;
   }
-
 
   @include md-mermaid;
 
