@@ -207,34 +207,27 @@ export async function handleImageUpload(
 }
 
 /**
- * 标题工具（H1-H6）：不进工具栏（已按移动端反馈移除），仅供 Tool 面板条目使用。
+ * 标题工具（单条）：不进工具栏（已按移动端反馈移除），仅供 Tool 面板使用。
+ * 使用即应用一级标题；其余层级用 # 的数量书写。
  */
-export function getHeadingToolActions(locale: BytemdLocale): BytemdAction[] {
-  return [1, 2, 3, 4, 5, 6].map((level) => ({
-    title: locale[`h${level}` as keyof BytemdLocale],
+export function getHeadingToolAction(locale: BytemdLocale): BytemdAction {
+  return {
+    title: locale.headingText,
     group: 'heading',
-    icon: [
-      icons.H1,
-      icons.H2,
-      icons.H3,
-      icons.LevelFourTitle,
-      icons.LevelFiveTitle,
-      icons.LevelSixTitle,
-    ][level - 1],
-    cheatsheet:
-      level <= 3 ? `${'#'.repeat(level)} ${locale.headingText}` : undefined,
+    icon: icons.H,
+    cheatsheet: `# ${locale.headingText}`,
     handler: {
       type: 'action',
       click({ replaceLines, editor }) {
         replaceLines((line) => {
           line = line.trim().replace(/^#*/, '').trim()
-          line = '#'.repeat(level) + ' ' + line
+          line = '# ' + line
           return line
         })
         editor.focus()
       },
     },
-  }))
+  }
 }
 
 export function getBuiltinActions(

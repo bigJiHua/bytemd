@@ -17,7 +17,7 @@
     cancelEditorInteractions,
     createEditorUtils,
     getBuiltinActions,
-    getHeadingToolActions,
+    getHeadingToolAction,
     handleImageUpload,
   } from './editor'
   import Help from './help.svelte'
@@ -65,10 +65,12 @@
 
   $: actions = getBuiltinActions(mergedLocale, plugins, uploadImages)
   // Tool 面板专属条目：标题动作已从工具栏移除，只在面板里出现
-  $: toolExtraActions = getHeadingToolActions(mergedLocale)
+  $: toolExtraActions = getHeadingToolAction(mergedLocale)
   $: split = mode === 'split' || (mode === 'auto' && containerWidth >= 800)
-  // 窄屏（tab 模式）：不渲染动作工具栏、隐藏状态栏，工具全部收进 Tool 面板
-  $: narrow = !split
+  // 窄屏与模式解耦：容器 < 800 一律按移动端处理——即使宿主强制 split，
+  // 也不渲染动作工具栏（用户规则：移动端不出现工具栏），改为 tab 形态 + Tool 面板
+  $: narrow = containerWidth < 800
+  $: effectiveSplit = split && !narrow
   $: ((_) => {
     // reset active tab
     if (split) activeTab = false
@@ -78,7 +80,7 @@
   let editorEl: HTMLElement
   let previewEl: HTMLElement
   let bodyEl: HTMLElement
-  let containerWidth = Infinity // TODO: first screen
+  let containerWidth = typeof window !== 'undefined' ? window.innerWidth : 800 // TODO: first screen
 
   let codemirror: ReturnType<typeof createCodeMirror>
   let editor: Editor
@@ -128,7 +130,7 @@
     let edit: string
     let preview: string
 
-    if (split && activeTab === false) {
+    if (effectiveSplit && activeTab === false) {
       if (sidebar) {
         edit = `width:calc(${splitRatio}% - ${sidebar && !narrow ? 140 : 0}px)`
         preview = `width:calc(${100 - splitRatio}% - ${sidebar && !narrow ? 140 : 0}px)`
@@ -268,6 +270,14 @@
   }
 
   onMount(() => {
+    // RO 在部分环境（IAB 空闲合成器）不派发：挂载即量一次，并挂 resize 兜底。
+    // jsdom 等无布局环境 offsetWidth=0，跳过（回落初始 window.innerWidth）。
+    const measureContainer = () => {
+      if (root && root.offsetWidth > 0) containerWidth = root.offsetWidth
+    }
+    measureContainer()
+    window.addEventListener('resize', measureContainer)
+
     codemirror = createCodeMirror()
 
     editor = codemirror(editorEl, {
@@ -441,7 +451,9 @@
     editor.on('paste', pasteHandler)
 
     resizeObserver = new ResizeObserver((entries) => {
-      containerWidth = entries[0].contentRect.width
+      // 无布局环境（jsdom）上报 0 宽，忽略以免误判窄屏
+      const w = entries[0].contentRect.width
+      if (w > 0) containerWidth = w
       invalidateScrollMap()
     })
     resizeObserver.observe(root, { box: 'border-box' })
@@ -486,7 +498,7 @@
 
 <div
   class="bytemd"
-  class:bytemd-split={split && activeTab === false}
+  class:bytemd-split={effectiveSplit && activeTab === false}
   class:bytemd-fullscreen={fullscreen}
   class:bytemd-dragging={dragging}
   class:bytemd-narrow={narrow}
@@ -494,7 +506,8 @@
 >
   <Toolbar
     {context}
-    {split}
+    split={effectiveSplit}
+    {narrow}
     {activeTab}
     {sidebar}
     {fullscreen}
@@ -543,7 +556,7 @@
     bind:this={bodyEl}
   >
     <div class="bytemd-editor" style={styles.edit} bind:this={editorEl} />
-    {#if split && activeTab === false}
+    {#if effectiveSplit && activeTab === false}
       <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
       <div
         class="bytemd-split-handle"
@@ -620,7 +633,7 @@
       <Help
         locale={mergedLocale}
         actions={actions.leftActions}
-        extraActions={toolExtraActions}
+        extraActions={[toolExtraActions]}
         {context}
         {narrow}
         visible={sidebar === 'help'}
@@ -637,7 +650,7 @@
   {#if !narrow}
     <Status
       locale={mergedLocale}
-      showSync={!overridePreview && split}
+      showSync={!overridePreview && effectiveSplit}
       value={debouncedValue}
       {syncEnabled}
       islimited={value.length > maxLength}

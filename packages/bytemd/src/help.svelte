@@ -2,7 +2,7 @@
   import type { BytemdAction, BytemdEditorContext, BytemdLocale } from './types'
 
   export let actions: BytemdAction[]
-  // 面板专属条目（如 H1-H6 标题动作）：不进工具栏，只在这里出现
+  // 面板专属条目（如标题动作）：不进工具栏，只在这里出现
   export let extraActions: BytemdAction[] = []
   export let locale: BytemdLocale
   export let visible: boolean
@@ -29,8 +29,24 @@
   }
 
   $: shortcutItems = flatShortcutItems([...actions, ...extraActions])
-  // 工具条目 = 顶层动作（下拉父项内嵌子条目），不摊平
-  $: entries = [...actions, ...extraActions]
+
+  /**
+   * 一个工具 = 一行。下拉型动作（字号/颜色/提示块/列表）只取一个代表用法：
+   * 沿用父级图标与标题，handler 用第一个可执行子项（字号优先 20px）。
+   */
+  const toEntry = (action: BytemdAction): BytemdAction => {
+    if (action.handler?.type !== 'dropdown') return action
+    const kids = action.handler.actions
+    const preferred = kids.find((k) => k.title === '20') ?? kids[0]
+    if (!preferred) return action
+    return {
+      ...action,
+      handler: preferred.handler,
+      cheatsheet: action.cheatsheet || preferred.cheatsheet,
+    }
+  }
+
+  $: entries = [...actions, ...extraActions].map(toEntry)
 
   const run = (action: BytemdAction): void => {
     if (!context) return
@@ -67,35 +83,6 @@
           <div class="bytemd-tool-syntax">
             <code>{action.cheatsheet}</code>
           </div>
-        {/if}
-        {#if action.handler?.type === 'dropdown'}
-          <ul class="bytemd-tool-sub">
-            {#each action.handler.actions as child}
-              <li class="bytemd-tool-item bytemd-tool-sub-item">
-                <div class="bytemd-tool-row">
-                  {#if child.icon}<div class="bytemd-help-icon">
-                      {@html child.icon}
-                    </div>{/if}
-                  <div class="bytemd-help-title">{child.title}</div>
-                  {#if child.handler?.type === 'action' && context}
-                    <button
-                      class="bytemd-tool-use"
-                      on:click={() => run(child)}
-                      on:keydown|self={(e) =>
-                        ['Enter', 'Space'].includes(e.code) && run(child)}
-                    >
-                      {locale.use}
-                    </button>
-                  {/if}
-                </div>
-                {#if child.cheatsheet}
-                  <div class="bytemd-tool-syntax">
-                    <code>{child.cheatsheet}</code>
-                  </div>
-                {/if}
-              </li>
-            {/each}
-          </ul>
         {/if}
       </li>
     {/each}
