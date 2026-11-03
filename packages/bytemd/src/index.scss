@@ -452,15 +452,22 @@ $max-width: 800px;
   }
 
   &-sidebar {
-    display: inline-block;
-    vertical-align: top; // Safari
+    display: flex;
+    flex-direction: column;
     height: 100%;
-    overflow: auto;
+    overflow: hidden;
     font-size: 16px;
     border-left: 1px solid var(--bytemd-border);
     width: $sidebar-width;
     position: relative;
     padding: 0 16px;
+
+    // TOC 与 Help 平级：各自填满并内部滚动
+    > .bytemd-toc {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
     &-close {
       position: absolute;
       padding: 16px;
@@ -517,7 +524,31 @@ $max-width: 800px;
     }
   }
 
-  /* Tool 面板条目：icon + 介绍 + 【使用】钮一行，语法另起一行 */
+  /* Tool 面板：head(工具标题)固定，列表区内部滚动 */
+  .bytemd-help.bytemd-tool {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .bytemd-tool-head {
+    flex: none;
+
+    h2 {
+      margin-top: 4px;
+    }
+  }
+  .bytemd-tool-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    // 右侧关闭钮悬浮在滚动区之上，滚动时留出呼吸空间
+    padding-right: 2px;
+  }
+
+  /* 工具条目：icon + 介绍一行，【使用】【复制】靠右；语法另起一行 */
   ul.bytemd-tool-list {
     list-style: none;
     margin: 0;
@@ -553,14 +584,21 @@ $max-width: 800px;
       white-space: nowrap;
     }
   }
-  &-tool-use {
+  .bytemd-tool-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &-tool-use,
+  &-tool-copy {
     flex: none;
     font-size: 12px;
     line-height: 1;
     padding: 5px 12px;
     border-radius: 999px;
     border: 1px solid var(--bytemd-border);
-    background: var(--bytemd-bg-subtle, transparent);
+    background: var(--bytemd-bg-subtle);
     color: var(--bytemd-icon);
     cursor: pointer;
 
@@ -572,6 +610,52 @@ $max-width: 800px;
       outline: 2px solid var(--bytemd-primary);
       outline-offset: 1px;
     }
+  }
+  &-tool-use {
+    color: var(--bytemd-primary);
+    border-color: var(--bytemd-primary);
+    background: var(--bytemd-primary-bg);
+
+    &:hover {
+      background: var(--bytemd-primary-bg-hover);
+    }
+  }
+  &-tool-toggle {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--bytemd-icon);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--bytemd-primary);
+      background: var(--bytemd-hover);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--bytemd-primary);
+      outline-offset: 1px;
+    }
+  }
+  &-tool-chevron {
+    display: flex;
+    transition: transform 0.18s ease;
+    transform: rotate(180deg); // 收起：▸
+
+    svg {
+      width: 13px;
+      height: 13px;
+      display: block;
+    }
+  }
+  &-tool-toggle-open &-tool-chevron {
+    transform: rotate(-90deg); // 展开：▾
   }
   ul.bytemd-tool-list .bytemd-tool-syntax {
     clear: both;
@@ -587,7 +671,19 @@ $max-width: 800px;
         Menlo,
         monospace
       );
-      color: var(--bytemd-muted, inherit);
+      color: var(--bytemd-text-muted, inherit);
+    }
+  }
+
+  /* 手风琴预设：缩进 + 左侧导轨，行高更紧凑 */
+  ul.bytemd-tool-sub {
+    list-style: none;
+    margin: 8px 0 0;
+    padding-left: 10px;
+    border-left: 2px solid var(--bytemd-border);
+
+    li.bytemd-tool-item {
+      margin-bottom: 10px;
     }
   }
 
@@ -600,7 +696,7 @@ $max-width: 800px;
       width: min(320px, 88%);
       max-width: none;
       z-index: 30;
-      background-color: var(--bytemd-bg-card, #fff);
+      background-color: var(--bytemd-bg);
       box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
     }
   }

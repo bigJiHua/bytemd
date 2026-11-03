@@ -207,25 +207,48 @@ export async function handleImageUpload(
 }
 
 /**
- * 标题工具（单条）：不进工具栏（已按移动端反馈移除），仅供 Tool 面板使用。
- * 使用即应用一级标题；其余层级用 # 的数量书写。
+ * 标题工具：不进工具栏（已按移动端反馈移除），仅供 Tool 面板使用。
+ * 面板以手风琴展开 H1-H6 预设；父行【使用】应用一级标题。
  */
 export function getHeadingToolAction(locale: BytemdLocale): BytemdAction {
+  const headingUse = (level: number) => ({
+    type: 'action' as const,
+    click({
+      replaceLines,
+      editor,
+    }: {
+      replaceLines: (fn: (line: string) => string) => void
+      editor: { focus: () => void }
+    }) {
+      replaceLines((line) => {
+        line = line.trim().replace(/^#*/, '').trim()
+        line = '#'.repeat(level) + ' ' + line
+        return line
+      })
+      editor.focus()
+    },
+  })
   return {
     title: locale.headingText,
     group: 'heading',
     icon: icons.H,
     cheatsheet: `# ${locale.headingText}`,
     handler: {
-      type: 'action',
-      click({ replaceLines, editor }) {
-        replaceLines((line) => {
-          line = line.trim().replace(/^#*/, '').trim()
-          line = '# ' + line
-          return line
-        })
-        editor.focus()
-      },
+      type: 'dropdown',
+      actions: [1, 2, 3, 4, 5, 6].map((level) => ({
+        title: locale[`h${level}` as keyof BytemdLocale],
+        group: 'heading',
+        icon: [
+          icons.H1,
+          icons.H2,
+          icons.H3,
+          icons.LevelFourTitle,
+          icons.LevelFiveTitle,
+          icons.LevelSixTitle,
+        ][level - 1],
+        cheatsheet: `${'#'.repeat(level)} ${locale.headingText}`,
+        handler: headingUse(level),
+      })),
     },
   }
 }

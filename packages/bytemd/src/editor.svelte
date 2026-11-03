@@ -65,7 +65,7 @@
 
   $: actions = getBuiltinActions(mergedLocale, plugins, uploadImages)
   // Tool 面板专属条目：标题动作已从工具栏移除，只在面板里出现
-  $: toolExtraActions = getHeadingToolAction(mergedLocale)
+  $: toolHeadingAction = getHeadingToolAction(mergedLocale)
   $: split = mode === 'split' || (mode === 'auto' && containerWidth >= 800)
   // 窄屏与模式解耦：容器 < 800 一律按移动端处理——即使宿主强制 split，
   // 也不渲染动作工具栏（用户规则：移动端不出现工具栏），改为 tab 形态 + Tool 面板
@@ -631,9 +631,12 @@
         {@html icons.Close}
       </div>
       <Help
+        on:use={() => {
+          sidebar = false
+        }}
         locale={mergedLocale}
         actions={actions.leftActions}
-        extraActions={[toolExtraActions]}
+        extraActions={[toolHeadingAction]}
         {context}
         {narrow}
         visible={sidebar === 'help'}
