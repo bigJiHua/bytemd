@@ -589,35 +589,25 @@ $max-width: 800px;
     display: flex;
     align-items: center;
     gap: 6px;
+    margin-left: auto; // 【使用】永远贴行最右
   }
-  &-tool-use,
-  &-tool-copy {
+  &-tool-use {
     flex: none;
     font-size: 12px;
     line-height: 1;
     padding: 5px 12px;
     border-radius: 999px;
-    border: 1px solid var(--bytemd-border);
-    background: var(--bytemd-bg-subtle);
-    color: var(--bytemd-icon);
+    border: 1px solid var(--bytemd-primary);
+    background: var(--bytemd-primary-bg);
+    color: var(--bytemd-primary);
     cursor: pointer;
 
     &:hover {
-      color: var(--bytemd-primary);
-      border-color: var(--bytemd-primary);
+      background: var(--bytemd-primary-bg-hover);
     }
     &:focus-visible {
       outline: 2px solid var(--bytemd-primary);
       outline-offset: 1px;
-    }
-  }
-  &-tool-use {
-    color: var(--bytemd-primary);
-    border-color: var(--bytemd-primary);
-    background: var(--bytemd-primary-bg);
-
-    &:hover {
-      background: var(--bytemd-primary-bg-hover);
     }
   }
   &-tool-toggle {

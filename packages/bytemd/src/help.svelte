@@ -76,30 +76,6 @@
     // 使用即收起面板（移动端插入后回到编辑）
     dispatch('use', action.title)
   }
-
-  let copiedKey = ''
-  let copiedTimer: ReturnType<typeof setTimeout>
-  const copy = (key: string, text: string): void => {
-    if (!text) return
-    const done = () => {
-      copiedKey = key
-      clearTimeout(copiedTimer)
-      copiedTimer = setTimeout(() => {
-        copiedKey = ''
-      }, 1200)
-    }
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text).then(done, done)
-    } else {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-      done()
-    }
-  }
 </script>
 
 <div class="bytemd-help bytemd-tool" class:bytemd-hidden={!visible}>
@@ -130,18 +106,6 @@
                     run(entry.representative ?? entry.action)}
                 >
                   {locale.use}
-                </button>
-              {/if}
-              {#if entry.syntax}
-                <button
-                  class="bytemd-tool-copy"
-                  data-tooltip={locale.copy}
-                  on:click={() => copy(key, entry.syntax)}
-                  on:keydown|self={(e) =>
-                    ['Enter', 'Space'].includes(e.code) &&
-                    copy(key, entry.syntax)}
-                >
-                  {copiedKey === key ? '✓' : locale.copy}
                 </button>
               {/if}
               {#if expandable}
@@ -185,18 +149,6 @@
                             ['Enter', 'Space'].includes(e.code) && run(child)}
                         >
                           {locale.use}
-                        </button>
-                      {/if}
-                      {#if child.cheatsheet}
-                        <button
-                          class="bytemd-tool-copy"
-                          data-tooltip={locale.copy}
-                          on:click={() => copy(ckey, child.cheatsheet!)}
-                          on:keydown|self={(e) =>
-                            ['Enter', 'Space'].includes(e.code) &&
-                            copy(ckey, child.cheatsheet!)}
-                        >
-                          {copiedKey === ckey ? '✓' : locale.copy}
                         </button>
                       {/if}
                     </div>
