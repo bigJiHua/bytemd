@@ -91,6 +91,10 @@ test('generation is read-only while planning and preserves custom config/exports
   assert.equal(pkg.exports['./worker'].import, './dist/worker.mjs')
   assert.equal(Object.keys(pkg.exports['.'])[0], 'svelte')
   assert.equal(Object.keys(pkg.exports['.'])[1], 'types')
+  assert.deepEqual(pkg.exports['.'].svelte, {
+    types: './svelte/index.d.ts',
+    default: './svelte/index.js',
+  })
   assert.equal(Object.keys(pkg.exports['./worker'])[0], 'types')
   assert.equal(pkg.exports['./processor'].require, './dist/processor.js')
   assert.deepEqual(pkg.dependencies, { example: '1.0.0' })
@@ -128,6 +132,21 @@ test('new plugin README/default config/license are created and a second run chan
   assert.deepEqual(second.changes, [])
   await applyGeneration(second)
   assert.equal(await f.read('packages/plugin-math/README.md'), readme)
+})
+
+test('generation migrates legacy Svelte exports without changing custom runtime entries', async (t) => {
+  const f = await fixture(t)
+  const before = JSON.parse(await f.read('packages/bytemd/package.json'))
+  before.exports['.'].svelte = './svelte/index.js'
+  await f.write('packages/bytemd/package.json', before)
+  await applyGeneration(await planGeneration(f.root))
+  const after = JSON.parse(await f.read('packages/bytemd/package.json'))
+  assert.deepEqual(after.exports['.'].svelte, {
+    types: './svelte/index.d.ts',
+    default: './svelte/index.js',
+  })
+  assert.equal(after.exports['.'].import, './custom-main.mjs')
+  assert.equal((await planGeneration(f.root)).changes.length, 0)
 })
 
 test('unmarked plugin docs and manual text outside generated regions survive updates', async (t) => {

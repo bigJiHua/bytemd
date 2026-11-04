@@ -216,9 +216,11 @@ export class CM6CompatEditor {
 
   private options: Record<string, any>
   private listeners = new Map<string, Set<Listener>>()
-  private keyMaps: Record<string, string | ((...args: any[]) => void)>[] = []
+  private keyMaps: Record<string, string | ((...args: any[]) => unknown)>[] = []
   private cleanups: (() => void)[] = []
   private readOnlyConf = new Compartment()
+  private cachedDoc: EditorState['doc'] | undefined
+  private cachedValue = ''
 
   constructor(target: HTMLElement, options: Record<string, any> = {}) {
     this.options = options
@@ -300,6 +302,7 @@ export class CM6CompatEditor {
   }
 
   private handleKeydown(event: KeyboardEvent) {
+    if (event.isComposing || event.keyCode === 229) return
     for (const map of this.keyMaps) {
       for (const [combo, action] of Object.entries(map)) {
         if (!this.matches(combo, event)) continue
@@ -309,7 +312,9 @@ export class CM6CompatEditor {
           // so only consume the event when the command reports handling it.
           if (!this.runCommand(action)) continue
         } else {
-          action()
+          // CM5-style callbacks receive their editor. False declines handling
+          // so the native CM6 keymap can continue (undefined still handles).
+          if (action(this) === false) continue
         }
         // CM6's own keymap listens on the same element; it also honors
         // defaultPrevented, but stop immediately so nothing else re-runs it.
@@ -348,7 +353,7 @@ export class CM6CompatEditor {
     }
   }
 
-  addKeyMap(map: Record<string, string | ((...args: any[]) => void)>) {
+  addKeyMap(map: Record<string, string | ((...args: any[]) => unknown)>) {
     this.keyMaps.push(map)
   }
 
@@ -368,7 +373,15 @@ export class CM6CompatEditor {
   }
 
   getValue() {
-    return this.view.state.doc.toString()
+    // CM6 Text is immutable: native transactions, undo and setValue all replace
+    // its identity. Keep only the latest string, including across selection-only
+    // updates, so controlled hosts do not serialize the full document repeatedly.
+    const doc = this.view.state.doc
+    if (doc !== this.cachedDoc) {
+      this.cachedDoc = doc
+      this.cachedValue = doc.toString()
+    }
+    return this.cachedValue
   }
 
   setValue(value: string) {
@@ -391,7 +404,8 @@ export class CM6CompatEditor {
     return this.posFromIndex(index)
   }
 
-  setCursor(pos: CM6Pos) {
+  setCursor(position: CM6Pos | number, ch = 0) {
+    const pos = typeof position === 'number' ? { line: position, ch } : position
     this.setSelection(pos, pos)
   }
 
@@ -543,6 +557,8 @@ export class CM6CompatEditor {
     this.cleanups = []
     this.listeners.clear()
     this.view.destroy()
+    this.cachedDoc = undefined
+    this.cachedValue = ''
   }
 }
 

@@ -18,6 +18,7 @@ export interface BytemdLocale {
   /** Accessible name of the toolbar; falls back to English. */
   toolbar?: string
   accordion: string
+  callout: string
   calloutDefault: string
   calloutSuccess: string
   calloutWarning: string
@@ -39,6 +40,8 @@ export interface BytemdLocale {
   previewOnly: string
   exitPreviewOnly: string
   help: string
+  tool: string
+  use: string
   closeHelp: string
   toc: string
   closeToc: string
@@ -74,6 +77,7 @@ export interface BytemdLocale {
   codeText: string
   codeBlock: string
   codeLang: string
+  list: string
   ul: string
   ulItem: string
   ol: string

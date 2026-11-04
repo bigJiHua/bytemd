@@ -11,6 +11,8 @@
 
   export let context: BytemdEditorContext
   export let split: boolean
+  // 窄屏（移动端）：不渲染动作按钮条，工具收进 Tool 面板
+  export let narrow = false
   export let activeTab: false | 'write' | 'preview'
   export let fullscreen: boolean
   export let sidebar: false | 'help' | 'toc'
@@ -42,7 +44,7 @@
       group: 'sidebar',
     },
     {
-      title: helpActive ? locale.closeHelp : locale.help,
+      title: locale.tool,
       icon: icons.Helpcenter,
       handler: {
         type: 'action',
@@ -63,7 +65,7 @@
         },
       },
       active: writeActive,
-      hidden: !split,
+      hidden: !split || narrow,
       group: 'mode',
     },
     {
@@ -76,7 +78,7 @@
         },
       },
       active: previewActive,
-      hidden: !split,
+      hidden: !split || narrow,
       group: 'mode',
     },
     {
@@ -408,7 +410,7 @@
     <ToolbarActions actions={rightActions} right />
   </div>
 
-  {#if !split}
+  {#if !split && !narrow}
     <div
       class="bytemd-toolbar-actions"
       role="group"

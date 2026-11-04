@@ -320,11 +320,16 @@ export default function mediumZoom(
         }
         const onClose = (event: MouseEvent) => {
           event.stopPropagation()
-          zoom?.close()
+          requestClose()
         }
         const onKeyDown = (event: KeyboardEvent) => {
           const roots = bodyLocks.get(doc)?.roots
           if (roots?.[roots.length - 1] !== root) return
+          if (event.key === 'Escape' || event.key === 'Esc') {
+            event.preventDefault()
+            requestClose()
+            return
+          }
           if (event.key === 'ArrowLeft' && multiple) {
             event.preventDefault()
             go(-1)
@@ -383,9 +388,20 @@ export default function mediumZoom(
         clearTimeout(closeFallback)
         closeFallback = setTimeout(() => {
           flushTransition()
+          if (!images.includes(zoom?.getZoomedImage() as HTMLImageElement))
+            return
           zoom?.close().catch(() => {})
+          // close() emits `close` synchronously and can arm another fallback.
+          clearTimeout(closeFallback)
           closeFallback = setTimeout(flushTransition, 100)
         }, 350)
+      }
+      const requestClose = () => {
+        if (!images.includes(zoom?.getZoomedImage() as HTMLImageElement)) return
+        // Arm cleanup even when close() is swallowed during the open animation.
+        onClose()
+        flushTransition()
+        zoom?.close().catch(() => {})
       }
       const onClosed = () => {
         clearTimeout(closeFallback)

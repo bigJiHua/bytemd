@@ -32,7 +32,7 @@ This page lists what is guaranteed, what changed, and how to move a host integra
 | `tabSize` | Mapped |
 | `indentUnit` | Mapped |
 | `readOnly` | Mapped, switchable via `setOption('readOnly', …)` |
-| `extraKeys` | Mapped; CM6 keymap runs first, declined commands fall through to the editor default |
+| `extraKeys` | Mapped; compatibility handlers run before the native keymap. Unhandled string commands and callbacks returning `false` fall through; callbacks receive the adapter instance |
 | `autofocus` | Mapped |
 | `undoDepth` | Mapped (history depth) |
 | everything else | Ignored; pass a CM6 extension through `editorExtensions` |
@@ -87,7 +87,7 @@ const view = editor.view // CM6 EditorView
 view.dispatch({ effects: myCompartment.reconfigure(myExtension) })
 ```
 
-`editor.view` is the escape hatch for every CM6 feature that the adapter does not expose.
+`editor.view` is the escape hatch for every CM6 feature that the adapter does not expose. `editorExtensions` configures the initial view; use CM6 compartments through `view.dispatch()` for runtime changes.
 
 ### Large documents
 
@@ -106,4 +106,5 @@ When `value` crosses `largeDocumentThreshold` (default `102400`, UTF-16 code uni
 - `packages/bytemd/test/cm6-plugin-contract.test.ts` exercises the adapter the way an out-of-repo plugin would, including the CM5 `Doc` difference.
 - All 9 shipped plugins were audited against the upstream README and TS types; none uses `editorEffect`, and only GFM/Mermaid actions touch `ctx.editor`.
 - Browser acceptance for the real editor: `audit/cm6-v2-input-verify.mjs` and `audit/cm6-closeout-verify.mjs` (production playground build over CDP).
-- Real OS IME and real mobile devices remain manual acceptance items; CDP composition is automation evidence, not a substitute.
+- The user confirmed OS IME and real mobile device acceptance separately. The recorded CDP composition runs remain automation evidence and do not replace those checks.
+- The main 1.22.4 integration, current performance comparison and stable package evidence are in [the 2.1.0 architecture decision](../audit/ARCHITECTURE_DECISION_20261104.md).

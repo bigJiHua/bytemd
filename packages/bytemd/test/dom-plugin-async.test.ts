@@ -9,7 +9,10 @@ vi.mock('katex', () => ({
   default: { render: vi.fn() },
 }))
 vi.mock('highlight.js', () => ({
-  default: { highlightElement: vi.fn() },
+  default: {
+    highlightElement: vi.fn(),
+    getLanguage: (name: string) => (name === 'js' ? {} : undefined),
+  },
 }))
 
 afterEach(() => {
@@ -102,6 +105,24 @@ test('highlight waits for shared initialization before either Viewer renders', a
   await waitFor(() => expect(H.highlightElement).toHaveBeenCalledTimes(2))
   expect(a.container.querySelector('code')?.textContent).toBe('first\n')
   expect(b.container.querySelector('code')?.textContent).toBe('second\n')
+})
+
+test('highlight leaves unknown explicit fences untouched and still processes known languages', async () => {
+  const result = render(Viewer, {
+    value:
+      '```mermaid\ngraph TD; A-->B\n```\n\n```foreign\nplain\n```\n\n```js\nknown\n```',
+    plugins: [highlight()],
+  })
+  await waitFor(() => expect(H.highlightElement).toHaveBeenCalledOnce())
+  expect(vi.mocked(H.highlightElement).mock.calls[0][0].className).toBe(
+    'language-js',
+  )
+  expect(
+    result.container.querySelector('code.language-mermaid')?.textContent,
+  ).toBe('graph TD; A-->B\n')
+  expect(
+    result.container.querySelector('code.language-foreign')?.textContent,
+  ).toBe('plain\n')
 })
 
 test('highlight restores partial mutations after failure and processes later blocks', async () => {

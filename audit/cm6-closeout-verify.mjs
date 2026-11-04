@@ -1,17 +1,19 @@
 // CM6 closeout browser verification: capability tokens (frontmatter, inline
 // HTML, markdown marks, headings) in light/dark, Enter list continuation via
 // extraKeys, and the 100x mount/destroy loop over the production consumer
-// page. Results go to audit/cm6-closeout-results.json (gitignored).
+// page. Each run creates audit/prod-perf-cm6-closeout-* (gitignored).
 import { BrowserLauncher } from './prod-perf-browser-launcher.mjs'
 import { CDPClient } from './prod-perf-cdp-client.mjs'
 import { HeapProfilerController } from './prod-perf-heap-profiler.mjs'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { writeFile } from 'node:fs/promises'
+import { mkdtemp, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
+const output = await mkdtemp(join(root, 'audit/prod-perf-cm6-closeout-'))
+console.log(`CM6 closeout evidence: ${output}`)
 const vite = join(root, 'node_modules/vite/bin/vite.js')
 const previewPort = Number(process.argv[2] || 5186)
 const debugPort = 9518
@@ -272,7 +274,7 @@ async function main() {
       measuredAt: new Date().toISOString(),
     }
     await writeFile(
-      join(root, 'audit/cm6-closeout-results.json'),
+      join(output, 'results.json'),
       JSON.stringify(result, null, 2),
     )
     console.log(JSON.stringify(result, null, 2))

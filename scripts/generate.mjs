@@ -177,8 +177,14 @@ export async function planGeneration(root = rootDir) {
           'index.min.css',
           'markdown.css',
           'markdown.min.css',
+          'custom-blocks.css',
+          'custom-blocks.min.css',
+          'index.bundle.css',
+          'index.bundle.min.css',
         ])
           exports[`./dist/${name}`] = `./dist/${name}`
+        // 官方主题(token 预设 + all.css 属性切换 + manifest)
+        exports['./themes/*'] = './dist/themes/*'
       }
       // The fork ships ESM/CJS only: UMD and its CDN entry fields are retired
       // with the publish-format trim (PLAN Phase 3).
@@ -191,10 +197,8 @@ export async function planGeneration(root = rootDir) {
         exports,
         files: [],
       })
-      // TypeScript's conditional resolution needs types before runtime
-      // conditions. The `svelte` condition must stay first for Svelte-aware
-      // resolvers (`customConditions: ["svelte"]`), otherwise `types` wins and
-      // they receive the dist class declarations instead of the components.
+      // Svelte templates resolve component declarations before imperative class
+      // types; each branch still resolves types before its runtime entry.
       for (const name of Object.keys(exports)) {
         const current = pkg.exports[name]
         if (
@@ -204,12 +208,19 @@ export async function planGeneration(root = rootDir) {
           Object.hasOwn(current, 'types')
         ) {
           const { types, ...conditions } = current
-          if (name === '.' && conditions.svelte !== undefined) {
-            const { svelte, ...rest } = conditions
-            pkg.exports[name] = { svelte, types, ...rest }
-          } else {
-            pkg.exports[name] = { types, ...conditions }
+          if (pkg.name === 'bytemd' && name === '.') {
+            if (conditions.svelte === './svelte/index.js')
+              conditions.svelte = {
+                types: './svelte/index.d.ts',
+                default: './svelte/index.js',
+              }
+            if (conditions.svelte && typeof conditions.svelte === 'object') {
+              const { svelte, ...rest } = conditions
+              pkg.exports[name] = { svelte, types, ...rest }
+              continue
+            }
           }
+          pkg.exports[name] = { types, ...conditions }
         }
       }
       if (!Array.isArray(pkg.files))

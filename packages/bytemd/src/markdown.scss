@@ -1,88 +1,21 @@
 // ByteMD standard Markdown theme (opt-in external stylesheet)
 //
-//   import 'bytemd/dist/index.css'    // editor chrome
-//   import 'bytemd/dist/markdown.css' // Markdown content
+//   import 'bytemd/dist/index.css'            // editor chrome
+//   import 'bytemd/dist/markdown.css'         // full theme (typography + custom blocks)
+//   import 'bytemd/dist/custom-blocks.css'    // fork-proprietary blocks only
+//   import 'bytemd/dist/index.bundle.css'     // index.css + markdown.css convenience
 //
-// Every token is a CSS custom property so host apps can override it without
-// patching this file. The fallbacks are a clean light reading theme; when a
-// host defines --text-primary / --bg-soft / --brand-500 (or the --md-* names),
-// the theme follows the host's light/dark design tokens automatically.
+// Composition: tokens and fork-proprietary sections live in shared partials
+// (_markdown-tokens.scss / _markdown-parts.scss); this file keeps only the
+// standard typography and pulls the shared pieces back at their original
+// positions so the compiled output stays byte-stable. Every token is a CSS
+// custom property so host apps can override it without patching these files.
+
+@use 'markdown-tokens' as *;
+@use 'markdown-parts' as *;
 
 .markdown-body {
-  // ===== Design tokens =====
-  --md-text: var(--text-primary, #1f2d3d);
-  --md-muted: var(--text-secondary, #6b7280);
-  --md-border: var(--border-color, #e5e7eb);
-  --md-border-soft: var(--border-light, #f1f5f9);
-  --md-border-strong: var(--border-strong, #d0d7de);
-  --md-bg-soft: var(--bg-soft, #f5f7fa);
-  --md-surface: var(--bg-card, #fff);
-  --md-link: var(--brand-500, #2f6fdd);
-  --md-link-hover: var(--brand-600, #1e56c9);
-  --md-accent: #2b7a4b;
-  --md-radius: 8px;
-  --md-radius-sm: 6px;
-  --md-font-size: 16px;
-  --md-line-height: 1.75;
-  --md-code-bg: var(--bg-soft, #f6f8fa);
-  --md-inline-code-bg: var(--bg-soft, rgba(175, 184, 193, 0.22));
-  --md-quote-border: var(--border-strong, #d0d7de);
-
-  --md-callout-default: #409eff;
-  --md-callout-default-bg: #ecf5ff;
-  --md-callout-default-text: #1554ad;
-  --md-callout-success: #67c23a;
-  --md-callout-success-bg: #f0f9eb;
-  --md-callout-success-text: #529b2e;
-  --md-callout-warning: #e6a23c;
-  --md-callout-warning-bg: #fdf6ec;
-  --md-callout-warning-text: #b88230;
-  --md-callout-info: #909399;
-  --md-callout-info-bg: #f4f4f5;
-  --md-callout-info-text: #73767a;
-  --md-callout-danger: #f56c6c;
-  --md-callout-danger-bg: #fef0f0;
-  --md-callout-danger-text: #c45656;
-
-  --md-copy-color: #57606a;
-  --md-copy-bg: rgba(255, 255, 255, 0.85);
-  --md-copy-border: #d0d7de;
-  --md-code-header-bg: rgba(27, 31, 36, 0.04);
-
-  --md-timeline-line: #e2e2e0;
-  --md-timeline-doing-line: #eaf0f5;
-  --md-timeline-dashed: #e9e9e7;
-  --md-timeline-done: #40c057;
-  --md-timeline-doing: #2b7a4b;
-  --md-timeline-error: #ff6b6b;
-  --md-timeline-error-text: #f03e3e;
-  --md-timeline-milestone: #fab005;
-  --md-timeline-milestone-text: #f08c00;
-  --md-timeline-done-bg: #e8f5ea;
-  --md-timeline-doing-bg: #f4f8f6;
-  --md-timeline-todo-bg: #f1f3f5;
-  --md-timeline-error-bg: #fbe9e9;
-  --md-timeline-milestone-bg: #fbf2de;
-  --md-timeline-todo-text: #6d6e6f;
-  --md-timeline-hover: rgba(43, 122, 75, 0.05);
-
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
-  font-size: var(--md-font-size);
-  line-height: var(--md-line-height);
-  color: var(--md-text);
-  letter-spacing: 0.01em;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  tab-size: 4;
-
-  > :first-child {
-    margin-top: 0;
-  }
-  > :last-child {
-    margin-bottom: 0;
-  }
+  @include md-tokens-light;
 
   // ===== Headings =====
   h1,
@@ -91,7 +24,7 @@
   h4,
   h5,
   h6 {
-    margin: 1.5em 0 0.6em;
+    margin: 1.75em 0 0.75em;
     color: inherit;
     font-weight: 600;
     line-height: 1.35;
@@ -122,7 +55,7 @@
 
   // ===== Text =====
   p {
-    margin: 0.8em 0;
+    margin: 1em 0;
   }
 
   strong {
@@ -241,25 +174,7 @@
     border-top: 1px solid var(--md-border);
   }
 
-  // ===== Divider with centered text =====
-  // Flex structure and side lines are injected by rehypeInlineStyle so the
-  // divider still works when a host does not import this optional theme.
-  .bytemd-hr-text {
-    margin: 1.6em 0;
-    font-size: 0.95em;
-    font-weight: 500;
-    line-height: 1.5;
-    color: var(--md-muted);
-  }
-
-  .bytemd-hr-text-label img {
-    width: auto;
-    height: auto;
-    max-width: 8em;
-    max-height: 2em;
-    object-fit: contain;
-    vertical-align: middle;
-  }
+  @include md-divider;
 
   // ===== Tables =====
   table {
@@ -335,39 +250,8 @@
 
   // The header is only reserved after the Viewer injects code tools, so a
   // plain HTML <pre> rendered by a host without the Viewer keeps no empty bar.
-  pre.bytemd-code-block {
-    padding-top: 32px;
-  }
 
-  pre.bytemd-code-block::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 32px;
-    background: var(--md-code-header-bg);
-    border-bottom: 1px solid var(--md-border);
-    border-radius: calc(var(--md-radius) - 1px) calc(var(--md-radius) - 1px) 0 0;
-    pointer-events: none;
-  }
-
-  pre.bytemd-code-block[data-code-lang]::after {
-    content: attr(data-code-lang);
-    position: absolute;
-    top: 0;
-    left: 14px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--md-muted);
-    text-transform: uppercase;
-    pointer-events: none;
-  }
+  @include md-code-block;
 
   pre > code {
     display: block;
@@ -376,31 +260,7 @@
     font-size: 0.875em;
   }
 
-  // The copy button is injected by the Viewer, in the header on the right.
-  pre .bytemd-copy-btn {
-    position: absolute;
-    top: 4px;
-    right: 8px;
-    height: 24px;
-    padding: 0 8px;
-    font-family: inherit;
-    font-size: 12px;
-    line-height: 22px;
-    color: var(--md-copy-color);
-    background: var(--md-copy-bg);
-    border: 1px solid var(--md-copy-border);
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  pre .bytemd-copy-btn:hover {
-    background: var(--md-bg-soft);
-  }
-
-  pre .bytemd-copy-btn:focus-visible {
-    outline: 2px solid var(--md-link);
-    outline-offset: 1px;
-  }
+  @include md-copy-btn;
 
   kbd {
     display: inline-block;
@@ -461,406 +321,22 @@
     overflow-y: hidden;
   }
 
-  .bytemd-mermaid {
-    margin: 1em 0;
-    overflow-x: auto;
-  }
+  @include md-mermaid;
 
-  // ===== Callout: >[type] =====
-  blockquote.bytemd-callout {
-    margin: 1em 0;
-    padding: 10px 14px;
-    border-left: 4px solid;
-    border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
+  @include md-callout;
 
-    &.bytemd-callout-default {
-      color: var(--md-callout-default-text);
-      background: var(--md-callout-default-bg);
-      border-color: var(--md-callout-default);
-    }
-    &.bytemd-callout-success {
-      color: var(--md-callout-success-text);
-      background: var(--md-callout-success-bg);
-      border-color: var(--md-callout-success);
-    }
-    &.bytemd-callout-warning {
-      color: var(--md-callout-warning-text);
-      background: var(--md-callout-warning-bg);
-      border-color: var(--md-callout-warning);
-    }
-    &.bytemd-callout-info {
-      color: var(--md-callout-info-text);
-      background: var(--md-callout-info-bg);
-      border-color: var(--md-callout-info);
-    }
-    &.bytemd-callout-danger {
-      color: var(--md-callout-danger-text);
-      background: var(--md-callout-danger-bg);
-      border-color: var(--md-callout-danger);
-    }
-  }
+  @include md-accordion;
 
-  // ===== Accordion: +++ / ++- / ++ =====
-  .bytemd-accordion {
-    margin: 1em 0;
-    overflow: hidden;
-    border-radius: var(--md-radius);
-  }
+  @include md-pinyin;
 
-  .bytemd-accordion-item + .bytemd-accordion-item {
-    border-top: 1px solid var(--md-border-soft);
-  }
-
-  .bytemd-accordion-title {
-    display: flex;
-    align-items: center;
-    padding: 18px 20px;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 26px;
-    list-style: none;
-    cursor: pointer;
-    background: var(--md-accent);
-    user-select: none;
-
-    &::marker {
-      content: '';
-    }
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-
-    &::before {
-      content: '';
-      flex: none;
-      width: 0;
-      height: 0;
-      margin-right: 20px;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-top: 9px solid currentColor;
-    }
-  }
-
-  .bytemd-accordion-item[open] > .bytemd-accordion-title::before {
-    border-top: 0;
-    border-bottom: 9px solid currentColor;
-  }
-
-  .bytemd-accordion-body {
-    padding: 24px 22px;
-
-    > :first-child {
-      margin-top: 0;
-    }
-
-    > :last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  // ===== Pinyin: {拼 音|Ping Yin} =====
-  .bytemd-pinyin {
-    display: inline-block;
-    white-space: nowrap;
-    vertical-align: baseline;
-  }
-
-  .bytemd-pinyin-item {
-    display: inline-block;
-    text-align: center;
-    vertical-align: baseline;
-    line-height: 1.2;
-  }
-
-  .bytemd-pinyin-item + .bytemd-pinyin-item {
-    margin-left: 0.25em;
-  }
-
-  .bytemd-pinyin-rt {
-    display: block;
-    max-width: 3em;
-    overflow: hidden;
-    font-size: 0.55em;
-    font-weight: 400;
-    line-height: 1.3;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  // ===== Timeline: ::: timeline =====
-  .bytemd-timeline {
-    margin: 1em 0;
-  }
-
-  .bytemd-timeline-title {
-    margin-bottom: 24px;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.4;
-  }
-
-  .bytemd-timeline-list {
-    position: relative;
-  }
-
-  .bytemd-timeline-item {
-    position: relative;
-    padding-left: 34px;
-    padding-bottom: 20px;
-
-    &:last-child {
-      padding-bottom: 0;
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      z-index: 0;
-      left: 13px;
-      top: 18px;
-      bottom: -18px;
-      width: 2px;
-      background-color: var(--md-timeline-line);
-    }
-
-    &:last-child::after {
-      display: none;
-    }
-  }
-
-  .bytemd-timeline-content {
-    padding: 6px 12px;
-    border-radius: 6px;
-    transform-origin: left center;
-    transition: background-color 0.18s ease, transform 0.18s ease;
-  }
-
-  .bytemd-timeline-item:hover .bytemd-timeline-content {
-    background-color: var(--md-timeline-hover);
-    transform: scale(1.015);
-  }
-
-  .bytemd-timeline-item-doing::after {
-    background-color: var(--md-timeline-doing-line);
-  }
-
-  .bytemd-timeline-item-todo::after {
-    background-color: transparent;
-    background-image: linear-gradient(
-      to bottom,
-      var(--md-timeline-dashed) 50%,
-      transparent 50%
-    );
-    background-size: 2px 10px;
-    background-repeat: repeat-y;
-  }
-
-  .bytemd-timeline-marker {
-    position: absolute;
-    z-index: 1;
-    left: 14px;
-    top: 18px;
-    display: block;
-    box-sizing: border-box;
-    width: 18px;
-    height: 18px;
-    background-color: var(--md-surface);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-  }
-
-  .bytemd-timeline-item-done .bytemd-timeline-marker {
-    background-color: var(--md-timeline-done);
-  }
-
-  .bytemd-timeline-item-doing .bytemd-timeline-marker {
-    width: 24px;
-    height: 24px;
-    background-color: var(--md-timeline-doing);
-    border: 3px solid var(--md-surface);
-    box-shadow: 0 0 0 5px #cde5fb;
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 34px;
-      height: 34px;
-      border: 2px solid #cde5fb;
-      border-radius: 50%;
-      transform: translate(-50%, -50%) scale(1);
-      animation: bytemd-timeline-pulse 1.8s ease-out infinite;
-      pointer-events: none;
-    }
-  }
-
-  .bytemd-timeline-item-todo .bytemd-timeline-marker {
-    background-color: var(--md-surface);
-    border: 2px solid #adb5bd;
-  }
-
-  .bytemd-timeline-item-error .bytemd-timeline-marker {
-    background-color: var(--md-timeline-error);
-  }
-
-  .bytemd-timeline-item-milestone .bytemd-timeline-marker {
-    width: 18px;
-    height: 18px;
-    background-color: var(--md-timeline-milestone);
-    border-radius: 2px;
-    box-shadow: 0 0 0 6px #fbf3e4;
-    transform: translate(-50%, -50%) rotate(45deg);
-  }
-
-  .bytemd-timeline-date {
-    display: inline-block;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 24px;
-    border-radius: 999px;
-  }
-
-  .bytemd-timeline-item-done .bytemd-timeline-date {
-    color: var(--md-timeline-done);
-    background-color: var(--md-timeline-done-bg);
-  }
-
-  .bytemd-timeline-item-doing .bytemd-timeline-date {
-    color: var(--md-timeline-doing);
-    background-color: var(--md-timeline-doing-bg);
-  }
-
-  .bytemd-timeline-item-todo .bytemd-timeline-date {
-    color: var(--md-timeline-todo-text);
-    background-color: var(--md-timeline-todo-bg);
-  }
-
-  .bytemd-timeline-item-error .bytemd-timeline-date {
-    color: var(--md-timeline-error-text);
-    background-color: var(--md-timeline-error-bg);
-  }
-
-  .bytemd-timeline-item-milestone .bytemd-timeline-date {
-    color: var(--md-timeline-milestone-text);
-    background-color: var(--md-timeline-milestone-bg);
-  }
-
-  .bytemd-timeline-heading {
-    margin-top: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 24px;
-  }
-
-  .bytemd-timeline-item-doing .bytemd-timeline-heading {
-    color: var(--md-timeline-doing);
-  }
-
-  .bytemd-timeline-item-error .bytemd-timeline-heading {
-    color: var(--md-timeline-error-text);
-  }
-
-  .bytemd-timeline-item-milestone .bytemd-timeline-heading {
-    color: var(--md-timeline-milestone-text);
-  }
-
-  .bytemd-timeline-desc {
-    margin-top: 6px;
-    font-size: 14px;
-    line-height: 22px;
-    color: var(--md-timeline-todo-text);
-
-    > :first-child {
-      margin-top: 0;
-    }
-
-    > :last-child {
-      margin-bottom: 0;
-    }
-  }
+  @include md-timeline;
 }
 
-.markdown-body .bytemd-plugin-error {
-  padding: 8px 12px;
-  border-left: 3px solid var(--md-callout-danger-text);
-  background: var(--md-callout-danger-bg);
-  color: var(--md-callout-danger-text);
-  font-size: 14px;
-  white-space: normal;
-}
+@include md-plugin-error;
 
 // Dark theme fallbacks. Hosts that expose --text-primary / --bg-soft /
 // --bg-card / --brand-500 automatically keep their own palette; the values
 // below only apply when the theme is used standalone in a .dark container.
-.dark .markdown-body,
-[data-theme='dark'] .markdown-body,
-.markdown-body[data-theme='dark'] {
-  --md-text: var(--text-primary, #e6edf3);
-  --md-muted: var(--text-secondary, #9ba7b4);
-  --md-border: var(--border-color, #3d444d);
-  --md-border-soft: var(--border-light, #30363d);
-  --md-border-strong: var(--border-strong, #3d444d);
-  --md-bg-soft: var(--bg-soft, #161b22);
-  --md-surface: var(--bg-card, #0d1117);
-  --md-link: var(--brand-500, #79c0ff);
-  --md-link-hover: var(--brand-600, #a5d6ff);
-  --md-quote-border: var(--border-strong, #3d444d);
-  --md-code-bg: var(--bg-soft, #161b22);
-  --md-inline-code-bg: rgba(110, 118, 129, 0.4);
-  --md-copy-color: #c9d1d9;
-  --md-copy-bg: rgba(30, 35, 42, 0.85);
-  --md-copy-border: #444c56;
-  --md-code-header-bg: rgba(255, 255, 255, 0.05);
-  --md-callout-default-bg: rgba(64, 158, 255, 0.14);
-  --md-callout-default-text: #a0cfff;
-  --md-callout-success-bg: rgba(103, 194, 58, 0.14);
-  --md-callout-success-text: #b3e19d;
-  --md-callout-warning-bg: rgba(230, 162, 60, 0.16);
-  --md-callout-warning-text: #f3d19e;
-  --md-callout-info-bg: rgba(144, 147, 153, 0.16);
-  --md-callout-info-text: #c8c9cc;
-  --md-callout-danger-bg: rgba(245, 108, 108, 0.16);
-  --md-callout-danger-text: #fab6b6;
-  --md-timeline-line: #3b4148;
-  --md-timeline-doing-line: rgba(120, 170, 255, 0.18);
-  --md-timeline-dashed: #3b4148;
-  --md-timeline-done: #69db7c;
-  --md-timeline-doing: #8ce99a;
-  --md-timeline-error: #ff8787;
-  --md-timeline-error-text: #ff8787;
-  --md-timeline-milestone: #ffc078;
-  --md-timeline-milestone-text: #ffc078;
-  --md-timeline-done-bg: rgba(64, 192, 87, 0.16);
-  --md-timeline-doing-bg: rgba(43, 122, 75, 0.22);
-  --md-timeline-todo-bg: rgba(144, 147, 153, 0.16);
-  --md-timeline-error-bg: rgba(245, 108, 108, 0.16);
-  --md-timeline-milestone-bg: rgba(230, 162, 60, 0.16);
-  --md-timeline-todo-text: #aab4be;
-  --md-timeline-hover: rgba(104, 211, 145, 0.12);
-}
+@include md-tokens-dark;
 
-@keyframes bytemd-timeline-pulse {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.9;
-  }
-  70% {
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(2.2);
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .markdown-body .bytemd-timeline-item-doing .bytemd-timeline-marker::after {
-    animation: none;
-    opacity: 0;
-  }
-}
+@include md-frames;

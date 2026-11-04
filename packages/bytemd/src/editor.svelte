@@ -18,6 +18,7 @@
     cancelEditorInteractions,
     createEditorUtils,
     getBuiltinActions,
+    getHeadingToolAction,
     handleImageUpload,
   } from './editor'
   import Help from './help.svelte'
@@ -71,7 +72,13 @@
   const dispatch = createEventDispatcher<{ change: { value: string } }>()
 
   $: actions = getBuiltinActions(mergedLocale, plugins, uploadImages)
+  // Tool 面板专属条目：标题动作已从工具栏移除，只在面板里出现
+  $: toolHeadingAction = getHeadingToolAction(mergedLocale)
   $: split = mode === 'split' || (mode === 'auto' && containerWidth >= 800)
+  // 窄屏与模式解耦：容器 < 800 一律按移动端处理——即使宿主强制 split，
+  // 也不渲染动作工具栏（用户规则：移动端不出现工具栏），改为 tab 形态 + Tool 面板
+  $: narrow = containerWidth < 800
+  $: effectiveSplit = split && !narrow
   $: ((_) => {
     // reset active tab
     if (split) activeTab = false
@@ -81,10 +88,10 @@
   let editorEl: HTMLElement
   let previewEl: HTMLElement
   let bodyEl: HTMLElement
-  let containerWidth = Infinity // TODO: first screen
+  let containerWidth = typeof window !== 'undefined' ? window.innerWidth : 800 // TODO: first screen
 
   let codemirror: ReturnType<typeof createCodeMirror>
-  let editor: Editor
+  let editor: CM6CompatEditor
   let activeTab: false | 'write' | 'preview'
   let fullscreen = false
   let sidebar: false | 'help' | 'toc' = false
@@ -131,19 +138,19 @@
     let edit: string
     let preview: string
 
-    if (split && activeTab === false) {
+    if (effectiveSplit && activeTab === false) {
       if (sidebar) {
-        edit = `width:calc(${splitRatio}% - ${sidebar ? 140 : 0}px)`
-        preview = `width:calc(${100 - splitRatio}% - ${sidebar ? 140 : 0}px)`
+        edit = `width:calc(${splitRatio}% - ${sidebar && !narrow ? 140 : 0}px)`
+        preview = `width:calc(${100 - splitRatio}% - ${sidebar && !narrow ? 140 : 0}px)`
       } else {
         edit = `width:${splitRatio}%`
         preview = `width:${100 - splitRatio}%`
       }
     } else if (activeTab === 'preview') {
       edit = 'display:none'
-      preview = `width:calc(100% - ${sidebar ? 280 : 0}px)`
+      preview = `width:calc(100% - ${sidebar && !narrow ? 280 : 0}px)`
     } else {
-      edit = `width:calc(100% - ${sidebar ? 280 : 0}px)`
+      edit = `width:calc(100% - ${sidebar && !narrow ? 280 : 0}px)`
       preview = 'display:none'
       // TODO: use width:0 to make scroll sync work until
       // the position calculation improved (causes white screen after switching to editor only)
@@ -187,14 +194,19 @@
     host()!.cbs = plugins.map((p) => p.editorEffect?.(effectContext))
 
     keyMap = {}
-    // TODO: nested shortcuts
-    actions.leftActions.forEach(({ handler }) => {
-      if (handler?.type === 'action' && handler.shortcut) {
-        keyMap[handler.shortcut] = () => {
-          handler.click(context)
+    // 递归收集快捷键（含下拉子项），否则动作收进下拉后其快捷键会丢失
+    const collectShortcuts = (items: typeof actions.leftActions): void => {
+      items.forEach(({ handler }) => {
+        if (!handler) return
+        if (handler.type === 'action' && handler.shortcut) {
+          keyMap[handler.shortcut] = () => {
+            handler.click(context)
+          }
         }
-      }
-    })
+        if (handler.type === 'dropdown') collectShortcuts(handler.actions)
+      })
+    }
+    collectShortcuts(actions.leftActions)
     editor.addKeyMap(keyMap)
   }
   function off() {
@@ -288,6 +300,14 @@
   }
 
   onMount(() => {
+    // RO 在部分环境（IAB 空闲合成器）不派发：挂载即量一次，并挂 resize 兜底。
+    // jsdom 等无布局环境 offsetWidth=0，跳过（回落初始 window.innerWidth）。
+    const measureContainer = () => {
+      if (root && root.offsetWidth > 0) containerWidth = root.offsetWidth
+    }
+    measureContainer()
+    window.addEventListener('resize', measureContainer)
+
     codemirror = createCodeMirror()
 
     editor = codemirror(editorEl, {
@@ -451,23 +471,26 @@
       }
     }
 
-    const dropHandler: Parameters<Editor['on']>[1] = (_, e) => {
+    const dropHandler: Parameters<CM6CompatEditor['on']>[1] = (_, e) => {
       handleImages(e, e.dataTransfer?.items)
     }
-    const pasteHandler: Parameters<Editor['on']>[1] = (_, e) => {
+    const pasteHandler: Parameters<CM6CompatEditor['on']>[1] = (_, e) => {
       handleImages(e, e.clipboardData?.items)
     }
     editor.on('drop', dropHandler)
     editor.on('paste', pasteHandler)
 
     resizeObserver = new ResizeObserver((entries) => {
-      containerWidth = entries[0].contentRect.width
+      // 无布局环境（jsdom）上报 0 宽，忽略以免误判窄屏
+      const w = entries[0].contentRect.width
+      if (w > 0) containerWidth = w
       invalidateScrollMap()
     })
     resizeObserver.observe(root, { box: 'border-box' })
 
     // No need to call `on` because cm instance would change once after init
     return () => {
+      window.removeEventListener('resize', measureContainer)
       layoutObserver.disconnect()
       mutations.disconnect()
       previewEl.removeEventListener('load', invalidateScrollMap, true)
@@ -506,14 +529,16 @@
 
 <div
   class="bytemd"
-  class:bytemd-split={split && activeTab === false}
+  class:bytemd-split={effectiveSplit && activeTab === false}
   class:bytemd-fullscreen={fullscreen}
   class:bytemd-dragging={dragging}
+  class:bytemd-narrow={narrow}
   bind:this={root}
 >
   <Toolbar
     {context}
-    {split}
+    split={effectiveSplit}
+    {narrow}
     {activeTab}
     {sidebar}
     {fullscreen}
@@ -522,7 +547,7 @@
     actions={actions.leftActions}
     on:tab={(e) => {
       const v = e.detail
-      if (split) {
+      if (effectiveSplit) {
         activeTab = activeTab === v ? false : v
       } else {
         activeTab = v
@@ -562,7 +587,7 @@
     bind:this={bodyEl}
   >
     <div class="bytemd-editor" style={styles.edit} bind:this={editorEl} />
-    {#if split && activeTab === false}
+    {#if effectiveSplit && activeTab === false}
       <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
       <div
         class="bytemd-split-handle"
@@ -637,8 +662,22 @@
         {@html icons.Close}
       </div>
       <Help
+        on:use={() => {
+          sidebar = false
+          if (!effectiveSplit) {
+            activeTab = 'write'
+            tick().then(() => {
+              if (destroyed || !editor) return
+              editor.setSize(null, null)
+              editor.focus()
+            })
+          }
+        }}
         locale={mergedLocale}
         actions={actions.leftActions}
+        extraActions={[toolHeadingAction]}
+        {context}
+        {narrow}
         visible={sidebar === 'help'}
       />
       <Toc
@@ -650,18 +689,20 @@
       />
     </div>
   </div>
-  <Status
-    locale={mergedLocale}
-    showSync={!overridePreview && split}
-    value={debouncedValue}
-    {syncEnabled}
-    islimited={value.length > maxLength}
-    on:sync={(e) => {
-      syncEnabled = e.detail
-    }}
-    on:top={() => {
-      editor.scrollTo(null, 0)
-      previewEl.scrollTo({ top: 0 })
-    }}
-  />
+  {#if !narrow}
+    <Status
+      locale={mergedLocale}
+      showSync={!overridePreview && effectiveSplit}
+      value={debouncedValue}
+      {syncEnabled}
+      islimited={value.length > maxLength}
+      on:sync={(e) => {
+        syncEnabled = e.detail
+      }}
+      on:top={() => {
+        editor.scrollTo(null, 0)
+        previewEl.scrollTo({ top: 0 })
+      }}
+    />
+  {/if}
 </div>

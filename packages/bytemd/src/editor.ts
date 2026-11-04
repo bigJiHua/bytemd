@@ -200,38 +200,58 @@ export async function handleImageUpload(
   editor.focus()
 }
 
+/**
+ * 标题工具：不进工具栏（已按移动端反馈移除），仅供 Tool 面板使用。
+ * 面板以手风琴展开 H1-H6 预设；父行【使用】应用一级标题。
+ */
+export function getHeadingToolAction(locale: BytemdLocale): BytemdAction {
+  const headingUse = (level: number) => ({
+    type: 'action' as const,
+    click({
+      replaceLines,
+      editor,
+    }: {
+      replaceLines: (fn: (line: string) => string) => void
+      editor: { focus: () => void }
+    }) {
+      replaceLines((line) => {
+        line = line.trim().replace(/^#*/, '').trim()
+        line = '#'.repeat(level) + ' ' + line
+        return line
+      })
+      editor.focus()
+    },
+  })
+  return {
+    title: locale.headingText,
+    group: 'heading',
+    icon: icons.H,
+    cheatsheet: `# ${locale.headingText}`,
+    handler: {
+      type: 'dropdown',
+      actions: [1, 2, 3, 4, 5, 6].map((level) => ({
+        title: locale[`h${level}` as keyof BytemdLocale],
+        group: 'heading',
+        icon: [
+          icons.H1,
+          icons.H2,
+          icons.H3,
+          icons.LevelFourTitle,
+          icons.LevelFiveTitle,
+          icons.LevelSixTitle,
+        ][level - 1],
+        cheatsheet: `${'#'.repeat(level)} ${locale.headingText}`,
+        handler: headingUse(level),
+      })),
+    },
+  }
+}
+
 export function getBuiltinActions(
   locale: BytemdLocale,
   plugins: BytemdPlugin[],
   uploadImages: EditorProps['uploadImages'],
 ): { leftActions: BytemdAction[]; rightActions: BytemdAction[] } {
-  const headingAction = (level: number): BytemdAction => ({
-    title: locale[`h${level}` as keyof BytemdLocale],
-    group: 'heading',
-
-    icon: [
-      icons.H1,
-      icons.H2,
-      icons.H3,
-      icons.LevelFourTitle,
-      icons.LevelFiveTitle,
-      icons.LevelSixTitle,
-    ][level - 1],
-    cheatsheet:
-      level <= 3 ? `${'#'.repeat(level)} ${locale.headingText}` : undefined,
-    handler: {
-      type: 'action',
-      click({ replaceLines, editor }) {
-        replaceLines((line) => {
-          line = line.trim().replace(/^#*/, '').trim()
-          line = '#'.repeat(level) + ' ' + line
-          return line
-        })
-        editor.focus()
-      },
-    },
-  })
-
   const rangeStyleAction = (
     kind: 'size' | 'color' | 'bg',
     value: string,
@@ -321,18 +341,6 @@ export function getBuiltinActions(
   ]
 
   const leftActions: BytemdAction[] = [
-    {
-      title: locale.headingText,
-      group: 'heading',
-      icon: icons.H,
-      handler: {
-        type: 'dropdown',
-        actions: [4, 5, 6].map(headingAction),
-      },
-    },
-    headingAction(1),
-    headingAction(2),
-    headingAction(3),
     {
       title: locale.fontSize,
       group: 'style',
@@ -496,31 +504,42 @@ export function getBuiltinActions(
       },
     },
     {
-      title: locale.ul,
+      // 无序/有序两个列表按钮收进一个下拉，节省工具栏横向空间
+      title: locale.list,
       group: 'block',
       icon: icons.ListTwo,
-      cheatsheet: `- ${locale.ulItem}`,
       handler: {
-        type: 'action',
-        shortcut: getShortcutWithPrefix('U', true),
-        click({ replaceLines, editor }) {
-          replaceLines((line) => '- ' + line)
-          editor.focus()
-        },
-      },
-    },
-    {
-      title: locale.ol,
-      group: 'block',
-      icon: icons.OrderedList,
-      cheatsheet: `1. ${locale.olItem}`,
-      handler: {
-        type: 'action',
-        shortcut: getShortcutWithPrefix('O', true),
-        click({ replaceLines, editor }) {
-          replaceLines((line, i) => `${i + 1}. ${line}`)
-          editor.focus()
-        },
+        type: 'dropdown',
+        actions: [
+          {
+            title: locale.ul,
+            group: 'block',
+            icon: icons.ListTwo,
+            cheatsheet: `- ${locale.ulItem}`,
+            handler: {
+              type: 'action',
+              shortcut: getShortcutWithPrefix('U', true),
+              click({ replaceLines, editor }) {
+                replaceLines((line) => '- ' + line)
+                editor.focus()
+              },
+            },
+          },
+          {
+            title: locale.ol,
+            group: 'block',
+            icon: icons.OrderedList,
+            cheatsheet: `1. ${locale.olItem}`,
+            handler: {
+              type: 'action',
+              shortcut: getShortcutWithPrefix('O', true),
+              click({ replaceLines, editor }) {
+                replaceLines((line, i) => `${i + 1}. ${line}`)
+                editor.focus()
+              },
+            },
+          },
+        ],
       },
     },
     {
@@ -592,7 +611,16 @@ export function getBuiltinActions(
   }))
 
   leftActions.push(
-    ...calloutActions,
+    {
+      // 五个彩色提示块收进一个下拉，节省工具栏横向空间（移动端尤其明显）
+      title: locale.callout,
+      group: 'custom',
+      icon: `<span class="bytemd-callout-dot" style="background-color:#409eff"></span>`,
+      handler: {
+        type: 'dropdown',
+        actions: calloutActions,
+      },
+    },
     {
       title: locale.accordion,
       group: 'custom',

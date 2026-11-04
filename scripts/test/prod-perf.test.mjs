@@ -3,6 +3,7 @@ import {
   CDPClient,
   CDPConnectionError,
   CDPSession,
+  waitForPage,
 } from '../../audit/prod-perf-cdp-client.mjs'
 import {
   CompositionInjector,
@@ -95,6 +96,31 @@ test('page evaluation reports runtime exceptions instead of undefined success', 
     },
   }
   await assert.rejects(evalInPage(session, 'return 1'), /Missing selector/)
+})
+
+test('page readiness waits for delayed results and returns only after success', async () => {
+  let calls = 0
+  const session = {
+    async send(method, options) {
+      assert.equal(method, 'Runtime.evaluate')
+      assert.equal(options.awaitPromise, true)
+      return { result: { value: ++calls >= 3 } }
+    },
+  }
+  await waitForPage(session, 'window.ready', 5000)
+  assert.equal(calls, 3)
+})
+
+test('page readiness times out when the condition never becomes true', async () => {
+  const session = {
+    async send() {
+      return { result: { value: false } }
+    },
+  }
+  await assert.rejects(
+    waitForPage(session, 'window.ready', 1),
+    /Timeout waiting.*window.ready/,
+  )
 })
 
 test('CDP ignores late replies after timeout and clears pending jobs on disconnect', async () => {
@@ -314,6 +340,7 @@ function fakeCompositionSession({ failOn } = {}) {
   const listeners = new Map()
   const session = {
     sent: [],
+    allSent: [],
     listens: 0,
     unlistens: 0,
     on(name, fn) {
@@ -325,12 +352,19 @@ function fakeCompositionSession({ failOn } = {}) {
       }
     },
     async send(method, params) {
-      session.sent.push({ method, params })
+      session.allSent.push({ method, params })
+      if (method.startsWith('Input.')) session.sent.push({ method, params })
       if (failOn === method) throw new Error(`${method} rejected`)
       return {}
     },
     emit(event) {
-      listeners.get('Input.compositionEvent')?.(event)
+      const binding = session.allSent.find(
+        (call) => call.method === 'Runtime.addBinding',
+      )?.params.name
+      listeners.get('Runtime.bindingCalled')?.({
+        name: binding,
+        payload: JSON.stringify({ ...event, timestamp: performance.now() }),
+      })
     },
     get listenerCount() {
       return listeners.size
@@ -342,6 +376,17 @@ function fakeCompositionSession({ failOn } = {}) {
 test('composition sends the CDP IME protocol shape in order', async () => {
   const session = fakeCompositionSession()
   const result = await new CompositionInjector().compose(session, '中文输入')
+  assert.deepEqual(
+    session.allSent.map(({ method }) => method),
+    [
+      'Runtime.addBinding',
+      'Runtime.evaluate',
+      'Input.imeSetComposition',
+      'Input.insertText',
+      'Runtime.evaluate',
+      'Runtime.removeBinding',
+    ],
+  )
   assert.deepEqual(
     session.sent.map(({ method }) => method),
     ['Input.imeSetComposition', 'Input.insertText'],
@@ -425,11 +470,23 @@ test('composition reports failures from the text insertion step', async () => {
   assert.equal(session.unlistens, 1)
 })
 
+test('composition setup failure sends no input and still removes the runtime listener', async () => {
+  const session = fakeCompositionSession({ failOn: 'Runtime.evaluate' })
+  await assert.rejects(
+    new CompositionInjector().compose(session, 'x'),
+    /CDP composition failed: Runtime\.evaluate rejected/,
+  )
+  assert.equal(session.sent.length, 0)
+  assert.equal(session.listenerCount, 0)
+  assert.equal(session.allSent.at(-1).method, 'Runtime.removeBinding')
+})
+
 test('composition cancel clears the candidate and flags its reason', async () => {
   const session = fakeCompositionSession()
   const dispatch = session.send
   session.send = async (method, params) => {
-    session.emit({ type: 'compositionupdate', data: '' })
+    if (method === 'Input.imeSetComposition')
+      session.emit({ type: 'compositionupdate', data: '' })
     return dispatch(method, params)
   }
   const result = await new CompositionInjector().cancel(session)

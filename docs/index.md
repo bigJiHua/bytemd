@@ -40,6 +40,8 @@ Before using the component, remember to import CSS file to make styles correct:
 import 'bytemd/dist/index.css'
 // Optional standard Markdown theme (typography, tables, code, callouts, etc.)
 import 'bytemd/dist/markdown.css'
+// …or, when base typography comes from your own Markdown theme, import only
+// the fork-proprietary blocks instead: import 'bytemd/dist/custom-blocks.css'
 ```
 
 ### Svelte
@@ -174,7 +176,7 @@ Svelte, React, Vue 2 and Vue 3 Viewers share DOM plugin error feedback. Plugins 
 
 Mermaid serializes each configuration with its awaited render across this plugin module's Viewers, preserves source on failure, uses unique diagram IDs and cleans up staging/replacement nodes. Its automatic page scan and built-in error diagram are disabled. KaTeX enables and catches parse errors internally (including unknown commands), overriding `katexOptions.throwOnError` so invalid expressions retain their source and receive feedback. KaTeX and highlight preserve source on local failure and continue processing other blocks; highlight waits for its shared asynchronous initialization before using the library. Successful math/highlight transformations restore source during cleanup so locale changes can safely restart effects. A failed library load is not retained in the plugin's loader cache, but network recovery/retry policy remains the browser's responsibility. Direct host calls to Mermaid's global `initialize`/`render` need their own coordination with plugin rendering.
 
-KaTeX and highlight yield to the browser between batches after approximately 8ms of work, using `scheduler.yield()` where available and a cancellable timer fallback elsewhere. Updates and unmounting stop pending work; a native yield may still resume, but its stale nodes are ignored. One expression or code block can exceed the soft budget. Markdown parsing and AST/HTML conversion remain synchronous, so batching alone does not remove long-document blocking. See [the measured performance baseline and Worker plan](../audit/PERFORMANCE.md).
+KaTeX and highlight yield to the browser between batches after approximately 8ms of work, using `scheduler.yield()` where available and a cancellable timer fallback elsewhere. Updates and unmounting stop pending work; a native yield may still resume, but its stale nodes are ignored. One expression or code block can exceed the soft budget. Markdown parsing and AST/HTML conversion remain synchronous, so batching alone does not remove long-document blocking. See [the measured performance baseline and Worker plan](./audit/PERFORMANCE.md).
 
 Rehype plugins run after sanitization and must be trusted, as must custom sanitizer strategies.
 
@@ -184,7 +186,7 @@ All four framework Editors and Viewers accept `renderer`. Use `createWorkerRende
 
 Parser functions cannot be transferred: unknown remark/rehype/sanitize/handlers callbacks keep the synchronous compatibility path. Register known parser configurations inside the Worker and map every callback, order and option explicitly; DOM effects stay on the main thread. New requests abort old ones, ignore late results and clear stale preview/TOC state. A shared renderer belongs to the host, which calls `destroy()` when all consumers are finished. Default queue strategy preserves an active parse; restart strategy terminates it and pays startup costs. Startup/active timeout defaults to 60 seconds.
 
-Vite 4 module Workers need `resolve.conditions: ['worker']` for the DOM-free entity decoder and `worker.format: 'es'` for code splitting. Worker URL and CSP remain host configuration. See [runnable examples, lifecycle contracts and measured results](../audit/WORKER.md). Worker reduces main-thread parsing blockage; large DOM insertion/layout and CodeMirror work can still stall input.
+Vite 4 module Workers need `resolve.conditions: ['worker']` for the DOM-free entity decoder and `worker.format: 'es'` for code splitting. Worker URL and CSP remain host configuration. See [runnable examples, lifecycle contracts and measured results](./audit/WORKER.md). Worker reduces main-thread parsing blockage; large DOM insertion/layout and CodeMirror work can still stall input.
 
 ### Editor
 
@@ -247,7 +249,20 @@ import 'bytemd/dist/index.css'
 import 'bytemd/dist/markdown.css'
 ```
 
-You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css).
+Only need the fork-proprietary blocks (callout, accordion, pinyin, timeline, text divider, code tools, plugin-error notice) while base typography comes from a third-party theme? Import `bytemd/dist/custom-blocks.css` instead of `markdown.css` — those classes are fork-specific, so the layer cannot conflict with any base typography theme. `bytemd/dist/index.bundle.css` (index.css + markdown.css) is the one-import convenience for hosts that want the default look.
+
+You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) — pair them with `custom-blocks.css` for the fork-proprietary blocks.
+
+### Official themes
+
+A standardized theme family ships as token presets in `bytemd/dist/themes/`: `daylight` (日光), `verdant` (苍翠), `azure` (湛蓝), `sunset` (暮橙), `violet` (雾紫), `rose` (蔷薇) and the standalone dark `ink` (玄墨). Unlike per-theme hardcoded stylesheets, each file only overrides the chromatic identity (neutrals + accent, ~17 tokens) — structure, typography and the callout/timeline/accordion styles all come from `markdown.css`, so semantic colors stay constant across the family and every theme inherits future structure upgrades automatically. Light themes fall back to the dark token block automatically inside `.dark` / `[data-theme=dark]` containers.
+
+```js
+import 'bytemd/dist/markdown.css'
+import 'bytemd/dist/themes/verdant.min.css' // any manifest id; load after markdown.css
+```
+
+For instant switching without swapping `<link>` elements, import `bytemd/dist/themes/all.css` once and toggle `data-bytemd-theme='<id>'` on the `.markdown-body` element. `bytemd/themes/manifest.json` lists every id with its label for switcher UIs; hosts may still override any `--md-*` token on top of a preset.
 
 ## Extended Markdown syntax
 

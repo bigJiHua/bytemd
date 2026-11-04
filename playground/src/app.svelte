@@ -62,7 +62,7 @@
     dark = !dark
     document.documentElement.classList.toggle('dark', dark)
   }
-  let maxLength: number
+  let maxLength: number | undefined
 
   let enabled = {
     breaks: false,
@@ -142,7 +142,7 @@
     {value}
     {mode}
     {plugins}
-    {maxLength}
+    maxLength={maxLength ?? Infinity}
     layoutContainment
     placeholder={'Start writing with ByteMD'}
     locale={locales[localeKey]}
@@ -166,13 +166,21 @@
   .container {
     max-width: 1200px;
     margin: 0 auto;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 400px;
   }
   .badges {
-    position: absolute;
-    top: 46px;
-    left: 12px;
-    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: none;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 8px;
     pointer-events: none;
     font-size: 12px;
     line-height: 20px;
@@ -194,6 +202,7 @@
     opacity: 0.6;
   }
   .line {
+    flex: none;
     margin: 10px 0;
     text-align: center;
   }
@@ -222,6 +231,8 @@
     background: rgba(121, 192, 255, 0.14);
   }
   :global(.bytemd) {
-    height: calc(100vh - 100px);
+    flex: 1;
+    min-height: 240px;
+    height: auto;
   }
 </style>

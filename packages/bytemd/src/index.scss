@@ -54,8 +54,15 @@ $max-width: 800px;
 
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial,
-    sans-serif, Apple Color Emoji, Segoe UI Emoji;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Helvetica,
+    Arial,
+    sans-serif,
+    Apple Color Emoji,
+    Segoe UI Emoji;
   color: var(--bytemd-text);
   border: 1px solid var(--bytemd-border);
   background-color: var(--bytemd-bg);
@@ -64,7 +71,12 @@ $max-width: 800px;
   .CodeMirror,
   code,
   kbd {
-    font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+    font-family:
+      SFMono-Regular,
+      Consolas,
+      Liberation Mono,
+      Menlo,
+      monospace;
   }
 
   &-toolbar {
@@ -114,15 +126,21 @@ $max-width: 800px;
       }
     }
 
-    // 自适应网格：桌面最多 20 列（598px），宽度不足时自动降列换行。
+    // 弹性工具栏：图标 26px 起步、每行自动填满行宽（桌面一行为主，移动端每行铺满），
+    // 放不下自动换行。max-width 44px 防止超宽编辑器下图标过度拉伸。
     &-groups {
-      display: grid;
+      display: flex;
       flex: none;
-      grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
-      grid-auto-rows: 28px;
-      gap: 4px 2px;
+      flex-wrap: wrap;
+      gap: 4px 0;
       width: 100%;
-      max-width: 598px;
+      max-width: none;
+
+      .bytemd-toolbar-icon {
+        flex: 1 1 26px;
+        min-width: 26px;
+        max-width: 44px;
+      }
     }
 
     &-group {
@@ -152,7 +170,9 @@ $max-width: 800px;
       color: var(--bytemd-text-muted);
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.12s ease, color 0.12s ease,
+      transition:
+        background-color 0.12s ease,
+        color 0.12s ease,
         box-shadow 0.12s ease;
 
       @media (hover: hover) {
@@ -187,7 +207,9 @@ $max-width: 800px;
       color: var(--bytemd-icon);
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.12s ease, color 0.12s ease;
+      transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
 
       svg,
       img {
@@ -494,15 +516,22 @@ $max-width: 800px;
   }
 
   &-sidebar {
-    display: inline-block;
-    vertical-align: top; // Safari
+    display: flex;
+    flex-direction: column;
     height: 100%;
-    overflow: auto;
+    overflow: hidden;
     font-size: 16px;
     border-left: 1px solid var(--bytemd-border);
     width: $sidebar-width;
     position: relative;
     padding: 0 16px;
+
+    // TOC 与 Help 平级：各自填满并内部滚动
+    > .bytemd-toc {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
     &-close {
       position: absolute;
       padding: 16px;
@@ -556,6 +585,173 @@ $max-width: 800px;
     &-content {
       float: right;
       font-size: 12px;
+    }
+  }
+
+  /* Tool 面板：head(工具标题)固定，列表区内部滚动 */
+  .bytemd-help.bytemd-tool {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .bytemd-tool-head {
+    flex: none;
+
+    h2 {
+      margin-top: 4px;
+    }
+  }
+  .bytemd-tool-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    // 右侧关闭钮悬浮在滚动区之上，滚动时留出呼吸空间
+    padding-right: 2px;
+  }
+
+  /* 工具条目：icon + 介绍一行，【使用】【复制】靠右；语法另起一行 */
+  ul.bytemd-tool-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  ul.bytemd-tool-list li.bytemd-tool-item {
+    list-style: none;
+    margin-bottom: 14px;
+  }
+  ul.bytemd-tool-list .bytemd-tool-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ul.bytemd-tool-list .bytemd-help-icon {
+      flex: none;
+      display: flex;
+      align-items: center;
+      padding: 0;
+
+      svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+    }
+    ul.bytemd-tool-list .bytemd-help-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding-left: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  .bytemd-tool-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto; // 【使用】永远贴行最右
+  }
+  &-tool-use {
+    flex: none;
+    font-size: 12px;
+    line-height: 1;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--bytemd-primary);
+    background: var(--bytemd-primary-bg);
+    color: var(--bytemd-primary);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bytemd-primary-bg-hover);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--bytemd-primary);
+      outline-offset: 1px;
+    }
+  }
+  &-tool-toggle {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--bytemd-icon);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--bytemd-primary);
+      background: var(--bytemd-hover);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--bytemd-primary);
+      outline-offset: 1px;
+    }
+  }
+  &-tool-chevron {
+    display: flex;
+    transition: transform 0.18s ease;
+    transform: rotate(180deg); // 收起：▸
+
+    svg {
+      width: 13px;
+      height: 13px;
+      display: block;
+    }
+  }
+  &-tool-toggle-open &-tool-chevron {
+    transform: rotate(-90deg); // 展开：▾
+  }
+  ul.bytemd-tool-list .bytemd-tool-syntax {
+    clear: both;
+    margin-top: 4px;
+    padding-left: 24px;
+    font-size: 12px;
+
+    code {
+      font-family: var(
+        --bytemd-font-mono,
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        monospace
+      );
+      color: var(--bytemd-text-muted, inherit);
+    }
+  }
+
+  /* 手风琴预设：缩进 + 左侧导轨，行高更紧凑 */
+  ul.bytemd-tool-sub {
+    list-style: none;
+    margin: 8px 0 0;
+    padding-left: 10px;
+    border-left: 2px solid var(--bytemd-border);
+
+    li.bytemd-tool-item {
+      margin-bottom: 10px;
+    }
+  }
+
+  /* 窄屏（tab 模式）：侧栏改为浮层，不再挤压编辑/预览宽度 */
+  &.bytemd-narrow {
+    .bytemd-sidebar {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(320px, 88%);
+      max-width: none;
+      z-index: 30;
+      background-color: var(--bytemd-bg);
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
     }
   }
 

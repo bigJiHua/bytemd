@@ -48,7 +48,7 @@ export async function reproduce(options = {}) {
   let preview, browser
   try {
     if (!skipRegression) {
-      await command(pnpm, ['exec', 'vitest', 'run', '--threads', 'false'])
+      await command(pnpm, ['exec', 'vitest', 'run'])
       report.regression = 'passed'
     }
     if (!skipBuild) {

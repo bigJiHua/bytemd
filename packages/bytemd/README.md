@@ -40,6 +40,8 @@ Before using the component, remember to import CSS file to make styles correct:
 import 'bytemd/dist/index.css'
 // Optional standard Markdown theme (typography, tables, code, callouts, etc.)
 import 'bytemd/dist/markdown.css'
+// …or, when base typography comes from your own Markdown theme, import only
+// the fork-proprietary blocks instead: import 'bytemd/dist/custom-blocks.css'
 ```
 
 ### Svelte
@@ -247,7 +249,20 @@ import 'bytemd/dist/index.css'
 import 'bytemd/dist/markdown.css'
 ```
 
-You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css).
+Only need the fork-proprietary blocks (callout, accordion, pinyin, timeline, text divider, code tools, plugin-error notice) while base typography comes from a third-party theme? Import `bytemd/dist/custom-blocks.css` instead of `markdown.css` — those classes are fork-specific, so the layer cannot conflict with any base typography theme. `bytemd/dist/index.bundle.css` (index.css + markdown.css) is the one-import convenience for hosts that want the default look.
+
+You can still use third-party Markdown themes instead, for example [juejin-markdown-themes](https://github.com/xitu/juejin-markdown-themes) and [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) — pair them with `custom-blocks.css` for the fork-proprietary blocks.
+
+### Official themes
+
+A standardized theme family ships as token presets in `bytemd/dist/themes/`: `daylight` (日光), `verdant` (苍翠), `azure` (湛蓝), `sunset` (暮橙), `violet` (雾紫), `rose` (蔷薇) and the standalone dark `ink` (玄墨). Unlike per-theme hardcoded stylesheets, each file only overrides the chromatic identity (neutrals + accent, ~17 tokens) — structure, typography and the callout/timeline/accordion styles all come from `markdown.css`, so semantic colors stay constant across the family and every theme inherits future structure upgrades automatically. Light themes fall back to the dark token block automatically inside `.dark` / `[data-theme=dark]` containers.
+
+```js
+import 'bytemd/dist/markdown.css'
+import 'bytemd/dist/themes/verdant.min.css' // any manifest id; load after markdown.css
+```
+
+For instant switching without swapping `<link>` elements, import `bytemd/dist/themes/all.css` once and toggle `data-bytemd-theme='<id>'` on the `.markdown-body` element. `bytemd/themes/manifest.json` lists every id with its label for switcher UIs; hosts may still override any `--md-*` token on top of a preset.
 
 ## Extended Markdown syntax
 

@@ -85,6 +85,13 @@ export default function highlight({
             batchStarted = performance.now()
           }
           if (!markdownBody.contains(el)) continue
+          const language = /\blang(?:uage)?-([\w-]+)\b/i.exec(
+            el.className + ' ' + (el.parentElement?.className ?? ''),
+          )?.[1]
+          // Unknown explicit languages already fall back to plain text in
+          // highlight.js. Skip that call so Mermaid/foreign fences do not emit
+          // warnings containing DOM nodes that DevTools then retains.
+          if (language && !hljs.getLanguage(language)) continue
           const original = {
             html: el.innerHTML,
             className: el.className,

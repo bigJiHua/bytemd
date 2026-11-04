@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { margin: 0; }
+      .bytemd { height: 600px; }
+    </style>
+  </head>
+  <body>
+    <form><div id="editor"></div></form>
+    <script type="module">
+      import { Editor } from '/packages/bytemd/dist/index.mjs'
+      import '/packages/bytemd/dist/index.css'
+      import '/packages/bytemd/dist/markdown.css'
+      import '/packages/bytemd/dist/themes/all.css'
+
+      const add = window.addEventListener.bind(window)
+      const remove = window.removeEventListener.bind(window)
+      window.resizeListeners = new Set()
+      window.addEventListener = (type, callback, options) => {
+        if (type === 'resize' && callback.name === 'measureContainer') {
+          window.resizeListeners.add(callback)
+        }
+        return add(type, callback, options)
+      }
+      window.removeEventListener = (type, callback, options) => {
+        if (type === 'resize') window.resizeListeners.delete(callback)
+        return remove(type, callback, options)
+      }
+      window.submissions = 0
+      window.actionCalls = 0
+      document.querySelector('form').addEventListener('submit', (event) => {
+        event.preventDefault()
+        window.submissions++
+      })
+      window.mountEditor = () => {
+        window.instance = new Editor({
+          target: document.querySelector('#editor'),
+          props: {
+            value: '# Upgrade regression',
+            plugins: [{ actions: [{ title: 'Probe insert', icon: '<svg></svg>', handler: {
+              type: 'action',
+              click({ editor }) { window.actionCalls++; editor.replaceSelection('X') },
+            } }] }],
+          },
+        })
+        window.instance.$on('change', (event) => {
+          window.instance.$set({ value: event.detail.value })
+        })
+      }
+      window.mountEditor()
+      window.ready = true
+    </script>
+  </body>
+</html>

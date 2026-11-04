@@ -2,17 +2,19 @@
 // input, toolbar actions (core + gfm/mermaid plugin actions), plugin preview
 // rendering, composition IME, single-step undo and output integrity against
 // the production playground build. Results go to
-// audit/cm6-v2-input-results.json (gitignored).
+// a new audit/prod-perf-cm6-input-* directory for each run (gitignored).
 import { BrowserLauncher } from './prod-perf-browser-launcher.mjs'
 import { CDPClient } from './prod-perf-cdp-client.mjs'
 import { CompositionInjector } from './prod-perf-composition-injector.mjs'
 import { KeyboardInjector } from './prod-perf-keyboard-injector.mjs'
 import { spawn } from 'node:child_process'
-import { writeFile } from 'node:fs/promises'
+import { mkdtemp, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
+const output = await mkdtemp(join(root, 'audit/prod-perf-cm6-input-'))
+console.log(`CM6 input evidence: ${output}`)
 const vite = join(root, 'node_modules/vite/bin/vite.js')
 const previewPort = Number(process.argv[2] || 5190)
 const debugPort = 9522
@@ -535,12 +537,19 @@ async function main() {
 
     results.checks = checks
     results.compositionEvents = compositionResult?.events?.length ?? 0
+    check(
+      'real DOM composition event trace',
+      ['compositionstart', 'compositionupdate', 'compositionend'].every(
+        (type) =>
+          compositionResult?.events?.some((event) => event.type === type),
+      ),
+    )
     results.compositionError = compositionResult?.error ?? null
     results.consoleProblems = consoleProblems
     results.pageUrl
     results.measuredAt = new Date().toISOString()
     await writeFile(
-      join(root, 'audit/cm6-v2-input-results.json'),
+      join(output, 'results.json'),
       JSON.stringify(results, null, 2),
     )
     const failed = checks.filter((c) => !c.ok)

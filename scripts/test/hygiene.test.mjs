@@ -79,7 +79,8 @@ test('bytemd declares its Svelte 5 peer and typed svelte entry', () => {
   const entry = pkg.exports['.']
   assert.equal(entry.svelte.types, './svelte/index.d.ts')
   assert.equal(entry.svelte.default, './svelte/index.js')
-  assert.equal(pkg.peerDependencies.svelte, '>=5')
+  assert.equal(pkg.dependencies.svelte, '^5.57.3')
+  assert.equal(pkg.peerDependencies.svelte, '^5.57.3')
   assert.equal(pkg.peerDependenciesMeta.svelte.optional, true)
 })
 

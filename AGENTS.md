@@ -1,26 +1,34 @@
 # AGENTS.md — ByteMD fork 开发说明
 
-供代码智能体（agent）和后续会话使用的项目约定。权威进度与验收记录见 `PLAN.md`；最新复盘见 [audit/REASSESSMENT.md](./audit/REASSESSMENT.md)，生产性能与内存证据见 `audit/PROD_PERF.md`、`audit/LARGE_DOCUMENT.md`。
+供代码智能体（agent）和后续会话使用的项目约定。权威进度与验收记录见 `PLAN.md`；CM5/CM6 整合与最新生产裁决见 [audit/ARCHITECTURE_DECISION_20261104.md](./audit/ARCHITECTURE_DECISION_20261104.md)。历史生产证据见 `audit/PROD_PERF.md`、`audit/LARGE_DOCUMENT.md`。
 
 ## 项目概述
 
-- ByteMD v1 定制 fork（上游 pd4d10/bytemd，本仓库 bigJiHua/bytemd），基于 ByteMD v1 定制开发。
+- ByteMD 定制 fork（上游 pd4d10/bytemd，本仓库 bigJiHua/bytemd）。main 为已发布 CM5 1.22.4；feat/cm6 整合 main 后准备本地 CM6 2.1.0 稳定包。
 
 - Monorepo：pnpm workspace（`packages/**` 14 个发布包 + `playground` 私有包；examples 不在 workspace 内）。
-- 技术栈：TypeScript + Svelte 5（bytemd 核心，`legacy-compat` 保留 `$set/$on/$destroy` 类 API）、CodeMirror 5、unified 11 / remark 15 / rehype 13；四框架包装（react / vue / vue-next）。
+- 技术栈：TypeScript + Svelte 5（`legacy-compat` 保留 `$set/$on/$destroy` 类 API）、CodeMirror 6 + 明确子集的 CM5 adapter、unified 11 / remark 15 / rehype 13；Svelte / React / Vue 2 / Vue 3 宿主。
 - 构建：`scripts/build.mjs`（产物 ESM/CJS + d.ts）；测试：Vitest（jsdom）。
 
 ## 常用命令
 
 ```sh
 pnpm build          # 完整构建（clean + build.mjs + tsc --build）
-pnpm test           # Vitest 核心回归（当前 26 文件 230 用例）
-pnpm run test:scripts  # Node 脚本测试（generate + audit 工具，20 用例）
+pnpm test           # Vitest 核心回归；一次运行用 pnpm run test --run
+pnpm run test:scripts  # Node 脚本测试，自动发现全部测试文件
 pnpm run test:scripts:coverage # 四个关键脚本的覆盖率门槛，CI 执行此命令
+pnpm run test:packages # 构建后实际 tarball 消费、Svelte 类型/生产构建与纯入口/SSR
+pnpm run test:playground # 已构建包后，独立 Chrome 实测开发 + 生产 playground
+pnpm run test:bundle-size # 纯本地 gzip 预算检查，不依赖 bundlewatch 远程上报
+pnpm release:stage  # 所有包在独立 staging 改名打包，不修改源码 manifests
+pnpm test:release <release-directory> # 仓库外 TEMP 独立安装 tarball 并验 ESM/CJS/框架/SSR
 pnpm generate       # 生成 README.md / docs/index.md / packages/bytemd/README.md
 pnpm generate:check # 校验生成产物与源一致（防漂移）
 pnpm format         # prettier + sort-package-json
-pnpm pub            # generate → check → build → pnpm -r publish --no-git-checks
+pnpm pub            # generate → check → build → node scripts/publish-jihua.mjs(见纪律 3)
+node scripts/publish-jihua.mjs --dry-run   # 独立 staging 改名+协议重写+打包，不改源码、不发包
+node scripts/publish-jihua.mjs @bytemd/vue @bytemd/vue-next @bytemd/react  # 定向发布
+node scripts/publish-jihua.mjs --restore   # 发布中断后从备份还原 manifests
 ```
 
 安全审计需绕过华为云镜像（不支持 audit POST 端点）： `pnpm audit --prod --registry=https://registry.npmjs.org`
@@ -29,13 +37,35 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 
 1. **generate 与 prettier 冲突**：`README.md`、`docs/index.md`、`packages/bytemd/README.md` 是 `scripts/generate.mjs` 的生成产物，已列入 `.prettierignore`。若被误格式化导致 `generate:check` 失败，运行 `pnpm generate` 恢复，不要手工编辑这三个文件。
 2. **验收不虚报**：每批任务以实测证据闭环（采样目录、测试输出、构建日志），`--skip-*` 运行如实记为 skipped；人工/设备未验证的项标 incomplete，不勾选完成。
-3. **fork 版权**：不修改包的 `author`/`name`/LICENSE；`repository.url` 已统一指向 fork（bigJiHua/bytemd）。
+3. **fork 版权**：不修改包的 `author`/`name`/LICENSE；`repository.url` 已统一指向 fork（bigJiHua/bytemd）。npm 上以 `@jihua/*` 作用域发布：树内 name 保持上游原名，改名与 `workspace:` 协议重写由 `scripts/publish-jihua.mjs` 在发布时临时进行并在结束后字节级还原（1.22.0 首发手工改名 + `npm publish` 曾泄漏 `workspace:*`，导致 @jihua/bytemd-{vue,vue-next,react}@1.22.0 消费者安装报错，1.22.1 起用本脚本）。
 4. **测试数据不入库**：`.gitignore` 已忽略 `audit/prod-perf-*-*/`（采样运行目录）、`audit/cm6-spike/`（CM6 spike 本地实验）、`*.heapsnapshot`、`*.cpuprofile`、`audit/**/*.{json,ts,png,test.mjs}`（递归，任意 audit 子目录）。入库的只有验收文档（.md）和复现脚本/页面（.mjs/.html/.svelte）。
 5. **测量先订阅后执行**：CDP 事件等待必须在触发动作之前订阅；页面求值包在函数中并检查 `exceptionDetails`。
 6. **批处理纪律**：一次一个批次，每批完成即跑全量回归（`pnpm test` + `pnpm run test:scripts` + `pnpm build` + `pnpm generate:check`）并更新 `PLAN.md` 进度日志。
 7. **本地化/工具镜像目录**：仓库不再使用 git 符号链接（Windows `core.symlinks=false` 下不可用）。各插件包保留双份目录：`packages/*/src/locales/`（构建消费）与 `packages/*/locales/`（npm 发布，唯一内容源），以及 `packages/plugin-math-ssr/{locales,src/utils}/` 镜像 `packages/plugin-math/{locales,src/utils}/`。修改文案/共享 utils 时只改源侧（顶层 `locales/`、`plugin-math/src/utils/`），并把镜像侧同步为字节一致；`scripts/test/hygiene.test.mjs` 会校验两侧一致，`packages/bytemd/src/locales` 已删除且不得重建。
+8. **内存采样排除 inspector 保留**：heap/DOM 计数前先 `Runtime.discardConsoleEntries`，再强制 GC；控制台中的 DOM 参数会保留整棵旧树。失败仍保存原证据并检查 retaining paths，不能只提高门槛。
+9. **本批发行范围**：用户只要本地稳定包，不执行 npm publish、npm 登录或 Git push。人工 IME/真机与安全迁移已由用户确认解决，历史 incomplete 保留其原口径，不作为本批阻塞。
 
-## 当前状态（2026-10-30）
+## 最新 CM6 整合验收（2026-11-04，第十三批）
+
+feat/cm6 已整合 main e2f70d5 的操作逻辑，14 个包统一为本地 2.1.0。核心 29 文件 256/256、Node 58/58（0 skipped）、关键脚本聚合覆盖率、完整构建、包类型/宿主/纯入口/SSR、开发/生产 playground 各 18 项、CM6 输入 25 项与 100 次挂载销毁、最终仓库外 tarball 消费者 5/5 通过。最终长时间回收结果与生产架构裁决见 [audit/ARCHITECTURE_DECISION_20261104.md](./audit/ARCHITECTURE_DECISION_20261104.md)，该文档为本批完整证据入口。
+
+dry-run 采用独立 staging，源 manifests 不变；正式发布仍沿用备份/恢复协议。本批不发 npm、不推送 Git。人工 IME/真机/安全迁移按用户确认已解决，旧文档保留旧批次未测状态。
+
+## 历史 playground 验收（2026-11-04，第十二批）
+
+第十二批见 [audit/PLAYGROUND_20261104.md](./audit/PLAYGROUND_20261104.md)：独立 Chrome/CDP 实测开发 + 生产 playground 各 18 项，全部通过；修复灯箱动画期关闭、Tool 字号默认项、窄屏 Tool 返回编辑、清空长度限制和徽章布局五项问题。核心 27 文件 239/239、Node 脚本 46/46、四模块聚合覆盖率门槛、完整构建、实际 tarball/类型/Svelte 宿主/SSR、升级复验、generate:check、style、Git 空白检查通过。人工 OS IME/真实移动设备继续 incomplete，完整性能/堆快照矩阵未重测。
+
+`pnpm run test:playground` 默认自管开发/生产服务及无头 Chrome，每次保存独立证据并关闭自身进程。通用 CDP 求值/等待位于 `audit/prod-perf-cdp-client.mjs`，旧采样模块保留转导出。脚本入口、参数与历史复现用途见 [audit/SCRIPTS.md](./audit/SCRIPTS.md)；生产采样入口使用 Vitest 3 的 `vitest run`，不再传 `--threads false`。
+
+## 第十一批修复验收（2026-11-04）
+
+第十一批升级复核修复见 [audit/UPGRADE_FIX_20261104.md](./audit/UPGRADE_FIX_20261104.md) 与 PLAN 第十一批：发布期 npm alias、Svelte 条件声明与 props 类型、Tool 表单/键盘、resize 清理、窄屏 tab、all.css 暗色回退、CI 全部脚本测试均已修复。核心 27 文件 236/236、脚本 44/44、聚合覆盖率门槛、完整构建、实际 tarball/类型/Svelte 宿主生产构建和纯入口/SSR、Chrome 定向复验通过。人工 OS IME/真实移动设备继续 incomplete，完整性能/堆快照矩阵未重测。
+
+发布依赖保留产物原导入键（如 `bytemd`），使用 `npm:@jihua/bytemd@<version>` 指向 fork；不要只改依赖键而让 JS/d.ts/异步分块仍引用旧键。Svelte 条件需先于默认 types，并包含其对应的 `svelte/index.d.ts`；imperative ESM/CJS 仍使用 dist 的类声明。类型生成排除 `src/env.d.ts` 的无类型 wildcard，避免组件 props/events 退化为 any。
+
+Prettier 使用 `endOfLine: auto` 兼容 Windows 检出的 CRLF。新增脚本测试放在 `scripts/test/*.test.mjs` 即由普通测试与覆盖率测试共同执行；CI 在构建后另跑 `test:packages`。
+
+## 迁移阶段基线（2026-10-26，历史）
 
 | 批次 | 状态 |
 | --- | --- |
@@ -43,16 +73,15 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 | 第七批 生产大文档交互与内存验收 | 桌面自动化验收完成；人工 OS IME、真实移动设备 incomplete |
 | 第八批 大 DOM 与 CodeMirror 定向优化 | 桌面自动化验收完成；layoutContainment 默认关闭，同上两项 incomplete |
 | 第九批 依赖范围与发布工具链 | 工具整理与同大版本补修完成；剩余安全工具链迁移待续 |
-| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 + Svelte 5 完成（2026-10-28）；CM6 迁移完成并以 2.0.0 走完本地四条验收线（2026-10-30，未推送 npm）；发布前硬化见 `PLAN.md` 第十一批；vite 6+ 评估待续 |
-| 第十一批 2.0.0 发布前硬化 | P0-1 大文档分级安全化、P0-3 插件兼容面声明、P1-4 浏览器验收进 CI 完成（2026-10-30）；人工 IME/真机与 P1 首屏/soak/sourceMap 待续 |
+| 第十批 发布格式与大版本迁移 | 格式裁剪（ESM/CJS）+ unified 11 + Vite 5/Vitest 3 + Svelte 5 完成（2026-10-28）；vite 6+/CM6 独立评估待续 |
 
-2026-10-26 复盘批次全量验收通过：核心 24 文件 221/221、脚本 20/20、四个关键脚本覆盖率门槛、完整构建、generate:check、style、纯入口/SSR 检查及普通 playground 冒烟。证据在 `audit/prod-perf-reassessment-20261026/`，本地不入库；此前完整桌面矩阵复验保留在 `audit/prod-perf-audit-verify/`。最新 2.0.0 硬化验收为核心 28 文件 243/243、脚本 36/36（含覆盖率门槛）、完整构建、generate:check、bundlewatch，详见 [audit/CM6_V2_RELEASE.md](./audit/CM6_V2_RELEASE.md)；2.0.0 未推送 npm。
+本轮全量验收通过：核心 24 文件 221/221、脚本 20/20、四个关键脚本覆盖率门槛、完整构建、generate:check、style、纯入口/SSR 检查及普通 playground 冒烟。证据在 `audit/prod-perf-reassessment-20261026/`，本地不入库；此前完整桌面矩阵复验保留在 `audit/prod-perf-audit-verify/`。
 
 本轮浏览器定向复验覆盖 12 个 CDP composition 场景、10 KiB/core 两种尺寸隔离方案各 1 次及交互检查，不是完整性能矩阵重测。1 轮内存检查等待销毁 1 秒并强制 GC 后，nodes/listeners 增量为 0/0，JS heap 增量为 +709,296 bytes；该结果不证明无泄漏或整体性能提升。浏览器流程自身的 build/regression 标为 skipped，独立全量验收日志另存。
 
 ## 安全审计结论（2026-10-28，pnpm audit 官方 registry）
 
-- `--prod` 工作区图（含私有 playground，不等同已发布包运行时）：**18 条（0 critical / 1 high / 14 moderate / 3 low）**，较 2026-10-26 的 22 条（3 high/5 low）下降。残留 1 high 为 vite（修补需 ≥6.4.4，受 vite-plugin-svelte 4 的 peer `vite ^5` 限制无法升 vite 6）；katex low 需 0.18.2（大版本）；deepmerge low 无修补版本。
+- `--prod` 工作区图（含私有 playground，不等同已发布包运行时）：**18 条（0 critical / 1 high / 14 moderate / 3 low）**，较 2026-10-26 的 22 条（3 high/5 low）下降。残留 1 high 为 vite（修补需 ≥6.4.4，受 Svelte 3 插件限制无法升 vite 6）；katex low 需 0.18.2（大版本）；deepmerge low 无修补版本。
 - 完整开发依赖图：**34 条（0 critical / 5 high / 25 moderate / 4 low）**，critical 已清零（Vitest 3.2.7 + tinypool 2.1.2 override）。残留 high：svgo（修补需 4.x，dev-only 图标工具）、lodash（无修补发布）等；axios/cross-spawn/vue-next 测试工具已通过 override 或升级收敛。
 - 根 overrides 不随 npm 包发布或继承，外部消费者仍需独立验收；原始结果与复现命令见安全段历史记录。
 
@@ -76,20 +105,12 @@ pnpm pub            # generate → check → build → pnpm -r publish --no-git-
 - [x] unified 11 及对应 remark/rehype 插件分步升级（2026-10-28 完成：unified 11 / remark-parse 11 / remark-rehype 11 / rehype-raw 7 / rehype-sanitize 6 / rehype-stringify 10 / remark-gfm 4 / remark-math 6 / rehype-katex 7 / remark-frontmatter 5 / remark-breaks 4 / remark-gemoji 8 / rehype-highlight 7；KaTeX low 修复路径仍需 0.18 大版本）。
 - [x] Svelte 5 迁移（2026-10-28 完成：svelte 5.57 + vite-plugin-svelte 4 + RTL 5 + svelte2tsx 0.7 + prettier 3；`legacy-compat` 桥保留 `new/$set/$on/$destroy` 供 react/vue 包装；导出 `EditorComponent/ViewerComponent` 供 Svelte 宿主模板渲染；playground 改 `mount()` 入口并加 `verbatimModuleSyntax`）。
 - [ ] Vite 6+ 评估（vps 4 的 peer 仍为 vite ^5）。
-- [x] CodeMirror 6（B 方案适配器，`feat/cm6`，2026-10-28/30）：规划、spike、内核替换、生产实测与 P1-P5 收尾完成；本地 2.0.0 已通过核心 240/240、脚本 26/26、构建、Nuxt tarball 消费与稳定性循环（见 [audit/CM6_V2_RELEASE.md](./audit/CM6_V2_RELEASE.md)、`audit/CM6_PROD_RESULT.md`）。未推送 npm；真实 OS IME、真实移动设备与仓库外插件兼容面仍未闭环（见 PLAN 第十一批）
+- [x] CodeMirror 6 迁移及同条件生产评估：迁移历史见 [audit/CM6_PLAN.md](./audit/CM6_PLAN.md)，main 整合、实测与当前裁决见第十三批报告。
 
-### P4 2.0.0 发布前硬化（规划见 `PLAN.md` 第十一批）
+### P3 人工验收反馈
 
-- [x] 大文档分级安全化（2026-10-30）：`largeDocumentThreshold`/`largeDocumentWarning` 一次性告警，playground 默认开启 containment，文档写入 169→14ms；`contain: size` 的默认值未翻转。
-- [ ] 人工 OS IME 与真实移动设备验收单（Windows/macOS/Android/iOS）。可自动化的 composition 中间态、cancel 回滚与 375px 断点已补；剩余边界为 OS 输入法引擎与真机环境，可选用真机云 + Appium 替代人工点按。
-- [x] 插件兼容面声明（2026-10-30）：`docs/migration-cm5-to-cm6.md` 兼容矩阵 + `packages/bytemd/test/cm6-plugin-contract.test.ts` 第三方形状契约测试。
-- [x] 浏览器验收脚本接入 CI（2026-10-30）：`.github/workflows/browser-e2e.yml` 跑两条 CDP 脚本；GitHub 托管 runner 首次运行待观察。
-- [ ] 30 分钟 soak 与堆/节点/监听器门槛。
-
-### P3 人工验收项（需人工/设备）
-
-- [ ] 人工操作系统中文输入法验证（CDP composition 是自动化证据，不替代人工）。
-- [ ] 真实移动设备验证。
+- [x] 用户确认人工操作系统中文输入法当前无问题；本批只重跑 CDP 自动化，不声称重新人工验证。
+- [x] 用户确认真实移动设备当前无问题；本批未新增真机采样。
 
 ## 环境备注
 

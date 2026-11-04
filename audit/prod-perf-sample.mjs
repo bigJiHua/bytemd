@@ -1,33 +1,13 @@
 import { EvidenceArchiver } from './prod-perf-archiver.mjs'
-import { CDPClient } from './prod-perf-cdp-client.mjs'
+import { CDPClient, evalInPage, waitForPage } from './prod-perf-cdp-client.mjs'
 import { HeapProfilerController } from './prod-perf-heap-profiler.mjs'
 import { KeyboardInjector } from './prod-perf-keyboard-injector.mjs'
 
 const PREFIX = '__PROD_PERF_RESULT__:'
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export async function evalInPage(session, expression) {
-  const reply = await session.send('Runtime.evaluate', {
-    expression: `(async () => { ${expression} })()`,
-    awaitPromise: true,
-    returnByValue: true,
-  })
-  if (reply.exceptionDetails)
-    throw new Error(
-      reply.exceptionDetails.exception?.description ||
-        reply.exceptionDetails.text,
-    )
-  return reply.result.value
-}
-
-export async function waitForPage(session, expression, timeoutMs = 180000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await evalInPage(session, `return (${expression})`)) return
-    await sleep(100)
-  }
-  throw new Error(`Timeout waiting for page condition: ${expression}`)
-}
+// Retain imports used by existing probes; generic page helpers live with CDP.
+export { evalInPage, waitForPage } from './prod-perf-cdp-client.mjs'
 
 // Subscribe before invoking an action, including actions that emit synchronously.
 export async function withPageEvent(session, type, action, timeoutMs = 180000) {

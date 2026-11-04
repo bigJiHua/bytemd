@@ -1,6 +1,6 @@
 {
   "name": "bytemd",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Hackable Markdown Editor and Viewer",
   "keywords": [
     "markdown",
@@ -40,11 +40,16 @@
     "./dist/index.min.css": "./dist/index.min.css",
     "./dist/markdown.css": "./dist/markdown.css",
     "./dist/markdown.min.css": "./dist/markdown.min.css",
+    "./dist/custom-blocks.css": "./dist/custom-blocks.css",
+    "./dist/custom-blocks.min.css": "./dist/custom-blocks.min.css",
+    "./dist/index.bundle.css": "./dist/index.bundle.css",
+    "./dist/index.bundle.min.css": "./dist/index.bundle.min.css",
     "./viewer": {
       "types": "./dist/viewer.d.ts",
       "import": "./dist/viewer.mjs",
       "require": "./dist/viewer.js"
-    }
+    },
+    "./themes/*": "./dist/themes/*"
   },
   "main": "./dist/index.js",
   "svelte": "./svelte/index.js",
@@ -81,6 +86,7 @@
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.0.0",
     "select-files": "^1.0.1",
+    "svelte": "^5.57.3",
     "tippy.js": "^6.3.7",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
@@ -91,7 +97,7 @@
     "@primer/css": "^15.2.0"
   },
   "peerDependencies": {
-    "svelte": ">=5"
+    "svelte": "^5.57.3"
   },
   "peerDependenciesMeta": {
     "svelte": {

@@ -1,10 +1,56 @@
 # ByteMD 现代化与瘦身计划
 
-> 范围：只改本地 fork `bigJiHua/bytemd`，不碰 Main。目标：先修正确性/安全，再砍冗余依赖与发布格式；保持现有主题/示例可用。Svelte 5 与 CodeMirror 6 曾定为重写级迁移暂缓，现已于第十批完成（CM6 为本地 2.0.0，未发版）；发布前硬化见第十一批。
+## 第十三批 — CM5/CM6 整合、生产架构裁决与本地稳定包（2026-11-04，完成）
+
+- [x] 合并 main e2f70d5 的 Tool、窄屏、灯箱、主题、发布 alias 与回归脚本到 feat/cm6，保留 CM6 原生扩展。
+- [x] 同条件生产矩阵对照 CM5 / 整合 CM6 / 优化 CM6，完成 10/100/500 KiB、core/enhanced、sync/worker 每组 3 次。
+- [x] 补测最终 CM6 与 CM5 默认同步首屏，各 18 样本；500 KiB enhanced 构造 2767.2 → 1872.9 ms，完整暖首屏 4554.8 → 3956.0 ms。
+- [x] 修复全文序列化缓存、兼容快捷键回调/退让/组合输入、setCursor 两种调用形式、Svelte 运行时依赖和 Vue 2 编译器解析。
+- [x] playground 开发/生产各 18 项通过；修复 CDP 命中坐标的滚动同步与 fixed 侧栏处理。
+- [x] 堆快照定位 highlight.js 未知语言警告的 DevTools DOM 保留；高亮插件跳过未知语言，采样清理 inspector 日志后强制 GC。
+- [x] 最终代码两代各 30 分钟编辑/滚动/主题 soak：CM5 1258 次、CM6 1197 次；销毁 nodes/listeners 均 0/0，heap +2.16/+2.76 MiB，均低于 5 MiB 门槛；保存 CM6 堆快照。
+- [x] 全量回归、打包类型/框架/SSR、仓库外消费者、生成/格式/包体积门槛与发布演练。
+- [x] 架构裁决报告与 14 个 2.1.0 稳定 tarball 交付；详见 audit/ARCHITECTURE_DECISION_20261104.md。
+
+用户确认：main 的 npm latest 为 1.22.4，CM6 beta 为 2.1.0-beta.2；本地清单原为 2.0.0，统一为 2.1.0。仅交付本地包，不执行 npm publish 或 Git push。用户确认人工 IME、真实移动设备及安全迁移已解决，本批不宣称再次人工验证。
+
+本批新增脚本验收：CM6 输入 25 项通过，DOM compositionstart/update/end 共 4 事件；旧 Input.compositionEvent 订阅已改为实际 Runtime binding。核心 256/256、Node 58/58（0 skipped）、四模块覆盖率门槛、完整构建、包类型/宿主/SSR、最终仓库外消费者 5/5、开发/生产 playground 各 18 项通过。原地发布演练在 Windows 出现 UNKNOWN open 错误，已 --restore 恢复全部清单；dry-run 改为独立 staging 并共享 scope/alias 改写，验证源 manifests 字节不变，避免原地演练的文件改写。
+
+最终选择 CM6 单内核 + CM5 子集 adapter + 现有 Worker/纯解析/DOM effects 分层。默认暖首屏更快，增强全量预览本轮慢约 4%–8%，纯内核 change 路径 CM5 更快；不采用未验证的 rehypeRaw 旁路、增量 AST 或虚拟预览。实测、限制、包安装说明均保留在本批报告和本地发行合集。
+
+## 第十二批 — playground 实测与脚本清理（2026-11-04，完成）
+
+- [x] 实测 playground 开发模式与生产 preview：默认示例、编辑/预览、工具栏与键盘、插件开关、语言/主题、目录/手风琴/复制、390px 窄屏；保存浏览器错误与截图。
+- [x] 修复实测发现的问题：灯箱动画期间关闭按钮/Escape 被忽略；Tool 字号使用按钮误选 12px；窄屏 Tool 使用后未返回编辑；playground 清空长度限制后仍提示超限；插件徽章遮挡控件和窄屏布局。
+- [x] 清理验收脚本：将旧 playground smoke 整理为可独立运行的命令，共用已有 CDP 求值/等待助手，移除无引用的临时调试脚本；历史复现与验收证据保留。
+- [x] 回测：核心测试、全部脚本及覆盖率、完整构建、包消费/SSR、generate:check、style；更新本批进度和验收记录。人工 OS IME、真实移动设备继续 incomplete。
+
+验收：开发与生产 playground 各 18/18，共 36 项浏览器检查通过，runtimeErrors 均为空；核心 27 文件 239/239、脚本 46/46、四模块聚合覆盖率门槛、完整构建、实际打包消费/类型/Svelte 宿主/SSR、整理后的升级复验、generate:check、style 与 Git 空白检查通过。证据见 [PLAYGROUND_20261104.md](./audit/PLAYGROUND_20261104.md)，脚本入口见 [SCRIPTS.md](./audit/SCRIPTS.md)。
+
+## 第十一批 — 1.22.4 升级复核修复（2026-11-04，完成）
+
+范围：修复本轮确认的 8 项问题，并修复阻碍回测的过时 SSR 脚本与格式漂移。本批不升级依赖、不发布 npm；保持树内包名、author 和 LICENSE 约定。原始复核证据：`audit/prod-perf-review-20261104/`（本地忽略）。
+
+实施顺序：先处理发布消费与 Svelte 类型，再处理交互/主题，最后补齐验收链并全量回测；作为一个批次闭环。
+
+- [x] P1 发布依赖：发布时使用 npm alias，将产物中的原导入名解析到 `@jihua/*`；覆盖 ESM/CJS、声明、Viewer 子入口和 Vue 3 异步分块，验证实际 tarball 消费与 manifests 还原。
+- [x] P1 Svelte 入口/类型：为 Svelte 条件提供与运行导出一致的声明；恢复 Editor/Viewer props/events 类型，验证正常模板、错误 props 和 imperative 类 API。
+- [x] P1 Tool 表单行为：所有非提交按钮指定 `type="button"`，验证点击不触发表单 submit。
+- [x] P2 Tool 键盘行为：原生按钮只处理 click，验证 Enter/Space 单次激活与预设展开。
+- [x] P2 生命周期：移除销毁时的窗口 resize 监听，验证多次挂载/销毁无残留且同页其他编辑器可用。
+- [x] P2 窄屏 tab：统一有效分屏状态，验证 390px + 强制 split 时重复点击预览仍保留预览。
+- [x] P2 主题层叠：降低亮色属性预设特异性，验证 all.css 与单主题的暗色回退一致，并保留显式 ink 暗色主题。
+- [x] P2 CI 脚本测试：覆盖率命令执行全部 Node 脚本测试，保留四关键模块聚合门槛；CI 补构建后包消费/类型/SSR 检查。
+- [x] 验收工具：更新 Svelte 5 SSR 调用和标题断言；修复 23 个文件的格式漂移，生成产物仍由 generate 管理。
+- [x] 全量回测：`pnpm test`、`pnpm run test:scripts`、覆盖率门槛、完整构建、`pnpm generate:check`、`pnpm style`、纯入口/SSR、实际打包消费与类型、Chrome 定向交互/主题/窄屏复验；保存日志和汇总后更新本节与进度日志。
+
+验收：核心 27 文件 236/236、Node 脚本 44/44（0 skipped），四模块覆盖率门槛通过（lines/statements 85.75%、branches 85.84%、functions 80%）；完整构建、实际 tarball 消费/类型/Svelte 宿主生产构建、纯入口/SSR、Chrome 定向复验、generate:check、style 和 Git 空白检查通过。14/14 包发布演练成功，14/14 manifests SHA-256 校验确认字节还原。详见 [修复验收记录](./audit/UPGRADE_FIX_20261104.md)。
+
+人工 OS IME、真实移动设备与完整性能/堆快照矩阵保持 incomplete/未重测，不用本批定向验证替代。
+
+> 范围：只改本地 fork `bigJiHua/bytemd`，不碰 Main。目标：先修正确性/安全，再砍冗余依赖与发布格式；保持现有主题/示例可用。暂缓：Svelte 5、CodeMirror 6 属于重写级迁移，不在前几阶段。
 
 ## 决策基线
-
-> 以下为第十批之前的基线；Svelte 5、CodeMirror 6、ESM/CJS 裁剪均已完成，现行发布前基线见第十一批。
 
 - 不先动 Svelte 版本，不先动 CodeMirror 版本。
 - UMD/CJS 发布格式裁剪会改变包的兼容面，等确认后再做。
@@ -144,7 +190,7 @@
   - playground 入口改 `mount()`（`new App()` 跳过 `init_operations`，模板辅助函数全部 undefined），并改为从源码编译 ByteMD 以共享同一 Svelte 运行时。
 - [x] 本轮验收：核心 26 文件 230/230、脚本 26/26 + 覆盖率门槛（85.28%）、完整构建、generate:check、style、bundlewatch（index.mjs 63.98KB gzip）、无头 Chrome 实测 playground（编辑器/37 工具栏/28 标题/KaTeX×2/mermaid/高亮×5/复制按钮×6/交互重渲染/暗色 #0d1117，仅 favicon 404）。
 - [x] 评审修复（2026-10-28）：svelte 条件入口改导出 Editor/Viewer 组件（dist 入口保留兼容类）；Viewer 的 beforeUpdate 仅在 file/plugins/locale 变化时清理，恢复与 tick 重绑的配对；render-controller 改为插件数组内容快照比较、对象参数不再走快捷路径；删除 viewer 未使用的 lifecycle。核心 26 文件 231/231、脚本 26/26、完整构建、style、generate:check 通过；真实 Svelte 宿主与 Svelte 3 的 examples/svelte 未实测。
-- [ ] Vite 6+ 仍为独立评估项目：@sveltejs/vite-plugin-svelte 4 的 peer 仍为 vite ^5。CodeMirror 6 已完成本地 2.0.0 验收，发布前硬化见第十一批。
+- [ ] Vite 6/7、CodeMirror 6 仍为独立评估项目：@sveltejs/vite-plugin-svelte 4 的 peer 仍为 vite ^5。
 
 #### 复盘补修：核心边界、测量工具与依赖安全 — 2026-10-26（完成）
 
@@ -161,69 +207,6 @@
 
 本批原始证据为 `audit/prod-perf-reassessment-20261026/`（本地、Git 忽略）。生产复现命令的 build/regression 为 skipped，完整构建与全量回归在独立命令中通过；没有覆盖历史采样、提交或发布。
 
-#### 第十一批：2.0.0 发布前硬化 — 2026-10-30（核实完成；P0-1/P0-3/P1-4 已实施，P0-2 待人工）
-
-> 触发：2.0.0 四条验收线已闭环（[CM6_V2_RELEASE.md](./audit/CM6_V2_RELEASE.md)），但“验收通过”不等于“可对外宣称生产就绪”。本章先逐条核实外部评审提出的 P0/P1/P2 主张，再给出可执行闸门；未完成项一律保持 `- [ ]`。
-
-**核实结论（2026-10-30 代码/文档实查）**
-
-| 主张 | 核实 | 证据 |
-| --- | --- | --- |
-| CDP compositionEvent 采样为 0，仅值/预览正确 | **属实** | `Input.compositionEvent` 无头环境未派发，以值/预览断言为准 |
-| `layoutContainment` 默认关闭是大文档脚枪 | **属实，但不能直接翻转默认值** | 默认 `false`（`editor.svelte:55`，React/Vue 同）；README 已有“≈100 KiB 以上建议开启”，未给 169→14ms 数字；playground 未传该参数。`contain: size` 会让内容撑高/打印展开的编辑器塌陷，改默认值属行为破坏 |
-| CM6 兼容层只覆盖 CM5 子集，仓库外插件可能失效 | **属实** | `state.selectingText/draggingText` 为占位（`cm6-editor.ts:214`）；`getDoc()` 返回 CM6 `Text` 而非 CM5 Doc（`:359`）；`getOption/setOption` 仅透传构造项 + `readOnly`（`:363/527`）；`editorConfig` 实际映射 8 项 |
-| 500 KiB 加载约 3.7s，成本在预览/插件而非内核 | **属实** | 3718.4ms（Layout 235ms / Task 3480ms）；插件已按需 chunk，瓶颈是全量预览渲染与 DOM 插入 |
-| 200 次输入堆 +1.22MB、节点 +103；100 次挂载 +1.38MB | **一半无法复核** | 仓库只留档 100 次挂载 DOM/listener +0/+0、堆 +1.28MB（`CM6_PROD_RESULT.md` §5）；+1.22MB/+103 未落盘，需重跑归档 |
-| 每次预览更新重建 sourceMap；全量 `heightAtLine` 14.3ms | **部分属实** | 每次 render 都执行 `annotateSourceBlocks`（`processor.ts:31`）；滚动测量已按内容/尺寸/图片失效缓存（`scroll.ts`），14.3ms 为一次性全量测量，两者成本未拆分 |
-| 浏览器验收脚本未进 CI | **属实** | `test.yml` 只跑 generate/scripts/vitest/build；`cm6-v2-input-verify`、`cm6-closeout-verify` 为手工 CDP 脚本 |
-| overlay 自定义语法（`[size=]`/`[color=]`）高亮需补专项对照 | **不成立** | CM5 overlay addon 从未被调用，自定义语法本无编辑器高亮；这是新增能力，不是等价迁移，不列入 2.0 阻塞 |
-| `editorConfig` 缺全量映射 | **部分属实** | 8 项已映射且文档列出忽略项（`docs/index.md:199`）；缺的是逐项对照表与迁移示例，不是“无说明” |
-| 主题不跟随 `prefers-color-scheme` | **属实** | 只有 `.dark` / `[data-theme="dark"]`（`index.scss:699`），无 auto 模式 |
-| 缺 CHANGELOG / 迁移指南 / 插件 peer 说明 | **属实** | `CHANGELOG.md` 不存在；README 仅一节 CM6 实例说明；peer `^1.5.0 \|\| ^2.0.0` 只写在 package.json |
-| 缺原生 `EditorView` 扩展入口 | **部分不成立** | `editorExtensions`（`Extension[]`）与 `editor.view` 已暴露（`docs/index.md:200/216`）；缺的是高价值插件逐步脱离 CM5 形状的路线 |
-
-##### P0 — 发版闸门（三项，未完成前不得宣称生产就绪）
-
-- [x] P0-1 大文档安全化（分级，不翻转默认值）— 2026-10-30 完成
-  - 新增 `largeDocumentThreshold`（默认 `102400`，UTF-16 code units，与 `maxLength` 同口径）与 `largeDocumentWarning`（默认 `true`）；超过阈值且未开启 containment 时打印一次告警，`0`/`false` 可关闭；四框架 wrapper 已透传。
-  - playground 默认开启 `layoutContainment`；生产页实测 `.bytemd-body-contained` 存在，编辑区与预览高度均 > 0（`cm6-v2-input-verify` 第 19 条断言）。
-  - 三份 README 与 `docs/index.md` 写入“500 KiB 169→14ms”数据与反面条件（`height:auto`、打印展开必须关闭）。
-  - 验收：核心 28 文件 243/243（含新增告警用例）、四框架生命周期回归、完整构建、style、generate:check、两条浏览器验收通过。
-  - 默认值未翻转：`contain: size` 对内容撑高与打印仍是确定破坏，翻转需 auto-height 宿主的单独证据。
-- [ ] P0-2 人工 OS IME 与真实移动设备验收单
-  - **可自动化的部分已补齐（2026-10-30）**：`scripts/test/prod-perf.test.mjs` 新增 10 例，锁住 composition 注入器的 CDP 协议形状、事件窗口、失败包装、`cancel()` 路径与键盘逐键派发；`audit/cm6-v2-input-verify.mjs` 新增 4 项 e2e（逐字 `compositionupdate` 序列、合成提交、cancel 回滚、375px 断点收起预览并在 1280px 恢复），共 24/24 通过。两个注入器行/分支覆盖 100%。
-  - 仍未覆盖：`compositionEvents` 采样为 0，说明 CDP 的 `imeSetComposition` 不派发真实 composition 事件；OS 输入法引擎（候选词窗口、拼音转换、上屏顺序、逐键中间态）与真机软键盘/浏览器差异不在当前工具链可观测范围。
-  - **可选自动化替代**：真机云（BrowserStack/Sauce Labs）+ Appium/adb 设备侧驱动，接入后可将本项降级为“真机云通过”，无需人工点按；需账号与预算拍板。
-  - 人工兜底范围：Windows（微软拼音/搜狗）、macOS（拼音）、Android（Gboard）、iOS 各至少 1 台；覆盖候选词、回车上屏、长按联想、标点、粘贴中文、撤销；记录设备/OS/浏览器/输入法版本与录屏。通过前保持 `incomplete`。
-- [x] P0-3 插件兼容面声明与矩阵 — 2026-10-30 完成
-  - 新增 `docs/migration-cm5-to-cm6.md`：兼容矩阵（含“支持/已变更/不支持/占位”四档）、`getDoc()` 返回 CM6 `Text` 的破坏面、`editorConfig` 映射表、keymap/CSS/原生扩展 recipe、大文档说明；三份 README 的 CM6 实例小节加入链接。
-  - 新增 `packages/bytemd/test/cm6-plugin-contract.test.ts`（2 例）：按仓库外插件形状覆盖 `wrapText`/`replaceLines`/`appendBlock`/`setOption`/`getDoc`/`addKeyMap`/`heightAtLine`/选区与位置换算，以及 `ctx.codemirror`/`root`/`isDestroyed`。
-  - 顺带修正适配器 `getOption('lineNumbers' | 'lineWrapping')` 在未显式传参时返回 `false`、与实际默认行为不符的问题。
-  - 仓库内 9 插件审计结论沿用 `audit/CM6_V2_RELEASE.md` §2：均无 `editorEffect`，仅 gfm/mermaid 动作触达编辑器。
-
-##### P1 — 性能与体验（可并行，不阻塞 P0 结论）
-
-- [ ] P1-1 大文档首屏策略：先保证编辑器可交互、预览后到（Worker renderer 或延迟首渲染）。目标：500 KiB 编辑器可交互 < 1s；不得把当前 3718ms 基线说成“已优化”。先测后改。
-- [ ] P1-2 长时 soak 与内存门槛：30 分钟连续输入 + 滚动 + 主题切换，记录 heap/nodes/listeners；重跑 200 次输入并把数值落盘。门槛先以夜间巡检脚本形式加入，稳定后再决定是否阻塞 PR。
-- [ ] P1-3 sourceMap 与滚动映射成本拆分：量化 `annotateSourceBlocks` 与首次滚动测量占比；超过 50ms 再做增量/延迟重建，避免为未证实的问题引入缓存一致性风险。
-- [x] P1-4 浏览器验收进 CI — 2026-10-30 完成（本地按 CI 步骤跑通；GitHub Actions 首次运行待观察）
-  - 新增 `.github/workflows/browser-e2e.yml`：安装/生成/构建包 → 构建 playground 与 audit 消费页 → 串行运行两条 CDP 验收 → 上传 JSON 证据；PR 仅在该批路径变更时触发，另有 push main 与手动触发。
-  - 本地实测：input 24/24（containment 布局、逐字 `compositionupdate`、cancel 回滚、375px 断点）、closeout 全通过（100 次挂载/销毁 nodes +0 / listeners +0，堆 +1.36MB），console 0 问题。
-  - 未验证：GitHub 托管 runner 上的 Chrome/sandbox 行为与耗时，需首次流水线运行确认。
-
-##### P2 — 工程化与长期（发版后可排）
-
-- [ ] P2-1 `editorConfig` 完整对照表：CM5 选项逐项标注“已映射/忽略/替代方式”，附 `editorExtensions` 示例。
-- [ ] P2-2 主题 auto：`data-theme="auto"` + `matchMedia('(prefers-color-scheme: dark)')` 监听，避免亮色页面被系统暗色误伤；需同步 tippy 下拉与暗色 token 测试。
-- [ ] P2-3 可访问性实测：CM6 keymap、tippy 菜单、TOC 焦点顺序与读屏（NVDA/VoiceOver）清单；现有工具栏/侧栏 aria 不覆盖这三处。
-- [ ] P2-4 发版资料：`CHANGELOG.md`（2.0.0 破坏面/迁移路径/性能数据）、迁移指南、插件 peer 说明；bundlewatch 门槛已有，补 CM6 体积变化（63.98→67.95KB gzip）说明。
-- [ ] P2-5 原生扩展路线：`editorExtensions`/`editor.view` 已可用，长期让高价值插件直接消费 `EditorView`，逐步减少 CM5 形状适配器维护面。
-- [x] P2-6 登记 overlay 结论：CM5 无自定义语法高亮，无需 token 对照；若未来实现属新增能力（避免重复立项）。
-
-**执行状态（2026-10-30）**：P0-1、P0-3、P1-4 已完成并本地验收；剩余 P0-2（人工 OS IME 与真实移动设备）是唯一发布闸门。P1-1/P1-2/P1-3 待按实测排期，P2 全部不阻塞 2.0.0。
-
-**“只做三件事”的修正**：方向成立，但第一条应改为“分级安全化”，而不是把 `layoutContainment` 直接设为默认——`contain: size` 对内容撑高与打印是确定破坏，默认翻转需单独证据。
-
 ### 后续执行顺序与验收
 
 | 顺序 | 范围 | 验收与推进条件 |
@@ -232,7 +215,6 @@
 | 2 | 外部发布消费与测量工具覆盖 | 干净安装不继承根 overrides，核对数学插件实际依赖及入口；补 summarizer 和浏览器失败清理关键路径 |
 | 3（第十批） | 发布格式与解析/框架迁移 | ✅ 格式裁剪（ESM/CJS）、unified 11、Svelte 5 完成（2026-10-28）；CodeMirror 6 / vite 6+ 独立评估 |
 | 4（七/八批待验） | 人工与设备、进一步大 DOM 优化 | 人工 OS IME、真实移动设备仍 incomplete；更多循环内存趋势与虚拟预览契约另行验证，不重复标记桌面自动化未完成 |
-| 5（第十一批） | 2.0.0 发布前硬化 | P0 三项闭环（大文档分级安全化、人工 IME/真机、插件兼容面声明）后才可对外宣称生产就绪；P1 性能体验与 P2 工程化不阻塞发版，按实测排期 |
 
 Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和第九批发布工具整理已实施；工具链安全升级（critical 清零）、发布格式裁剪、unified 11 与 Svelte 5 已于 2026-10-28 完成。源码块标识仅在一次预览渲染内关联源码与 DOM，不是跨编辑持久 ID，也不实现段落内逐行定位或虚拟预览。
 
@@ -293,7 +275,7 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - [x] Vite 5 / Vitest 3 / jsdom 24 工具链（2026-10-28，critical 清零）；TypeScript 5 保持
 - [x] Prettier 3 + prettier-plugin-svelte 3 / sort-imports 5（2026-10-28，全库格式化通过；`generate.mjs` 改为 await 异步 `prettier.format`）
 - [x] Svelte 5（2026-10-28，见第十批；`legacy-compat` 保留类 API）
-- [x] CodeMirror 6（2026-10-29/30）：`CM6CompatEditor` 适配器接入，本地 2.0.0 走完功能/生产/稳定性/独立消费四条线（[CM6_V2_RELEASE.md](./audit/CM6_V2_RELEASE.md)）；未推送 npm，发布前硬化与 P0 闸门见第十一批
+- [ ] CodeMirror 6（单独项目，不做混合迁移）：规划与价值评估见 [audit/CM6_PLAN.md](./audit/CM6_PLAN.md)，建议先做 P0 spike 实测再决定是否投入
 
 ## 功能同步与开发约定
 
@@ -304,29 +286,13 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - [x] 开发文档同步普通安装与显式 `generate` / `generate:check`、文档维护区域和格式保护；playground 依赖生成的 `svelte/` / `dist/`，源码变更后需重新构建，测试直接读取源码。
 - [x] 构建清理改为 Node 脚本，解决 Windows 下 `rm` 不存在导致 `pnpm build` 失败的问题。
 - [x] Lerna/engines 与 fork 发布元数据整理完成（第九批）。
-- [ ] Phase 3 继续处理外部消费验证；Phase 5 仅剩 vite 6+。CodeMirror 6 的 2.0.0 发布前硬化见第十一批。
+- [ ] Phase 3 继续处理外部消费验证；Phase 5 仅剩 CodeMirror 6 与 vite 6+。
 
 ## 进度日志
 
-- 2026-10-30（续）：第十一批 P0-1/P0-3/P1-4 执行完成，未改默认值、未发版。
-  - **P0-1 大文档分级安全化**：`EditorProps` 新增 `largeDocumentThreshold`（默认 102400 UTF-16 code units）与 `largeDocumentWarning`（默认 true）；`editor.svelte` 在 `value` 超阈值且 `layoutContainment` 关闭时打印一次告警（`0`/`false` 关闭），四框架透传。playground 默认 `<Editor layoutContainment />`；三份 README 与 `docs/index.md` 写入 169→14ms 与反面条件。新增测试覆盖告警一次、containment 开启静默、warning=false 静默、小文档静默。
-  - **P0-3 兼容面声明**：新增 `docs/migration-cm5-to-cm6.md`（兼容矩阵、`getDoc()` 返回 CM6 `Text` 的破坏面、`editorConfig` 映射、keymap/CSS/原生扩展 recipe、大文档说明），三份 README 加链接；新增 `packages/bytemd/test/cm6-plugin-contract.test.ts`（2 例）模拟仓库外插件调用 `wrapText`/`replaceLines`/`appendBlock`/`setOption`/`getDoc`/`addKeyMap`/`heightAtLine` 等；修正 `getOption('lineNumbers'|'lineWrapping')` 默认值误报。
-  - **P1-4 CI 浏览器验收**：新增 `.github/workflows/browser-e2e.yml`（构建包/playground/audit 消费页后串行跑两条 CDP 脚本并上传 JSON）；`cm6-v2-input-verify` 增加“containment 下编辑区与预览高度 > 0”断言。
-  - **验收**：核心 28 文件 243/243、脚本 36/36、脚本覆盖率门槛 85.28%、`pnpm build` exit 0、playground 与 audit 页构建 exit 0、`pnpm style`、`generate:check` 通过；浏览器 input 24/24（compositionEvents 0、console 0）、closeout 通过（100 次挂载/销毁 nodes +0 / listeners +0、堆 +1.36MB）。产物 gzip：index.mjs 68.64KB、index.css 4.05KB、markdown.css 3.87KB，低于 bundlewatch 上限。
-  - **未完成**：真实 OS IME 与真实移动设备（P0-2；可自动化的 composition 中间态与 cancel 路径已补，剩余边界见该条目）；GitHub 托管 runner 首次运行；P1-1 首屏、P1-2 soak、P1-3 sourceMap 成本量化。
+- 2026-11-04（playground）：第十二批完成。真实 Chrome/CDP 实测开发和生产 playground 各 18 项，全部通过，包含八种插件启停、系统剪贴板读回、灯箱翻页/关闭、中文 locale/暗色、编辑/撤销、Tool、长度提示、全屏/tab 键盘与 390px 窄屏。修复五项实测问题：灯箱打开动画期间关闭失效、Tool 字号误用 12px、窄屏 Tool 使用后不返回编辑、清空最大长度后限制未解除、徽章遮挡控件。统一 `test:playground` 入口，合并 CDP 求值/等待并保留兼容转导出，去除旧 Vitest 参数和临时 debug 脚本，补脚本指南。核心 27 文件 239/239、Node 46/46、覆盖率 lines/statements 86.17% / branches 86.03% / functions 81.08%、完整构建、实际 tarball/类型/SSR、升级复验、generate:check、style、Git 空白检查通过。证据：`audit/prod-perf-playground-20261104/`、`audit/prod-perf-playground-63KjRg/`、`audit/prod-perf-packages-J25I3D/`、`audit/prod-perf-playground-upgrade-final-20261104/`；详见 [audit/PLAYGROUND_20261104.md](./audit/PLAYGROUND_20261104.md)。人工 OS IME/真实移动设备 incomplete，完整性能/堆快照矩阵未重测；未提交或发布。
 
-- 2026-10-30（续 2）：按“能自动化的先自动化”补齐 IME/移动端测试边界，人工项仍未勾选。
-  - 核实出的真实自动化缺口：composition `cancel()` 已实现但生产 e2e 从未调用（死代码）；`compose()` 只发完整字符串，未覆盖逐字中间态。
-  - `scripts/test/prod-perf.test.mjs` 新增 10 例：CDP `imeSetComposition`/`insertText` 协议形状与顺序、事件窗口与时间戳、`finally` 退订、两步失败包装、cancel 成功/失败、键盘逐键 keyDown+keyUp、特殊键与兜底映射；两个注入器行/分支覆盖 100%。
-  - `audit/cm6-v2-input-verify.mjs` 新增 4 项 e2e：逐字 `z→zh→zhong` 均进入文档、合成提交、cancel 回滚原值、375px 断点收起预览且无横向溢出、1280px 恢复分屏；input 24/24，连跑一致。
-  - 关键证据：`compositionEvents` 仍为 0，说明 CDP 的 `imeSetComposition` 不产生真实 composition 事件，验证的是“文档状态随注入变化”，不是“CM6 正确消费真实输入法事件流”。
-  - 结论：剩余人工项的边界是 OS 输入法引擎（候选词/拼音转换/上屏顺序）与真机软键盘/浏览器差异；可选用真机云 + Appium 进一步自动化替代，需账号与预算拍板。
-
-- 2026-10-30：立项第十一批（2.0.0 发布前硬化）。逐条核实外部评审的 P0/P1/P2 主张并写入计划：12 条中 7 条属实、4 条部分属实、1 条不成立。修正项：`layoutContainment` 不能直接翻转默认值（`contain: size` 对 auto-height/打印是确定破坏，改为阈值告警 + playground 默认开启 + 文档实测数字）；overlay 自定义语法本无 CM5 高亮，属新增能力而非等价迁移；`editorExtensions`/`editor.view` 已存在，缺的是插件去 CM5 形状路线；200 次输入堆 +1.22MB/节点 +103 未在仓库落盘，需重跑。核心结论不变：真实 OS IME/真机、插件兼容面声明、浏览器验收进 CI 是发布前必须闭环的三项；500 KiB 3718ms 加载成本在预览与 DOM，不在内核。本批只改计划文档，未改代码、未发版。
-
-- 2026-10-29（续）：bytemd 2.0.0 本地发布验证完成（未推送/未发布）。版本决策：13 包统一 major 2.0.0（内核世代更替 + `.cm-*` CSS 契约变更 + wrapper `workspace:*` 锁定核心必须随发），插件 peer 放宽 `^1.5.0 || ^2.0.0`（插件仅用文档化 context API，同 dist 服务两代内核）。插件审计：上游 README 权威面对照 TS 定义一致；9 插件均无 `editorEffect`，仅 gfm/mermaid 工具栏动作触达 editor（wrapText/replaceLines/appendBlock/setSelection/Pos/focus，适配器全覆盖）——插件侧无坑。tarball 净室验证（TEMP，不继承 workspace）：SSR/processor+插件/导出面/CJS/worker 子入口/locales+元数据 6/6。playground 生产构建 CDP 模拟输入 18/18：真实键盘（CJK 混排）值+预览、Enter 换行、粗体+单步撤销、gfm 表格动作落点、mermaid SVG、KaTeX、hljs、frontmatter 装饰与预览、composition IME、往返完整性；console 0 问题。实测抓出并修复 **Enter 吞键 bug**：字符串命令被一律 preventDefault，`insertNewlineContinueMarkup` 非列表上下文返回 false（等价 CM5 Pass）时普通段落 Enter 完全失效；修复为命令拒绝即放行 CM6 keymap（jsdom 未覆盖该组合）。工具注记：本环境 CDP returnByValue 对对象/布尔完成值间歇回报 undefined（副作用生效），脚本统一字符串回传+单次重试。文档：`audit/CM6_V2_RELEASE.md`；tarball 在 `audit/local-release-2.0.0/`（gitignore）。未推送、未发布。
-
-- 2026-10-29：CM6 收尾批次完成（`feat/cm6`，本批次前 13 个文件未提交状态一并收口）。P1 能力映射补全：yaml-frontmatter 高亮以 CM6 `ViewPlugin` 装饰实现（`.bytemd-yaml-*` 六类，token 色/暗色与 CM5 yaml 模式对位；核对确认 CM5 的 overlay addon 从未实际调用，自定义语法本无高亮、无需迁移）；inline HTML 由 lang-markdown 内嵌 html 解析器 + HighlightStyle 覆盖并生产页实测（tag/attribute/string 色）；`editorConfig` 映射补齐 `extraKeys`（适配器此前静默丢弃——Enter 列表续行实际失效）/`readOnly`（Compartment）/`autofocus`/`undoDepth`。P2：`wrapText`/`replaceLines`/`appendBlock` 改原生 CM6 单事务（单步撤销、选区随撤销恢复），顺带修复适配器 `appendBlock` 无空行路径落点钳位错误（非空文档图片上传/代码块/分割线/手风琴会插错位置并与末行拼接）。P3：补 `processingInstruction`/`contentSeparator`/`atom` token；删除暗色区 21 条死 CM5 `.cm-*` 规则。P4：新增 `cm6-capabilities.test.ts` 9 例；生产消费页 CDP 复验 100 次挂载/销毁 **0/0**、Enter 续行、亮/暗逐 token 色（`audit/cm6-closeout-verify.mjs`，数据入 `CM6_PROD_RESULT.md` §5）。复验揪出并修复关键缺陷：**`.CodeMirror` 兼容类被 CM6 update 抹掉**（改 `editorAttributes`/`contentAttributes` facet——修复前 focus 一次 `querySelector('.CodeMirror')` 即为 null）；`handleKeydown` 改 `stopImmediatePropagation`。审计工具链 Svelte 5 遗留修复：prod-perf 页 `new App()`→`mount()`、消费页改源码入口、移除 `resolve.conditions: ['worker']`（svelte 5 exports 的 worker 条件使主构建解析到 server 运行时）。P5 部分：三份 README 补 `editorExtensions`/`editorConfig` 子集/CM6 实例迁移说明并强化 `layoutContainment` 大文档指引（手工区，generate:check 不受影响）。验收：核心 27 文件 240/240、脚本 26/26、完整构建、generate:check、style、bundlewatch（index.mjs 67.79KB gzip PASS）。未完成：真实 OS IME/移动设备（需人工）、tarball+SSR 外部消费验证、major/minor 版本策略（待拍板）。
+- 2026-11-04：第十一批升级复核修复完成。修复发布依赖导入名、Svelte 条件声明/props 类型、Tool 表单提交与键盘重复触发、resize 监听残留、窄屏 tab、主题暗色回退和 CI 漏跑脚本测试共 8 项问题；追加修复打包 Svelte 模板的非空断言，更新 SSR 验收工具并收敛格式漂移。实测核心 27 文件 236/236、脚本 44/44（0 skipped）、四模块 c8 聚合门槛、完整构建、实际 tarball 消费/类型/Svelte 宿主生产构建、纯入口/SSR、Chrome 定向交互/主题/390px 窄屏、generate:check、style 与 Git 空白检查全部通过。14 包 dry-run 成功，14/14 manifests SHA-256 一致且备份已清理。tarball 消费使用本地 lockfile 依赖图，未做联网全新安装；人工 OS IME、真实移动设备继续 incomplete，完整性能/堆快照矩阵未重测。证据见 [audit/UPGRADE_FIX_20261104.md](./audit/UPGRADE_FIX_20261104.md)，本地日志在 `audit/prod-perf-review-20261104/`、`audit/prod-perf-packages-x5yLO5/`、`audit/prod-perf-fixes-20261104/`。未提交或发布。
 
 - 2026-10-28（续）：Svelte 5 迁移完成。依赖：svelte 5.57.3、@sveltejs/vite-plugin-svelte 4.0.4、@testing-library/svelte 5.4.2、svelte2tsx 0.7.62、svelte-preprocess 6.0.5、prettier 3.9 + prettier-plugin-svelte 3.5 + @trivago/sort-imports 5.2。核心适配：`legacy-compat.ts` 用 `createClassComponent` 维持 `new/$set/$on/$destroy`（react/vue/vue-next 包装零改动）、导出 `EditorComponent/ViewerComponent` 供 Svelte 宿主模板；移除 `svelte:options immutable`、`const $` 改名、按钮/效果改 `tick()` 后应用、`onDestroy` 直接清理 CodeMirror blinker、组件状态迁到 `context="module"` WeakMap（组件内可变绑定被响应化会清空刚绑定的效果）、render-controller 同请求去重；测试改 RTL 5 的 `rerender/unmount`，vitest alias 固定 katex/highlight.js 单模块 id。踩坑记录：playground 的 `new App()` 跳过 `init_operations`（改 `mount()`）；缺 `verbatimModuleSyntax` 时模板专用导入被 TS 擦除（`Editor is not defined`）；`bytemd/dist` 内含独立 Svelte 运行时，宿主要从源码或 `svelte` 条件消费。验收：核心 26 文件 230/230、脚本 26/26 + 覆盖率 85.28%、完整构建、generate:check、style、bundlewatch PASS（index.mjs 63.98KB gzip）、无头 Chrome 实测 playground 全绿（编辑器/37 工具栏/28 标题/KaTeX×2/mermaid/高亮×5/复制按钮×6/交互重渲染/暗色 #0d1117）。未提交或发布。
 
@@ -386,6 +352,24 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 - 2026-10-28：CM6 P0 补做完整场景复测（生产构建，CDP Trace）。CM5 使用 playground 完整 bytemd（工具栏/预览/滚动同步），CM6 使用编辑区 + 同一 bytemd 渲染预览（未含滚动同步/工具栏），同一 500/100 KiB fixture。500 KiB：CM5 Layout 最大 270.88（load）/226.35（scroll）/98.22（type）ms，CM6 201.96/100.41/88.79 ms；CM6 峰值下降但均 >75 ms 门槛；100 KiB 两者 Layout 总量基本持平（69/42/74 vs 69/43/73 ms），CM6 type 峰值略高（51.38 vs 34.35 ms）。CM6 500 KiB type Task 总时长 1501.6 ms vs CM5 646.3 ms，布局降低不等于输入整体更快。CM6 侧缺滚动同步导致 scroll 对比不等价。结论维持暂缓 P1，重判需含滚动同步的 CM6 原型；数据与限制见 `audit/CM6_SPIKE_RESULT.md`，`audit/CM6_PLAN.md` 已同步。
 
 - 2026-10-28：CM6 P0 原型补滚动同步后复测。CM6 页面接入 `measureScrollMap` 双向同步（sourceMap），仍无工具栏/插件/TOC 点击。500 KiB：CM6 Layout 峰值 load 205.33 / scroll 101.71 / type 90.30 ms，CM5 226.85 / 169.91 / 92.88 ms；scroll 峰值下降约 40%，但均 >75 ms；CM6 type Task 总时长 1500.8 ms vs CM5 540.2 ms。100 KiB：load/scroll 接近，CM6 type 峰值 54.01 vs 34.49 ms。结论仍为不达门槛、暂缓 P1；数据与限制见 `audit/CM6_SPIKE_RESULT.md`。
+
+- 2026-11-01：发布链路修复（main，1.22.1 准备）。定位 1.22.0 首发缺陷：手工逐包改名后走 `npm publish`，pnpm `workspace:` 协议未被改写——三包装包（vue/vue-next/react）dependencies 泄漏 `workspace:*`（npm 消费者安装即报 Unsupported URL Type），插件包 devDependencies 同样泄漏（惰性：npm 不装传递 devDeps，仅元数据脏）。修复：三包装版本 bump 1.22.1；新增 `scripts/publish-jihua.mjs`（备份→改名 @jihua/_→workspace:_ 落成真实版本号→逐包 `pnpm publish --no-git-checks --tag latest`→finally 字节级还原；--dry-run 演练 / --restore 中断兜底 / registry 已存在自动 skip）；`pub` 脚本入口与 `test:scripts` 同步更新；新增 6 例脚本单测。验收：核心 vitest 26 文件 231/231、脚本 32/32、`pnpm build`、`generate:check` 通过；dry-run 全 14 包打包成功（三包装 1.22.1、其余 1.22.0），还原后 git 状态仅含预期改动。main 上 `pnpm style` 存量漂移 29 文件（AGENTS/PLAN/bytemd src/插件 manifests/build.mjs 等，均为本批之前已存在），本批仅保证新增文件合规，未顺手重排。真实发布需维护者执行（npm 登录态）：先 `pnpm build`，再 `node scripts/publish-jihua.mjs @bytemd/vue @bytemd/vue-next @bytemd/react`；发布后建议对三个 1.22.0 包装版本做 npm deprecate 指向 1.22.1。
+
+- 2026-11-01：CSS 分层发布（main，随 1.22.1）。动因：站点切换 @jihua 包后 fork 自定义块（callout/timeline/accordion/文字分割线）不渲染——样式全在可选的 markdown.css，站点只引了 index.css（实测禁用对比确认打架面为零但机制无保障）。拆层：markdown.scss 按节拆为 _markdown-tokens.scss（light/dark tokens mixin）+ _markdown-parts.scss（divider/code-block/copy-btn/mermaid/callout/accordion/pinyin/timeline/plugin-error/frames 共 10 个 mixin），markdown.scss 以 @include 原位回插保持产物顺序；新增 custom-blocks.scss 入口（tokens+专属块，独立可用的零冲突层）。build.mjs 新增 dist/custom-blocks(.min).css 与 dist/index.bundle.css(.min)（= index.css+markdown.css 字节拼接）及产物选择器校验；generate.mjs exports 列表同步 4 项；三份文档补分层用法（散文段为手维区域）。金样验收：markdown.css 对比仅预期差异（pre.bytemd-code-block 增 position:relative 一行，独立分层锚定保险）；custom-blocks.css 含全部专属类与 tokens；bundle 拼接字节相等。回归：vitest 26 文件 231/231、脚本 32/32、build、generate:check、build.mjs/generate.mjs prettier 通过。发布范围 1.22.1 扩为 4 包：核心 bytemd（新产物）+ 三包装（workspace 修复）。
+
+- 2026-11-02：工具栏瘦身（main）。按用户反馈：①删除 H/H1/H2/H3 四个标题动作（含 H4-6 下拉与 headingAction 工厂），标题改由行内 # 语法书写；②五个彩色提示块按钮（默认/成功/警告/信息/重要）收进一个下拉（父级蓝点图标，locale 新增 callout 键——en/zh_Hans，其余语言走 en 回退；types.ts BytemdLocale +callout）。移动端 390px 工具栏由 4+ 行降到 3 行。测试更新：actions.test 断言标题动作为「不存在」、callout 下拉子项五色齐全且 zh locale 跟随；回归 26 文件 231/231、build、generate:check ✓。playground 实拍桌面下拉展开与移动端排布 ✓。站点吃到此变更需发布 1.22.2。
+
+- 2026-11-03：工具栏继续瘦身（main）。无序/有序两个列表按钮收进一个下拉（父级 ListTwo 图标，locale 新增 list 泛化键——en/zh_Hans，types.ts +list）。**顺手修掉 editor.svelte 的 `TODO: nested shortcuts`**：快捷键收集改为递归（含下拉子项），否则 ul/ol 收进下拉后 Ctrl+U/O 会静默丢失——该修复对所有下拉子项快捷键通用。actions.test 新增 List 下拉断言（子项=无序/有序）；回归 26 文件 231/231、build、generate:check ✓；playground(5199) 实拍下拉展开 ✓。
+
+- 2026-11-03：工具栏单行化（main）。用户反馈桌面端仍折两行——根因是 groups 网格 `max-width: 598px`（20 列硬上限，30 图标时代的设计）。改为 `repeat(auto-fill, 28px)` 定宽列 + `justify-content: start` + 去上限：空间足够即单行铺开、不足自动换行（移动端保持换行）、超宽编辑器下图标不拉伸。实测 1280 分屏 h=28 单行、390px h=156 多行换行。
+
+- 2026-11-03：窄屏工具栏根治（main）。用户实测 390px 仍渲染完整工具栏——根因有二：①`containerWidth = Infinity` 起始值（上游 TODO）+ IAB/首屏 RO 不派发 → split 恒真；②narrow 语义原本绑在 `!split` 上，宿主强制 split 时永不触发。修复：初始值改 `window.innerWidth`；`narrow = containerWidth < 800` 与模式解耦（宿主强制 split 的窄容器同样按移动端处理）；新增 `effectiveSplit = split && !narrow` 替代布局/类/传参中的 split；onMount 量一次 + window resize 兜底监听（RO 失灵环境自救）；RO 回调忽略 0 宽（jsdom 无布局）。坑记录：jsdom offsetWidth=0 需非零守卫；{effectiveSplit} 简写会把 prop 名改成 effectiveSplit（Toolbar 的 split 收到 undefined）；String.replace 只换首个（import 与调用两处需分别处理）；帮助面板摊平下拉子项会炸出 67 条 → 面板条目=顶层动作+下拉父项内嵌子行，一具一行（字号一条用 20px 代表）。回归 28 文件 233/233（含临时探针删除后）。
+
+## CM6 迁移历史验收（保留原始口径）
+
+- 2026-10-29（续）：bytemd 2.0.0 本地发布验证完成（未推送/未发布）。版本决策：13 包统一 major 2.0.0（内核世代更替 + `.cm-*` CSS 契约变更 + wrapper `workspace:*` 锁定核心必须随发），插件 peer 放宽 `^1.5.0 || ^2.0.0`（插件仅用文档化 context API，同 dist 服务两代内核）。插件审计：上游 README 权威面对照 TS 定义一致；9 插件均无 `editorEffect`，仅 gfm/mermaid 工具栏动作触达 editor（wrapText/replaceLines/appendBlock/setSelection/Pos/focus，适配器全覆盖）——插件侧无坑。tarball 净室验证（TEMP，不继承 workspace）：SSR/processor+插件/导出面/CJS/worker 子入口/locales+元数据 6/6。playground 生产构建 CDP 模拟输入 18/18：真实键盘（CJK 混排）值+预览、Enter 换行、粗体+单步撤销、gfm 表格动作落点、mermaid SVG、KaTeX、hljs、frontmatter 装饰与预览、composition IME、往返完整性；console 0 问题。实测抓出并修复 **Enter 吞键 bug**：字符串命令被一律 preventDefault，`insertNewlineContinueMarkup` 非列表上下文返回 false（等价 CM5 Pass）时普通段落 Enter 完全失效；修复为命令拒绝即放行 CM6 keymap（jsdom 未覆盖该组合）。工具注记：本环境 CDP returnByValue 对对象/布尔完成值间歇回报 undefined（副作用生效），脚本统一字符串回传+单次重试。文档：`audit/CM6_V2_RELEASE.md`；tarball 在 `audit/local-release-2.0.0/`（gitignore）。未推送、未发布。
+
+- 2026-10-29：CM6 收尾批次完成（`feat/cm6`，本批次前 13 个文件未提交状态一并收口）。P1 能力映射补全：yaml-frontmatter 高亮以 CM6 `ViewPlugin` 装饰实现（`.bytemd-yaml-*` 六类，token 色/暗色与 CM5 yaml 模式对位；核对确认 CM5 的 overlay addon 从未实际调用，自定义语法本无高亮、无需迁移）；inline HTML 由 lang-markdown 内嵌 html 解析器 + HighlightStyle 覆盖并生产页实测（tag/attribute/string 色）；`editorConfig` 映射补齐 `extraKeys`（适配器此前静默丢弃——Enter 列表续行实际失效）/`readOnly`（Compartment）/`autofocus`/`undoDepth`。P2：`wrapText`/`replaceLines`/`appendBlock` 改原生 CM6 单事务（单步撤销、选区随撤销恢复），顺带修复适配器 `appendBlock` 无空行路径落点钳位错误（非空文档图片上传/代码块/分割线/手风琴会插错位置并与末行拼接）。P3：补 `processingInstruction`/`contentSeparator`/`atom` token；删除暗色区 21 条死 CM5 `.cm-*` 规则。P4：新增 `cm6-capabilities.test.ts` 9 例；生产消费页 CDP 复验 100 次挂载/销毁 **0/0**、Enter 续行、亮/暗逐 token 色（`audit/cm6-closeout-verify.mjs`，数据入 `CM6_PROD_RESULT.md` §5）。复验揪出并修复关键缺陷：**`.CodeMirror` 兼容类被 CM6 update 抹掉**（改 `editorAttributes`/`contentAttributes` facet——修复前 focus 一次 `querySelector('.CodeMirror')` 即为 null）；`handleKeydown` 改 `stopImmediatePropagation`。审计工具链 Svelte 5 遗留修复：prod-perf 页 `new App()`→`mount()`、消费页改源码入口、移除 `resolve.conditions: ['worker']`（svelte 5 exports 的 worker 条件使主构建解析到 server 运行时）。P5 部分：三份 README 补 `editorExtensions`/`editorConfig` 子集/CM6 实例迁移说明并强化 `layoutContainment` 大文档指引（手工区，generate:check 不受影响）。验收：核心 27 文件 240/240、脚本 26/26、完整构建、generate:check、style、bundlewatch（index.mjs 67.79KB gzip PASS）。未完成：真实 OS IME/移动设备（需人工）、tarball+SSR 外部消费验证、major/minor 版本策略（待拍板）。
 
 - 2026-10-28：在 `feat/cm6` 分支完成 CodeMirror 6 最小内核原型（未提交）。新增 `CM6CompatEditor`（CM5 形状适配器，保留插件 `editor`/`codemirror.Pos` 调用面），`editor.ts` 工厂切到 CM6，`editor.svelte` 仅改类型；CM6 依赖替换 CM5 `codemirror-ssr`/`@types/codemirror`；`HighlightStyle` 接入 `--bytemd-syntax-*` 亮/暗 token；`.cm-*` 样式补编辑器高度/内容区/gutter/光标/选区。验证：231/231 测试、26/26 脚本、`pnpm build`、`generate:check`；playground 实测挂载/输入/预览/双向滚动同步/暗色/粗体动作。缺口：适配器仅覆盖子集（gfm 嵌套、frontmatter、overlay、keymap 全量、editorConfig 全量子集未完全），IME/移动/上传边界与 100 次挂载循环未人工复验；未提交、未发版。
 

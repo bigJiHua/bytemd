@@ -95,6 +95,94 @@ test('editorConfig readOnly blocks input and setOption can lift it', async () =>
   expect(editor.view.state.facet(EditorState.readOnly)).toBe(false)
 })
 
+test('setCursor accepts both CM5 position call shapes', async () => {
+  const result = render(Editor, { value: 'first\nsecond' })
+  await act()
+  const editor = codeMirror(result)
+  editor.setCursor(1, 3)
+  editor.replaceSelection('!')
+  expect(editor.getValue()).toBe('first\nsec!ond')
+  editor.setCursor({ line: 0, ch: 5 })
+  editor.replaceSelection('?')
+  expect(editor.getValue()).toBe('first?\nsec!ond')
+})
+
+test('controlled value stays current after native transactions, undo and replacement', async () => {
+  const result = render(Editor, { value: 'alpha\n中文' })
+  await act()
+  const editor = codeMirror(result)
+  expect(editor.getValue()).toBe('alpha\n中文')
+  editor.view.dispatch({ changes: { from: 0, to: 5, insert: 'beta' } })
+  expect(editor.getValue()).toBe('beta\n中文')
+  editor.setSelection({ line: 1, ch: 0 }, { line: 1, ch: 2 })
+  expect(editor.getValue()).toBe('beta\n中文')
+  undo(editor.view)
+  expect(editor.getValue()).toBe('alpha\n中文')
+  editor.setValue('replacement')
+  expect(editor.getValue()).toBe('replacement')
+})
+
+test('CM5-shaped key callbacks receive the editor and can decline handling', async () => {
+  const result = render(Editor, { value: 'text' })
+  await act()
+  const editor = codeMirror(result)
+  const callback = vi.fn((current) => {
+    current.setValue('handled')
+  })
+  editor.addKeyMap({ 'Ctrl-q': callback })
+  const handled = new KeyboardEvent('keydown', {
+    key: 'q',
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  })
+  editor.view.contentDOM.dispatchEvent(handled)
+  expect(callback).toHaveBeenCalledWith(editor)
+  expect(editor.getValue()).toBe('handled')
+  expect(handled.defaultPrevented).toBe(true)
+  editor.addKeyMap({ 'Ctrl-Shift-q': () => false })
+  const declined = new KeyboardEvent('keydown', {
+    key: 'q',
+    ctrlKey: true,
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true,
+  })
+  editor.view.contentDOM.dispatchEvent(declined)
+  expect(declined.defaultPrevented).toBe(false)
+})
+
+test('compatibility shortcuts do not run during composition', async () => {
+  const result = render(Editor, { value: '- item' })
+  await act()
+  const editor = codeMirror(result)
+  const callback = vi.fn()
+  editor.addKeyMap({ 'Ctrl-q': callback })
+  editor.view.contentDOM.dispatchEvent(
+    new CompositionEvent('compositionstart', {
+      data: '中',
+      bubbles: true,
+    }),
+  )
+  editor.view.contentDOM.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'q',
+      ctrlKey: true,
+      isComposing: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+  expect(callback).not.toHaveBeenCalled()
+  expect(editor.getValue()).toBe('- item')
+  editor.view.contentDOM.dispatchEvent(
+    new CompositionEvent('compositionend', {
+      data: '中',
+      bubbles: true,
+    }),
+  )
+})
+
 test('wrapping undoes in a single step and restores the selection', async () => {
   const result = render(Editor, { value: 'first\nsecond' })
   await act()

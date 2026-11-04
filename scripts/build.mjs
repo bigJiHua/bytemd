@@ -1,7 +1,13 @@
 // @ts-check
+import {
+  officialThemes,
+  renderAllThemesCss,
+  renderManifest,
+  renderThemeCss,
+} from '../packages/bytemd/themes.config.mjs'
 import { createVue3Plugin } from '../packages/vue-next/plugin.mjs'
 import { createVuePlugin } from '../packages/vue/plugin.mjs'
-import { packages, packagesDir, sveltePreprocessor } from './utils.mjs'
+import { packages, packagesDir, rootDir, sveltePreprocessor } from './utils.mjs'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { execaCommand } from 'execa'
 import glob from 'fast-glob'
@@ -24,8 +30,12 @@ import { build } from 'vite'
     if (name === 'bytemd') {
       // some parts are from here https://github.com/sveltejs/kit/blob/master/packages/kit/src/packaging/typescript.js
       await emitDts({
-        svelteShimsPath: 'node_modules/svelte2tsx/svelte-shims.d.ts',
+        svelteShimsPath: path.resolve(
+          rootDir,
+          'node_modules/svelte2tsx/svelte-shims-v4.d.ts',
+        ),
         declarationDir: './dist',
+        tsconfig: 'tsconfig.types.json',
       })
       glob.sync('./dist/src/*.svelte.d.ts').forEach((file) => {
         // console.log(file)
@@ -223,30 +233,22 @@ import { build } from 'vite'
       )
       await fs.writeFile('svelte/index.js', js)
 
-      // Declarations for the same entry: the runtime exports components, so the
-      // published types must describe components too. `*.svelte` has no
-      // declaration file, so declare the values with Svelte's component type;
-      // the compat class re-exports stay in dist and are dropped here.
-      const dtsPath = 'svelte/index.d.ts'
-      let dts = await fs.readFile(dtsPath, 'utf8')
-      if (!dts.includes(classExport))
-        throw new Error('svelte entry: class export line not found in d.ts')
-      dts = dts
-        .split('\n')
-        .filter(
-          (line) =>
-            !line.includes('index.scss') &&
-            !line.includes("from './legacy-compat'"),
-        )
-        .join('\n')
-      dts +=
-        "\nimport type { Component } from 'svelte';\n" +
-        "import type { EditorProps, ViewerProps } from './types';\n" +
-        'export declare const Editor: Component<EditorProps>;\n' +
-        'export declare const Viewer: Component<ViewerProps>;\n' +
-        'export declare const EditorComponent: Component<EditorProps>;\n' +
-        'export declare const ViewerComponent: Component<ViewerProps>;\n'
-      await fs.writeFile(dtsPath, dts)
+      const declarations = await fs.readFile('svelte/index.d.ts', 'utf8')
+      if (!declarations.includes(classExport))
+        throw new Error('svelte declarations: class export line not found')
+      await fs.writeFile(
+        'svelte/index.d.ts',
+        declarations.replace(
+          classExport,
+          [
+            "export { default as Editor } from './editor.svelte';",
+            "export { default as Viewer } from './viewer.svelte';",
+          ].join('\n'),
+        ),
+      )
+      for (const file of glob.sync('dist/*.svelte.d.ts')) {
+        await fs.copy(file, path.join('svelte', path.basename(file)))
+      }
 
       for (const [file, content] of [
         ['processor.mjs', "export * from './dist/processor.mjs'\n"],
@@ -275,6 +277,36 @@ import { build } from 'vite'
       await fs.writeFile(path.resolve(root, 'dist/markdown.css'), themeCss)
       await fs.writeFile(path.resolve(root, 'dist/markdown.min.css'), themeMin)
 
+      console.log('building custom-blocks layer...')
+      // Fork-proprietary blocks only (callout/timeline/accordion/pinyin/divider/
+      // code tools): the conflict-free companion for hosts that style base
+      // typography with their own Markdown theme.
+      const customSource = path.resolve(root, 'src/custom-blocks.scss')
+      const customCss = sass.compile(customSource, { style: 'expanded' }).css
+      const customMin = sass.compile(customSource, { style: 'compressed' }).css
+      await fs.writeFile(
+        path.resolve(root, 'dist/custom-blocks.css'),
+        customCss,
+      )
+      await fs.writeFile(
+        path.resolve(root, 'dist/custom-blocks.min.css'),
+        customMin,
+      )
+
+      console.log('building index.bundle.css (index.css + markdown.css)...')
+      const indexCss = await fs.readFile(
+        path.resolve(root, 'dist/index.css'),
+        'utf8',
+      )
+      await fs.writeFile(
+        path.resolve(root, 'dist/index.bundle.css'),
+        indexCss + '\n' + themeCss,
+      )
+      await fs.writeFile(
+        path.resolve(root, 'dist/index.bundle.min.css'),
+        indexCss + '\n' + themeMin,
+      )
+
       for (const selector of [
         '.markdown-body h1',
         '.markdown-body table',
@@ -285,6 +317,55 @@ import { build } from 'vite'
       ]) {
         if (!themeCss.includes(selector)) {
           throw new Error(`markdown theme is missing ${selector}`)
+        }
+      }
+      for (const selector of [
+        '--md-text',
+        '.bytemd-callout',
+        '.bytemd-accordion',
+        '.bytemd-pinyin',
+        '.bytemd-timeline',
+        '.bytemd-hr-text',
+        '.bytemd-copy-btn',
+        '.bytemd-plugin-error',
+      ]) {
+        if (!customCss.includes(selector)) {
+          throw new Error(`custom-blocks layer is missing ${selector}`)
+        }
+      }
+
+      console.log('building official themes...')
+      // 官方主题 = token 预设(单源 themes.config.mjs):逐主题 <id>(.min).css +
+      // all.css(data-bytemd-theme 属性切换)+ manifest.json。语义色跨主题恒定,
+      // 主题只声明中性色 + 强调色;亮色主题在 .dark 容器自动落 markdown.css 暗色块。
+      const themesDir = path.resolve(root, 'dist/themes')
+      await fs.ensureDir(themesDir)
+      for (const theme of officialThemes) {
+        const css = renderThemeCss(theme)
+        await fs.writeFile(path.join(themesDir, `${theme.id}.css`), css)
+        await fs.writeFile(
+          path.join(themesDir, `${theme.id}.min.css`),
+          css.replace(/\n\s*/g, ''),
+        )
+      }
+      await fs.writeFile(
+        path.join(themesDir, 'all.css'),
+        renderAllThemesCss(officialThemes),
+      )
+      await fs.writeFile(
+        path.join(themesDir, 'all.min.css'),
+        renderAllThemesCss(officialThemes).replace(/\n\s*/g, ''),
+      )
+      await fs.writeFile(
+        path.join(themesDir, 'manifest.json'),
+        renderManifest(officialThemes),
+      )
+      for (const theme of officialThemes) {
+        if (!/^[a-z0-9-]+$/.test(theme.id)) {
+          throw new Error(`official theme id is not kebab-case: ${theme.id}`)
+        }
+        if (!theme.tokens['--md-accent'] || !theme.tokens['--md-text']) {
+          throw new Error(`official theme ${theme.id} is missing core tokens`)
         }
       }
     }

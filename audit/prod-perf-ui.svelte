@@ -25,6 +25,7 @@
   let sandbox: HTMLElement
   let component: any
   let editor: any
+  let kernelCleanup = () => {}
   let busy = false
   let armed = false
   let mode = 'worker'
@@ -106,7 +107,7 @@
 
   const worker = createWorkerRenderer(
     () =>
-      new Worker(new URL('./worker-entry.ts', import.meta.url), {
+      new Worker(new URL('./prod-perf-worker-entry.mjs', import.meta.url), {
         type: 'module',
       }),
     {
@@ -229,6 +230,8 @@
   const probe = {
     editorEffect({ editor: cm, root }: any) {
       editor = cm
+      if (sample)
+        sample.editorReadyMs = round(performance.now() - sample.started)
       const keydown = (event: KeyboardEvent) => {
         if (
           event.key.length !== 1 ||
@@ -263,7 +266,9 @@
           sample.costMarks.codemirrorFirstUpdate = duration
         }
       }
-      cm.on('update', update)
+      // A document change exists in both kernels. CM6 does not emit CM5's
+      // viewport `update` event, so that event would silently omit its timing.
+      cm.on('change', update)
       root.addEventListener('keydown', keydown, true)
       const compositionstart = (e: CompositionEvent) => {
         composing = true
@@ -301,7 +306,7 @@
       root.addEventListener('compositionupdate', compositionupdate, true)
       root.addEventListener('compositionend', compositionend, true)
       return () => {
-        cm.off('update', update)
+        cm.off('change', update)
         editor = undefined
         root.removeEventListener('keydown', keydown, true)
         root.removeEventListener('compositionstart', compositionstart, true)
@@ -356,7 +361,8 @@
       requestAnimationFrame(poll)
     },
   }
-  function mount(value: string, defaultSync = false) {
+  function mount(value: string, defaultSync = false, editorOnly = false) {
+    kernelCleanup()
     const token = ++generation
     component?.$destroy()
     sandbox.innerHTML = ''
@@ -364,7 +370,7 @@
       target: sandbox,
       props: {
         value,
-        mode: 'split',
+        mode: editorOnly ? 'tab' : 'split',
         layoutContainment,
         renderer: defaultSync ? undefined : tracked,
         locale: {
@@ -476,6 +482,7 @@
     publish()
   }
   async function memoryCycleDestroy() {
+    kernelCleanup()
     busy = true
     status = '内存循环：销毁中'
     component?.$destroy()
@@ -537,6 +544,7 @@
     busy = false
   }
   onDestroy(() => {
+    kernelCleanup()
     observer?.disconnect()
     component?.$destroy()
     worker.destroy()
@@ -551,12 +559,102 @@
         return prepare()
       },
       arm,
+      async defaultStartup(options: any) {
+        profile = options.profile
+        size = options.size
+        mode = 'sync'
+        layoutContainment = false
+        fixture = performanceFixture(size, profile === 'enhanced')
+        const current = begin('default-sync-startup')
+        const started = performance.now()
+        mount(fixture.markdown, true)
+        const constructorMs = round(performance.now() - started)
+        const result = await finish(current)
+        return {
+          constructorMs,
+          totalMs: result.totalMs,
+          maxLongTaskMs: result.maxLongTaskMs,
+          editorReadyMs: result.editorReadyMs,
+          counts: result.counts,
+          errors: result.errors,
+        }
+      },
       async configure(props: any) {
         if ('layoutContainment' in props)
           layoutContainment = !!props.layoutContainment
         component.$set(props)
         await frame()
         await frame()
+      },
+      async kernelPrepare(options: any) {
+        sample = undefined
+        armed = false
+        busy = false
+        profile = 'core'
+        size = options.size
+        layoutContainment = !!options.layoutContainment
+        fixture = performanceFixture(size, false)
+        const text = options.frontmatter
+          ? '---\ntitle: benchmark\n---\n' + fixture.markdown
+          : fixture.markdown
+        const started = performance.now()
+        mount(text, true, true)
+        await frame()
+        await frame()
+        editor.focus()
+        editor.setCursor({
+          line: options.frontmatter ? editor.lineCount() - 1 : 0,
+          ch: 0,
+        })
+        const metrics: any[] = []
+        ;(window as any).__kernelMetrics = metrics
+        let pending: any
+        const root = sandbox.querySelector('.bytemd')!
+        const keydown = (event: KeyboardEvent) => {
+          if (event.key !== 'a' || event.ctrlKey || event.metaKey) return
+          pending = { started: performance.now() }
+          metrics.push(pending)
+          const current = pending
+          requestAnimationFrame(() => {
+            current.frameMs = round(performance.now() - current.started)
+          })
+        }
+        const changed = () => {
+          if (pending)
+            pending.changeMs = round(performance.now() - pending.started)
+        }
+        root.addEventListener('keydown', keydown, true)
+        editor.on('change', changed)
+        const currentEditor = editor
+        kernelCleanup = () => {
+          root.removeEventListener('keydown', keydown, true)
+          currentEditor.off('change', changed)
+          kernelCleanup = () => {}
+          delete (window as any).__kernelMetrics
+        }
+        return {
+          mountMs: round(performance.now() - started),
+          length: editor.getValue().length,
+          kernel: editor.view ? 'cm6' : 'cm5',
+        }
+      },
+      readKernel() {
+        return {
+          metrics: (window as any).__kernelMetrics,
+          firstLine: editor.getLine(0),
+          lastLine: editor.getLine(editor.lineCount() - 1),
+          length: editor.getValue().length,
+        }
+      },
+      readValueCost(iterations = 100) {
+        let total = 0
+        const started = performance.now()
+        for (let i = 0; i < iterations; i++) total += editor.getValue().length
+        return {
+          iterations,
+          total,
+          elapsedMs: round(performance.now() - started),
+        }
       },
       destroy: memoryCycleDestroy,
       resetComposition() {
