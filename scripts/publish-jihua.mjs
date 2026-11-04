@@ -132,7 +132,9 @@ async function alreadyPublished(name, version) {
 }
 
 function publishPackage(dir) {
-  return execSync('pnpm publish --no-git-checks --tag latest', {
+  // dist-tag 可经 NPM_PUBLISH_TAG 覆盖（如 CM6 线发 beta）
+  const tag = process.env.NPM_PUBLISH_TAG || 'latest'
+  return execSync(`pnpm publish --no-git-checks --tag ${tag}`, {
     cwd: dir,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
