@@ -1,5 +1,14 @@
 # ByteMD 现代化与瘦身计划
 
+## 第十四批 — CM6 宿主适配专项测试（2026-11-04，测试完成，扩展缺口待修）
+
+- [x] 实例化 Svelte、React、Vue 2、Vue 3 和 Vue 3 async 五个宿主，验证 `editorExtensions` 的原生 DOM 属性与 F9 键盘处理器实际生效。
+- [x] 保存失败证据：专项 2/5 通过、3/5 失败；Svelte/React 通过，Vue 2/Vue 3/Vue 3 async 的属性为 null、键盘回调次数为 0。
+- [x] 核心 29 文件 256/256、Node 脚本 58/58（0 skipped）、完整构建、generate:check、实际 tarball/类型/Svelte 宿主生产构建/纯入口/SSR 检查通过。
+- [ ] Vue 2/Vue 3 声明并透传 `editorExtensions`，覆盖 Vue 3 async 入口，补入持续回归并重新验收后再正式发布 2.1.0。
+
+本批按用户“测试”要求执行核验，未修改包实现或清单，未发布 npm。原有通过项未覆盖 Vue 的 CM6 原生扩展参数，不能替代本次专项结果。证据与复现命令见 [CM6 宿主适配测试](./audit/CM6_HOST_ADAPTATION_20261104.md)；浏览器生产采样、长时间回收与人工验收未在本批重测。
+
 ## 第十三批 — CM5/CM6 整合、生产架构裁决与本地稳定包（2026-11-04，完成）
 
 - [x] 合并 main e2f70d5 的 Tool、窄屏、灯箱、主题、发布 alias 与回归脚本到 feat/cm6，保留 CM6 原生扩展。
