@@ -460,6 +460,7 @@
 
     // No need to call `on` because cm instance would change once after init
     return () => {
+      window.removeEventListener('resize', measureContainer)
       layoutObserver.disconnect()
       mutations.disconnect()
       previewEl.removeEventListener('load', invalidateScrollMap, true)
@@ -516,7 +517,7 @@
     actions={actions.leftActions}
     on:tab={(e) => {
       const v = e.detail
-      if (split) {
+      if (effectiveSplit) {
         activeTab = activeTab === v ? false : v
       } else {
         activeTab = v
@@ -633,6 +634,14 @@
       <Help
         on:use={() => {
           sidebar = false
+          if (!effectiveSplit) {
+            activeTab = 'write'
+            tick().then(() => {
+              if (destroyed || !editor) return
+              editor.setSize(null, null)
+              editor.focus()
+            })
+          }
         }}
         locale={mergedLocale}
         actions={actions.leftActions}

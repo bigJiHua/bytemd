@@ -7,7 +7,7 @@ import {
 } from '../packages/bytemd/themes.config.mjs'
 import { createVue3Plugin } from '../packages/vue-next/plugin.mjs'
 import { createVuePlugin } from '../packages/vue/plugin.mjs'
-import { packages, packagesDir, sveltePreprocessor } from './utils.mjs'
+import { packages, packagesDir, rootDir, sveltePreprocessor } from './utils.mjs'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { execaCommand } from 'execa'
 import glob from 'fast-glob'
@@ -30,8 +30,12 @@ import { build } from 'vite'
     if (name === 'bytemd') {
       // some parts are from here https://github.com/sveltejs/kit/blob/master/packages/kit/src/packaging/typescript.js
       await emitDts({
-        svelteShimsPath: 'node_modules/svelte2tsx/svelte-shims.d.ts',
+        svelteShimsPath: path.resolve(
+          rootDir,
+          'node_modules/svelte2tsx/svelte-shims-v4.d.ts',
+        ),
         declarationDir: './dist',
+        tsconfig: 'tsconfig.types.json',
       })
       glob.sync('./dist/src/*.svelte.d.ts').forEach((file) => {
         // console.log(file)
@@ -228,6 +232,23 @@ import { build } from 'vite'
         ].join('\n'),
       )
       await fs.writeFile('svelte/index.js', js)
+
+      const declarations = await fs.readFile('svelte/index.d.ts', 'utf8')
+      if (!declarations.includes(classExport))
+        throw new Error('svelte declarations: class export line not found')
+      await fs.writeFile(
+        'svelte/index.d.ts',
+        declarations.replace(
+          classExport,
+          [
+            "export { default as Editor } from './editor.svelte';",
+            "export { default as Viewer } from './viewer.svelte';",
+          ].join('\n'),
+        ),
+      )
+      for (const file of glob.sync('dist/*.svelte.d.ts')) {
+        await fs.copy(file, path.join('svelte', path.basename(file)))
+      }
 
       for (const [file, content] of [
         ['processor.mjs', "export * from './dist/processor.mjs'\n"],

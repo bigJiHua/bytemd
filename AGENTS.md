@@ -14,9 +14,11 @@
 
 ```sh
 pnpm build          # 完整构建（clean + build.mjs + tsc --build）
-pnpm test           # Vitest 核心回归（当前 26 文件 230 用例）
-pnpm run test:scripts  # Node 脚本测试（generate + audit 工具，20 用例）
+pnpm test           # Vitest 核心回归（当前 27 文件 239 用例；一次运行用 pnpm run test --run）
+pnpm run test:scripts  # Node 脚本测试（当前 46 用例，自动发现全部测试文件）
 pnpm run test:scripts:coverage # 四个关键脚本的覆盖率门槛，CI 执行此命令
+pnpm run test:packages # 构建后实际 tarball 消费、Svelte 类型/生产构建与纯入口/SSR
+pnpm run test:playground # 已构建包后，独立 Chrome 实测开发 + 生产 playground
 pnpm generate       # 生成 README.md / docs/index.md / packages/bytemd/README.md
 pnpm generate:check # 校验生成产物与源一致（防漂移）
 pnpm format         # prettier + sort-package-json
@@ -38,7 +40,21 @@ node scripts/publish-jihua.mjs --restore   # 发布中断后从备份还原 mani
 6. **批处理纪律**：一次一个批次，每批完成即跑全量回归（`pnpm test` + `pnpm run test:scripts` + `pnpm build` + `pnpm generate:check`）并更新 `PLAN.md` 进度日志。
 7. **本地化/工具镜像目录**：仓库不再使用 git 符号链接（Windows `core.symlinks=false` 下不可用）。各插件包保留双份目录：`packages/*/src/locales/`（构建消费）与 `packages/*/locales/`（npm 发布，唯一内容源），以及 `packages/plugin-math-ssr/{locales,src/utils}/` 镜像 `packages/plugin-math/{locales,src/utils}/`。修改文案/共享 utils 时只改源侧（顶层 `locales/`、`plugin-math/src/utils/`），并把镜像侧同步为字节一致；`scripts/test/hygiene.test.mjs` 会校验两侧一致，`packages/bytemd/src/locales` 已删除且不得重建。
 
-## 当前状态（2026-10-26）
+## 最新 playground 验收（2026-11-04）
+
+第十二批见 [audit/PLAYGROUND_20261104.md](./audit/PLAYGROUND_20261104.md)：独立 Chrome/CDP 实测开发 + 生产 playground 各 18 项，全部通过；修复灯箱动画期关闭、Tool 字号默认项、窄屏 Tool 返回编辑、清空长度限制和徽章布局五项问题。核心 27 文件 239/239、Node 脚本 46/46、四模块聚合覆盖率门槛、完整构建、实际 tarball/类型/Svelte 宿主/SSR、升级复验、generate:check、style、Git 空白检查通过。人工 OS IME/真实移动设备继续 incomplete，完整性能/堆快照矩阵未重测。
+
+`pnpm run test:playground` 默认自管开发/生产服务及无头 Chrome，每次保存独立证据并关闭自身进程。通用 CDP 求值/等待位于 `audit/prod-perf-cdp-client.mjs`，旧采样模块保留转导出。脚本入口、参数与历史复现用途见 [audit/SCRIPTS.md](./audit/SCRIPTS.md)；生产采样入口使用 Vitest 3 的 `vitest run`，不再传 `--threads false`。
+
+## 第十一批修复验收（2026-11-04）
+
+第十一批升级复核修复见 [audit/UPGRADE_FIX_20261104.md](./audit/UPGRADE_FIX_20261104.md) 与 PLAN 第十一批：发布期 npm alias、Svelte 条件声明与 props 类型、Tool 表单/键盘、resize 清理、窄屏 tab、all.css 暗色回退、CI 全部脚本测试均已修复。核心 27 文件 236/236、脚本 44/44、聚合覆盖率门槛、完整构建、实际 tarball/类型/Svelte 宿主生产构建和纯入口/SSR、Chrome 定向复验通过。人工 OS IME/真实移动设备继续 incomplete，完整性能/堆快照矩阵未重测。
+
+发布依赖保留产物原导入键（如 `bytemd`），使用 `npm:@jihua/bytemd@<version>` 指向 fork；不要只改依赖键而让 JS/d.ts/异步分块仍引用旧键。Svelte 条件需先于默认 types，并包含其对应的 `svelte/index.d.ts`；imperative ESM/CJS 仍使用 dist 的类声明。类型生成排除 `src/env.d.ts` 的无类型 wildcard，避免组件 props/events 退化为 any。
+
+Prettier 使用 `endOfLine: auto` 兼容 Windows 检出的 CRLF。新增脚本测试放在 `scripts/test/*.test.mjs` 即由普通测试与覆盖率测试共同执行；CI 在构建后另跑 `test:packages`。
+
+## 迁移阶段基线（2026-10-26，历史）
 
 | 批次 | 状态 |
 | --- | --- |

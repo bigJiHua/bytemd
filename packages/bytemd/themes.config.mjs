@@ -249,7 +249,7 @@ export function renderThemeCss(theme) {
 
 /**
  * 生成 all.css:全部主题按 data-bytemd-theme 属性作用域合并,
- * 宿主切换主题无需置换 <link>(特异性 0-2-0,压过 markdown.css 默认 0-1-0)。
+ * 属性不增加特异性：后加载时覆盖默认值，暗色容器仍可覆盖亮色预设。
  */
 export function renderAllThemesCss(themes) {
   const blocks = themes.map((theme) => {
@@ -258,7 +258,7 @@ export function renderAllThemesCss(themes) {
       .join('\n')
     const canvas = canvasLines(theme, '  ').join('\n')
     const inner = canvas ? body + '\n' + canvas : body
-    return `.markdown-body[data-bytemd-theme='${theme.id}'] {\n${inner}\n}`
+    return `.markdown-body:where([data-bytemd-theme='${theme.id}']) {\n${inner}\n}`
   })
   const head = `/* ByteMD official themes (${themes.map((t) => t.id).join(', ')}) */\n/* Switch via .markdown-body[data-bytemd-theme='<id>'] — no <link> swap needed. */\n`
   return head + blocks.join('\n\n') + '\n'

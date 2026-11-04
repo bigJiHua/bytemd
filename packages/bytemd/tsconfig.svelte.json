@@ -6,6 +6,7 @@
     "rootDir": "src",
     "outDir": "svelte",
     "composite": false,
+    "declaration": true,
     "emitDeclarationOnly": false
   }
 }

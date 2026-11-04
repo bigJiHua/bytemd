@@ -2,7 +2,11 @@
   "name": "bytemd",
   "version": "1.22.4",
   "description": "Hackable Markdown Editor and Viewer",
-  "keywords": ["markdown", "editor", "viewer"],
+  "keywords": [
+    "markdown",
+    "editor",
+    "viewer"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/bigJiHua/bytemd.git",
@@ -12,8 +16,11 @@
   "author": "Rongjian Zhang",
   "exports": {
     ".": {
+      "svelte": {
+        "types": "./svelte/index.d.ts",
+        "default": "./svelte/index.js"
+      },
       "types": "./dist/index.d.ts",
-      "svelte": "./svelte/index.js",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
@@ -81,5 +88,7 @@
     "vfile": "^6.0.0",
     "word-count": "^0.2.2"
   },
-  "devDependencies": { "@primer/css": "^15.2.0" }
+  "devDependencies": {
+    "@primer/css": "^15.2.0"
+  }
 }

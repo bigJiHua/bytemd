@@ -50,7 +50,8 @@ export function mapPackageName(name) {
 /**
  * 改写一个 manifest。workspaceVersions 是「树内包名 → 真实版本」映射,
  * workspace: 协议按 pnpm publish 语义落成版本号(* → 精确,^/~ 保留前缀)。
- * 只改 name 与四个依赖字段;author/license/repository 等一律不动(纪律 3)。
+ * 依赖键保留产物的导入名，用 npm alias 指向 @jihua 包，覆盖 JS、声明与异步
+ * 分块。只改 name 与四个依赖字段，版权元数据保持原样。
  */
 export function rewriteManifest(manifest, workspaceVersions) {
   const rewritten = { ...manifest }
@@ -60,20 +61,22 @@ export function rewriteManifest(manifest, workspaceVersions) {
     if (!deps) continue
     const mapped = {}
     for (const [name, range] of Object.entries(deps)) {
+      let resolved = range
       if (typeof range === 'string' && range.startsWith('workspace:')) {
         const version = workspaceVersions[name]
         if (!version)
           throw new Error(`workspace 依赖 ${name} 不在工作区内,无法解析版本`)
         const suffix = range.slice('workspace:'.length)
-        mapped[mapPackageName(name)] =
-          suffix === '*'
+        resolved =
+          suffix === '*' || suffix === ''
             ? version
-            : suffix === ''
-              ? version
-              : `${suffix}${version}`
-      } else {
-        mapped[mapPackageName(name)] = range
+            : suffix === '^' || suffix === '~'
+              ? `${suffix}${version}`
+              : suffix
       }
+      const publishedName = mapPackageName(name)
+      mapped[name] =
+        publishedName === name ? resolved : `npm:${publishedName}@${resolved}`
     }
     rewritten[field] = mapped
   }

@@ -153,7 +153,12 @@ export async function planGeneration(root = rootDir) {
       const exports = {
         '.': {
           ...(pkg.name === 'bytemd'
-            ? { types: './dist/index.d.ts', svelte: './svelte/index.js' }
+            ? {
+                svelte: {
+                  types: './svelte/index.d.ts',
+                  default: './svelte/index.js',
+                },
+              }
             : {}),
           ...entry('index'),
         },
@@ -192,7 +197,8 @@ export async function planGeneration(root = rootDir) {
         exports,
         files: [],
       })
-      // TypeScript's conditional resolution needs types before runtime conditions.
+      // Svelte templates resolve component declarations before imperative class
+      // types; each branch still resolves types before its runtime entry.
       for (const name of Object.keys(exports)) {
         const current = pkg.exports[name]
         if (
@@ -202,6 +208,18 @@ export async function planGeneration(root = rootDir) {
           Object.hasOwn(current, 'types')
         ) {
           const { types, ...conditions } = current
+          if (pkg.name === 'bytemd' && name === '.') {
+            if (conditions.svelte === './svelte/index.js')
+              conditions.svelte = {
+                types: './svelte/index.d.ts',
+                default: './svelte/index.js',
+              }
+            if (conditions.svelte && typeof conditions.svelte === 'object') {
+              const { svelte, ...rest } = conditions
+              pkg.exports[name] = { svelte, types, ...rest }
+              continue
+            }
+          }
           pkg.exports[name] = { types, ...conditions }
         }
       }

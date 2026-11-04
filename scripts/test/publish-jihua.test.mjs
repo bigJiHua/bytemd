@@ -25,7 +25,9 @@ test('rewriteManifest resolves workspace protocol like pnpm publish would', () =
     versions,
   )
   assert.equal(rewritten.name, '@jihua/bytemd-vue-next')
-  assert.deepEqual(rewritten.dependencies, { '@jihua/bytemd': '1.22.0' })
+  assert.deepEqual(rewritten.dependencies, {
+    bytemd: 'npm:@jihua/bytemd@1.22.0',
+  })
   assert.deepEqual(rewritten.peerDependencies, { vue: '^3.0.0' })
 })
 
@@ -40,7 +42,9 @@ test('rewriteManifest keeps caret/tilde prefixes and rewrites devDependencies', 
     versions,
   )
   assert.deepEqual(rewritten.dependencies, { 'remark-gfm': '^4.0.1' })
-  assert.deepEqual(rewritten.devDependencies, { '@jihua/bytemd': '^1.22.0' })
+  assert.deepEqual(rewritten.devDependencies, {
+    bytemd: 'npm:@jihua/bytemd@^1.22.0',
+  })
 })
 
 test('rewriteManifest rejects workspace deps pointing outside the workspace', () => {
@@ -64,7 +68,10 @@ test('real manifests of this repo rewrite cleanly against current versions', () 
   )
   const rewritten = rewriteManifest(vueNext, versions)
   assert.equal(rewritten.name, '@jihua/bytemd-vue-next')
-  assert.equal(rewritten.dependencies['@jihua/bytemd'], versions.bytemd)
+  assert.equal(
+    rewritten.dependencies.bytemd,
+    `npm:@jihua/bytemd@${versions.bytemd}`,
+  )
   assert.ok(!JSON.stringify(rewritten).includes('workspace:'))
   assert.equal(rewritten.author, vueNext.author)
   assert.equal(rewritten.license, vueNext.license)
@@ -73,4 +80,25 @@ test('real manifests of this repo rewrite cleanly against current versions', () 
 test('mapPackageName maps target args given in either spelling', () => {
   const targets = ['@bytemd/vue', '@jihua/bytemd-vue-next'].map(mapPackageName)
   assert.deepEqual(targets, ['@jihua/bytemd-vue', '@jihua/bytemd-vue-next'])
+})
+
+test('publish aliases preserve explicit ranges and every dependency import key', () => {
+  const manifest = {
+    name: '@bytemd/react',
+    dependencies: { bytemd: 'workspace:^1.22.0' },
+    peerDependencies: { '@bytemd/plugin-gfm': '^1.0.0', react: '*' },
+    optionalDependencies: { bytemd: 'workspace:~' },
+  }
+  const rewritten = rewriteManifest(manifest, { bytemd: '1.22.4' })
+  assert.equal(rewritten.dependencies.bytemd, 'npm:@jihua/bytemd@^1.22.0')
+  assert.equal(
+    rewritten.peerDependencies['@bytemd/plugin-gfm'],
+    'npm:@jihua/bytemd-plugin-gfm@^1.0.0',
+  )
+  assert.equal(
+    rewritten.optionalDependencies.bytemd,
+    'npm:@jihua/bytemd@~1.22.4',
+  )
+  assert.equal(rewritten.peerDependencies.react, '*')
+  assert.equal(manifest.dependencies.bytemd, 'workspace:^1.22.0')
 })

@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["src/env.d.ts"],
+  "compilerOptions": {
+    "composite": false
+  }
+}

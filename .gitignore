@@ -46,6 +46,9 @@ packages/vue-next/viewer.d.ts
 # CM6 P0 spike (local experiment)
 audit/cm6-spike/
 
+# worker-entry-check.mjs 的临时 SSR 编译产物（finally 强删，进程被杀时兜底忽略）
+audit/worker-ssr-viewer.mjs
+
 # Build & pack artifacts
 packages/*/dist/
 playground/dist/

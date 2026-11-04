@@ -84,10 +84,12 @@ test('renderThemeCss emits a .markdown-body token preset', () => {
 test('renderAllThemesCss scopes every theme behind data-bytemd-theme', () => {
   const css = renderAllThemesCss(officialThemes)
   for (const t of officialThemes) {
-    assert.ok(css.includes(`.markdown-body[data-bytemd-theme='${t.id}']`))
+    assert.ok(
+      css.includes(`.markdown-body:where([data-bytemd-theme='${t.id}'])`),
+    )
   }
   assert.equal(
-    css.split('\n.markdown-body[data-bytemd-theme=').length - 1,
+    css.split('\n.markdown-body:where([data-bytemd-theme=').length - 1,
     officialThemes.length,
   )
 })
@@ -115,9 +117,10 @@ test('renderManifest lists id/label/dark for every theme', () => {
   )
 })
 
-test('built theme artifacts exist and match the source palettes', () => {
+test('built theme artifacts exist and match the source palettes', (t) => {
   const themesDir = path.join(root, 'packages', 'bytemd', 'dist', 'themes')
-  if (!fs.existsSync(themesDir)) return // dist 未构建时跳过(构建验收由 pnpm build 覆盖)
+  if (!fs.existsSync(themesDir))
+    return t.skip('Run pnpm build to verify generated theme artifacts')
   for (const t of officialThemes) {
     const css = fs.readFileSync(path.join(themesDir, `${t.id}.css`), 'utf8')
     assert.ok(css.includes(`--md-accent: ${t.tokens['--md-accent']};`))

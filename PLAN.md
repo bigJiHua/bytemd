@@ -1,5 +1,35 @@
 # ByteMD 现代化与瘦身计划
 
+## 第十二批 — playground 实测与脚本清理（2026-11-04，完成）
+
+- [x] 实测 playground 开发模式与生产 preview：默认示例、编辑/预览、工具栏与键盘、插件开关、语言/主题、目录/手风琴/复制、390px 窄屏；保存浏览器错误与截图。
+- [x] 修复实测发现的问题：灯箱动画期间关闭按钮/Escape 被忽略；Tool 字号使用按钮误选 12px；窄屏 Tool 使用后未返回编辑；playground 清空长度限制后仍提示超限；插件徽章遮挡控件和窄屏布局。
+- [x] 清理验收脚本：将旧 playground smoke 整理为可独立运行的命令，共用已有 CDP 求值/等待助手，移除无引用的临时调试脚本；历史复现与验收证据保留。
+- [x] 回测：核心测试、全部脚本及覆盖率、完整构建、包消费/SSR、generate:check、style；更新本批进度和验收记录。人工 OS IME、真实移动设备继续 incomplete。
+
+验收：开发与生产 playground 各 18/18，共 36 项浏览器检查通过，runtimeErrors 均为空；核心 27 文件 239/239、脚本 46/46、四模块聚合覆盖率门槛、完整构建、实际打包消费/类型/Svelte 宿主/SSR、整理后的升级复验、generate:check、style 与 Git 空白检查通过。证据见 [PLAYGROUND_20261104.md](./audit/PLAYGROUND_20261104.md)，脚本入口见 [SCRIPTS.md](./audit/SCRIPTS.md)。
+
+## 第十一批 — 1.22.4 升级复核修复（2026-11-04，完成）
+
+范围：修复本轮确认的 8 项问题，并修复阻碍回测的过时 SSR 脚本与格式漂移。本批不升级依赖、不发布 npm；保持树内包名、author 和 LICENSE 约定。原始复核证据：`audit/prod-perf-review-20261104/`（本地忽略）。
+
+实施顺序：先处理发布消费与 Svelte 类型，再处理交互/主题，最后补齐验收链并全量回测；作为一个批次闭环。
+
+- [x] P1 发布依赖：发布时使用 npm alias，将产物中的原导入名解析到 `@jihua/*`；覆盖 ESM/CJS、声明、Viewer 子入口和 Vue 3 异步分块，验证实际 tarball 消费与 manifests 还原。
+- [x] P1 Svelte 入口/类型：为 Svelte 条件提供与运行导出一致的声明；恢复 Editor/Viewer props/events 类型，验证正常模板、错误 props 和 imperative 类 API。
+- [x] P1 Tool 表单行为：所有非提交按钮指定 `type="button"`，验证点击不触发表单 submit。
+- [x] P2 Tool 键盘行为：原生按钮只处理 click，验证 Enter/Space 单次激活与预设展开。
+- [x] P2 生命周期：移除销毁时的窗口 resize 监听，验证多次挂载/销毁无残留且同页其他编辑器可用。
+- [x] P2 窄屏 tab：统一有效分屏状态，验证 390px + 强制 split 时重复点击预览仍保留预览。
+- [x] P2 主题层叠：降低亮色属性预设特异性，验证 all.css 与单主题的暗色回退一致，并保留显式 ink 暗色主题。
+- [x] P2 CI 脚本测试：覆盖率命令执行全部 Node 脚本测试，保留四关键模块聚合门槛；CI 补构建后包消费/类型/SSR 检查。
+- [x] 验收工具：更新 Svelte 5 SSR 调用和标题断言；修复 23 个文件的格式漂移，生成产物仍由 generate 管理。
+- [x] 全量回测：`pnpm test`、`pnpm run test:scripts`、覆盖率门槛、完整构建、`pnpm generate:check`、`pnpm style`、纯入口/SSR、实际打包消费与类型、Chrome 定向交互/主题/窄屏复验；保存日志和汇总后更新本节与进度日志。
+
+验收：核心 27 文件 236/236、Node 脚本 44/44（0 skipped），四模块覆盖率门槛通过（lines/statements 85.75%、branches 85.84%、functions 80%）；完整构建、实际 tarball 消费/类型/Svelte 宿主生产构建、纯入口/SSR、Chrome 定向复验、generate:check、style 和 Git 空白检查通过。14/14 包发布演练成功，14/14 manifests SHA-256 校验确认字节还原。详见 [修复验收记录](./audit/UPGRADE_FIX_20261104.md)。
+
+人工 OS IME、真实移动设备与完整性能/堆快照矩阵保持 incomplete/未重测，不用本批定向验证替代。
+
 > 范围：只改本地 fork `bigJiHua/bytemd`，不碰 Main。目标：先修正确性/安全，再砍冗余依赖与发布格式；保持现有主题/示例可用。暂缓：Svelte 5、CodeMirror 6 属于重写级迁移，不在前几阶段。
 
 ## 决策基线
@@ -242,6 +272,10 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 
 ## 进度日志
 
+- 2026-11-04（playground）：第十二批完成。真实 Chrome/CDP 实测开发和生产 playground 各 18 项，全部通过，包含八种插件启停、系统剪贴板读回、灯箱翻页/关闭、中文 locale/暗色、编辑/撤销、Tool、长度提示、全屏/tab 键盘与 390px 窄屏。修复五项实测问题：灯箱打开动画期间关闭失效、Tool 字号误用 12px、窄屏 Tool 使用后不返回编辑、清空最大长度后限制未解除、徽章遮挡控件。统一 `test:playground` 入口，合并 CDP 求值/等待并保留兼容转导出，去除旧 Vitest 参数和临时 debug 脚本，补脚本指南。核心 27 文件 239/239、Node 46/46、覆盖率 lines/statements 86.17% / branches 86.03% / functions 81.08%、完整构建、实际 tarball/类型/SSR、升级复验、generate:check、style、Git 空白检查通过。证据：`audit/prod-perf-playground-20261104/`、`audit/prod-perf-playground-63KjRg/`、`audit/prod-perf-packages-J25I3D/`、`audit/prod-perf-playground-upgrade-final-20261104/`；详见 [audit/PLAYGROUND_20261104.md](./audit/PLAYGROUND_20261104.md)。人工 OS IME/真实移动设备 incomplete，完整性能/堆快照矩阵未重测；未提交或发布。
+
+- 2026-11-04：第十一批升级复核修复完成。修复发布依赖导入名、Svelte 条件声明/props 类型、Tool 表单提交与键盘重复触发、resize 监听残留、窄屏 tab、主题暗色回退和 CI 漏跑脚本测试共 8 项问题；追加修复打包 Svelte 模板的非空断言，更新 SSR 验收工具并收敛格式漂移。实测核心 27 文件 236/236、脚本 44/44（0 skipped）、四模块 c8 聚合门槛、完整构建、实际 tarball 消费/类型/Svelte 宿主生产构建、纯入口/SSR、Chrome 定向交互/主题/390px 窄屏、generate:check、style 与 Git 空白检查全部通过。14 包 dry-run 成功，14/14 manifests SHA-256 一致且备份已清理。tarball 消费使用本地 lockfile 依赖图，未做联网全新安装；人工 OS IME、真实移动设备继续 incomplete，完整性能/堆快照矩阵未重测。证据见 [audit/UPGRADE_FIX_20261104.md](./audit/UPGRADE_FIX_20261104.md)，本地日志在 `audit/prod-perf-review-20261104/`、`audit/prod-perf-packages-x5yLO5/`、`audit/prod-perf-fixes-20261104/`。未提交或发布。
+
 - 2026-10-28（续）：Svelte 5 迁移完成。依赖：svelte 5.57.3、@sveltejs/vite-plugin-svelte 4.0.4、@testing-library/svelte 5.4.2、svelte2tsx 0.7.62、svelte-preprocess 6.0.5、prettier 3.9 + prettier-plugin-svelte 3.5 + @trivago/sort-imports 5.2。核心适配：`legacy-compat.ts` 用 `createClassComponent` 维持 `new/$set/$on/$destroy`（react/vue/vue-next 包装零改动）、导出 `EditorComponent/ViewerComponent` 供 Svelte 宿主模板；移除 `svelte:options immutable`、`const $` 改名、按钮/效果改 `tick()` 后应用、`onDestroy` 直接清理 CodeMirror blinker、组件状态迁到 `context="module"` WeakMap（组件内可变绑定被响应化会清空刚绑定的效果）、render-controller 同请求去重；测试改 RTL 5 的 `rerender/unmount`，vitest alias 固定 katex/highlight.js 单模块 id。踩坑记录：playground 的 `new App()` 跳过 `init_operations`（改 `mount()`）；缺 `verbatimModuleSyntax` 时模板专用导入被 TS 擦除（`Editor is not defined`）；`bytemd/dist` 内含独立 Svelte 运行时，宿主要从源码或 `svelte` 条件消费。验收：核心 26 文件 230/230、脚本 26/26 + 覆盖率 85.28%、完整构建、generate:check、style、bundlewatch PASS（index.mjs 63.98KB gzip）、无头 Chrome 实测 playground 全绿（编辑器/37 工具栏/28 标题/KaTeX×2/mermaid/高亮×5/复制按钮×6/交互重渲染/暗色 #0d1117）。未提交或发布。
 
 - 2026-10-28：剩余部分审计修复 + 第十批主体完成。先修复 [audit/REMAINING.md](./audit/REMAINING.md) 审计确认的 11 项问题（medium-zoom 关闭竞态/reportError/ownerDocument/样式注入、生成器 locales 按需导出、bytemd processor/worker 根转发、mermaid 全局配置恢复、frontmatter 静默失败兜底、gfm 固定 clipPath id、help 快捷区漏项、toolbar Escape/Enter 切换/tab roving、deploy.sh 版本固定）。随后完成第十批：UMD 移除（ESM/CJS + d.ts，bundlewatch 盯 ESM+CSS maxSize 实测 PASS）、unified 11 生态迁移（sanitize schema structuredClone、language-math 选择器、math-ssr 响亮失败、@vitejs/plugin-vue2）、Vite 5.4/Vitest 3.2/jsdom 24（threads 池 + 20s 超时保持重套件稳定，tinypool 2.1.2 override）。验收：核心 26 文件 230/230、脚本 26/26、覆盖率门槛、完整构建、generate:check、bundlewatch PASS、官方源 audit 开发图 0 critical（原 3）/prod 18 条 1 high（原 22 条 3 high）。残留：vite 6+/svgo 4 需 Svelte 3 之外支持、katex 0.18、人工 IME/移动设备 incomplete；vitest server.deps.inline 保持 katex/highlight.js 可 mock。未提交或发布。
@@ -301,7 +335,7 @@ Worker 核心、显式安装生成、桌面生产验证、可选尺寸隔离和�
 
 - 2026-10-28：CM6 P0 原型补滚动同步后复测。CM6 页面接入 `measureScrollMap` 双向同步（sourceMap），仍无工具栏/插件/TOC 点击。500 KiB：CM6 Layout 峰值 load 205.33 / scroll 101.71 / type 90.30 ms，CM5 226.85 / 169.91 / 92.88 ms；scroll 峰值下降约 40%，但均 >75 ms；CM6 type Task 总时长 1500.8 ms vs CM5 540.2 ms。100 KiB：load/scroll 接近，CM6 type 峰值 54.01 vs 34.49 ms。结论仍为不达门槛、暂缓 P1；数据与限制见 `audit/CM6_SPIKE_RESULT.md`。
 
-- 2026-11-01：发布链路修复（main，1.22.1 准备）。定位 1.22.0 首发缺陷：手工逐包改名后走 `npm publish`，pnpm `workspace:` 协议未被改写——三包装包（vue/vue-next/react）dependencies 泄漏 `workspace:*`（npm 消费者安装即报 Unsupported URL Type），插件包 devDependencies 同样泄漏（惰性：npm 不装传递 devDeps，仅元数据脏）。修复：三包装版本 bump 1.22.1；新增 `scripts/publish-jihua.mjs`（备份→改名 @jihua/*→workspace:* 落成真实版本号→逐包 `pnpm publish --no-git-checks --tag latest`→finally 字节级还原；--dry-run 演练 / --restore 中断兜底 / registry 已存在自动 skip）；`pub` 脚本入口与 `test:scripts` 同步更新；新增 6 例脚本单测。验收：核心 vitest 26 文件 231/231、脚本 32/32、`pnpm build`、`generate:check` 通过；dry-run 全 14 包打包成功（三包装 1.22.1、其余 1.22.0），还原后 git 状态仅含预期改动。main 上 `pnpm style` 存量漂移 29 文件（AGENTS/PLAN/bytemd src/插件 manifests/build.mjs 等，均为本批之前已存在），本批仅保证新增文件合规，未顺手重排。真实发布需维护者执行（npm 登录态）：先 `pnpm build`，再 `node scripts/publish-jihua.mjs @bytemd/vue @bytemd/vue-next @bytemd/react`；发布后建议对三个 1.22.0 包装版本做 npm deprecate 指向 1.22.1。
+- 2026-11-01：发布链路修复（main，1.22.1 准备）。定位 1.22.0 首发缺陷：手工逐包改名后走 `npm publish`，pnpm `workspace:` 协议未被改写——三包装包（vue/vue-next/react）dependencies 泄漏 `workspace:*`（npm 消费者安装即报 Unsupported URL Type），插件包 devDependencies 同样泄漏（惰性：npm 不装传递 devDeps，仅元数据脏）。修复：三包装版本 bump 1.22.1；新增 `scripts/publish-jihua.mjs`（备份→改名 @jihua/_→workspace:_ 落成真实版本号→逐包 `pnpm publish --no-git-checks --tag latest`→finally 字节级还原；--dry-run 演练 / --restore 中断兜底 / registry 已存在自动 skip）；`pub` 脚本入口与 `test:scripts` 同步更新；新增 6 例脚本单测。验收：核心 vitest 26 文件 231/231、脚本 32/32、`pnpm build`、`generate:check` 通过；dry-run 全 14 包打包成功（三包装 1.22.1、其余 1.22.0），还原后 git 状态仅含预期改动。main 上 `pnpm style` 存量漂移 29 文件（AGENTS/PLAN/bytemd src/插件 manifests/build.mjs 等，均为本批之前已存在），本批仅保证新增文件合规，未顺手重排。真实发布需维护者执行（npm 登录态）：先 `pnpm build`，再 `node scripts/publish-jihua.mjs @bytemd/vue @bytemd/vue-next @bytemd/react`；发布后建议对三个 1.22.0 包装版本做 npm deprecate 指向 1.22.1。
 
 - 2026-11-01：CSS 分层发布（main，随 1.22.1）。动因：站点切换 @jihua 包后 fork 自定义块（callout/timeline/accordion/文字分割线）不渲染——样式全在可选的 markdown.css，站点只引了 index.css（实测禁用对比确认打架面为零但机制无保障）。拆层：markdown.scss 按节拆为 _markdown-tokens.scss（light/dark tokens mixin）+ _markdown-parts.scss（divider/code-block/copy-btn/mermaid/callout/accordion/pinyin/timeline/plugin-error/frames 共 10 个 mixin），markdown.scss 以 @include 原位回插保持产物顺序；新增 custom-blocks.scss 入口（tokens+专属块，独立可用的零冲突层）。build.mjs 新增 dist/custom-blocks(.min).css 与 dist/index.bundle.css(.min)（= index.css+markdown.css 字节拼接）及产物选择器校验；generate.mjs exports 列表同步 4 项；三份文档补分层用法（散文段为手维区域）。金样验收：markdown.css 对比仅预期差异（pre.bytemd-code-block 增 position:relative 一行，独立分层锚定保险）；custom-blocks.css 含全部专属类与 tokens；bundle 拼接字节相等。回归：vitest 26 文件 231/231、脚本 32/32、build、generate:check、build.mjs/generate.mjs prettier 通过。发布范围 1.22.1 扩为 4 包：核心 bytemd（新产物）+ 三包装（workspace 修复）。
 

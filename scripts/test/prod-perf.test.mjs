@@ -3,6 +3,7 @@ import {
   CDPClient,
   CDPConnectionError,
   CDPSession,
+  waitForPage,
 } from '../../audit/prod-perf-cdp-client.mjs'
 import { cliOptions } from '../../audit/prod-perf-reproduce.mjs'
 import {
@@ -90,6 +91,31 @@ test('page evaluation reports runtime exceptions instead of undefined success', 
     },
   }
   await assert.rejects(evalInPage(session, 'return 1'), /Missing selector/)
+})
+
+test('page readiness waits for delayed results and returns only after success', async () => {
+  let calls = 0
+  const session = {
+    async send(method, options) {
+      assert.equal(method, 'Runtime.evaluate')
+      assert.equal(options.awaitPromise, true)
+      return { result: { value: ++calls >= 3 } }
+    },
+  }
+  await waitForPage(session, 'window.ready', 5000)
+  assert.equal(calls, 3)
+})
+
+test('page readiness times out when the condition never becomes true', async () => {
+  const session = {
+    async send() {
+      return { result: { value: false } }
+    },
+  }
+  await assert.rejects(
+    waitForPage(session, 'window.ready', 1),
+    /Timeout waiting.*window.ready/,
+  )
 })
 
 test('CDP ignores late replies after timeout and clears pending jobs on disconnect', async () => {

@@ -1,5 +1,28 @@
 import { get } from 'node:http'
 
+export async function evalInPage(session, expression) {
+  const reply = await session.send('Runtime.evaluate', {
+    expression: `(async () => { ${expression} })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  })
+  if (reply.exceptionDetails)
+    throw new Error(
+      reply.exceptionDetails.exception?.description ||
+        reply.exceptionDetails.text,
+    )
+  return reply.result.value
+}
+
+export async function waitForPage(session, expression, timeoutMs = 180000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (await evalInPage(session, `return (${expression})`)) return
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error(`Timeout waiting for page condition: ${expression}`)
+}
+
 export class CDPConnectionError extends Error {
   constructor(message) {
     super(message)

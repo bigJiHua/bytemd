@@ -9,7 +9,7 @@ pnpm install --frozen-lockfile
 pnpm generate
 pnpm generate:check
 pnpm test:scripts
-pnpm exec vitest run --threads false
+pnpm exec vitest run
 pnpm build
 pnpm dev
 ```

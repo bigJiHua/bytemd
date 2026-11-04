@@ -113,7 +113,17 @@ test('unmounting an open lightbox clears overlays without affecting another view
     markdownBody: b,
     file,
   })
-  await new Promise((resolve) => setTimeout(resolve, 100))
+  await vi.waitFor(
+    () => {
+      expect(
+        a.querySelector('img')?.classList.contains('medium-zoom-image'),
+      ).toBe(true)
+      expect(
+        b.querySelector('img')?.classList.contains('medium-zoom-image'),
+      ).toBe(true)
+    },
+    { timeout: 2000 },
+  )
   a.querySelector('img')!.click()
   expect(
     document.querySelector('[role="dialog"]')?.getAttribute('aria-label'),
@@ -139,6 +149,46 @@ test('unmounting an open lightbox clears overlays without affecting another view
   expect(document.body.style.overflow).toBe('')
   a.remove()
   b.remove()
+})
+
+test('lightbox button and Escape close while the opening transition is pending', async () => {
+  const root = document.createElement('div')
+  root.innerHTML = '<img src="lightbox-early-close.png" alt="Early close">'
+  document.body.append(root)
+  const cleanup = mediumZoom().viewerEffect!({
+    markdownBody: root,
+    file: getProcessor({}).processSync(''),
+  })
+  try {
+    await vi.waitFor(() => {
+      expect(root.querySelector('.medium-zoom-image')).not.toBeNull()
+    })
+    for (const action of ['button', 'escape']) {
+      root.querySelector('img')!.click()
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+      if (action === 'button') {
+        document.querySelector<HTMLButtonElement>('.bytemd-zoom-close')!.click()
+      } else {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+        )
+      }
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('[role="dialog"]')).toBeNull()
+          expect(document.querySelector('.medium-zoom-overlay')).toBeNull()
+          expect(
+            document.querySelector('.medium-zoom-image--opened'),
+          ).toBeNull()
+          expect(document.body.style.overflow).toBe('')
+        },
+        { timeout: 2000 },
+      )
+    }
+  } finally {
+    cleanup?.()
+    root.remove()
+  }
 })
 
 test('lightbox cleanup before import finishes prevents initialization', async () => {

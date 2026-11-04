@@ -50,7 +50,9 @@
       return { action, syntax: action.cheatsheet ?? '' }
     }
     const children = action.handler.actions
-    const representative = children.find((k) => k.title === '20') ?? children[0]
+    const representative =
+      children.find((k) => k.title === '20px' || k.title === '20') ??
+      children[0]
     return {
       action,
       children,
@@ -99,24 +101,21 @@
             <div class="bytemd-tool-actions">
               {#if runnable}
                 <button
+                  type="button"
                   class="bytemd-tool-use"
                   on:click={() => run(entry.representative ?? entry.action)}
-                  on:keydown|self={(e) =>
-                    ['Enter', 'Space'].includes(e.code) &&
-                    run(entry.representative ?? entry.action)}
                 >
                   {locale.use}
                 </button>
               {/if}
               {#if expandable}
                 <button
+                  type="button"
                   class="bytemd-tool-toggle"
                   class:bytemd-tool-toggle-open={expanded[key]}
                   data-tooltip={locale.cheatsheet}
                   aria-expanded={!!expanded[key]}
                   on:click={() => toggle(key)}
-                  on:keydown|self={(e) =>
-                    ['Enter', 'Space'].includes(e.code) && toggle(key)}
                 >
                   <span class="bytemd-tool-chevron"
                     >{@html icons.LeftExpand}</span
@@ -132,8 +131,7 @@
           {/if}
           {#if expandable && expanded[key]}
             <ul class="bytemd-tool-sub">
-              {#each entry.children! as child, j}
-                {@const ckey = key + '-' + j}
+              {#each entry.children ?? [] as child}
                 <li class="bytemd-tool-item bytemd-tool-sub-item">
                   <div class="bytemd-tool-row">
                     {#if child.icon}<div class="bytemd-help-icon">
@@ -143,10 +141,9 @@
                     <div class="bytemd-tool-actions">
                       {#if child.handler?.type === 'action'}
                         <button
+                          type="button"
                           class="bytemd-tool-use"
                           on:click={() => run(child)}
-                          on:keydown|self={(e) =>
-                            ['Enter', 'Space'].includes(e.code) && run(child)}
                         >
                           {locale.use}
                         </button>
